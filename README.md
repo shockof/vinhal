@@ -64,3 +64,10 @@ Nenhum endereço foi verificado: os mapas executam uma busca genérica por Igrej
 Prévia local: `python3 -m http.server 8765 --directory . --bind 127.0.0.1`.
 
 GitHub Pages configurado para `main` / raiz. Cada atualização da branch gera uma implantação; acompanhe em Actions → pages build and deployment. A versão anterior continua recuperável pelo histórico de commits.
+
+## Mapa de células
+Mapa interativo Leaflet 1.9.4 / OpenStreetMap na página Células, com filtros compartilhados de igreja/rede, marcadores com detalhes, enquadramento de todos os pontos e links de rota. Master/Supervisor podem cadastrar latitude e longitude públicas em Redes e células. As duas coordenadas são opcionais, mas devem ser preenchidas juntas e dentro dos limites geográficos. Células sem coordenadas ficam na lista com aviso, sem posição inventada.
+
+As três células originais usam pontos explicitamente fictícios na região de Maceió, apenas para demonstração; não são endereços confirmados. Pontos cadastrados e alterações continuam locais a este navegador. Não há geocodificação automática ou solicitação da localização do visitante. O fundo do mapa depende da conexão com OpenStreetMap e a biblioteca é carregada via unpkg; se indisponíveis, a lista e links permanecem acessíveis. Atribuição preservada. Para uso público em escala, revisar a política de uso dos tiles e contratar provedor adequado quando necessário.
+
+Verificado: três marcadores, filtro Videira Norte com um ponto, popup, botão Ver no mapa, rejeição de coordenada incompleta, salvar coordenadas e atualização pública, celular 390px sem transbordamento, sem erros de execução capturados. Arquivos adicionais: cell-map.js e cell-map.css.
