@@ -10,7 +10,9 @@ Clique em **Login** e digite um dos usuários: `master`, `supervisor`, `pastor`,
 ## Implementado
 - Site público com Início, Sobre, diretório de células filtrado por igreja/rede, mensagens/reflexão e materiais demonstrativos, endereço ilustrativo e contribuições sem pagamentos.
 - Logo original no cabeçalho, login, painéis e rodapé. Navegação e gestão responsivas para computador e celular.
-- Master com título, apresentação, horários, cores principal/destaque/fundo/botões, logo, banner, imagem/textos da visão, título/reflexão da pregação e informação de contribuições. Fluxo separado de salvar rascunho, visualizar, publicar localmente e descartar.
+- Master com aba lateral Personalização do site: identidade visual, páginas inicial/sobre/células/mensagens, menu e rodapé; textos, imagens, links, visibilidade e ordem dos blocos. Cores, logo, tipografia, largura, espaçamento, cantos e metadados. Salvar rascunho, visualizar, publicar localmente e descartar.
+- Pregações: YouTube/Vimeo/vídeo HTTPS ou MP4/WebM/OGG local (até 100 MB), título, pregador, data, série, descrição, capa, destaque na página inicial, editar e ocultar.
+- Arquivos da Palavra: PDF/TXT/DOC/DOCX/PPT/PPTX/XLS/XLSX/MP3 local (até 20 MB) ou endereço HTTPS, título, data, categoria, descrição, editar, ocultar e baixar.
 - Cadastro e edição de pessoas com nome, telefone fictício, categoria, batismo, estado civil, célula e foto local.
 - Cadastro, edição, busca e desativação/reativação de acessos fictícios por username; função, igreja, rede, célula, responsável e foto. Não cria credenciais reais.
 - Equipe Pastoral pública alimentada pelos cadastros ativos de supervisor, pastor e obreiro; área de líderes/discipuladores com célula, endereço fictício, mapa e link de compartilhamento. Alterações dos cadastros refletem imediatamente no site deste navegador.
@@ -45,17 +47,19 @@ Clique em **Login** e digite um dos usuários: `master`, `supervisor`, `pastor`,
 - Menu móvel, atalhos inferiores e relatório a 390 × 844 sem transbordamento horizontal da página.
 - Master: salvar rascunho, sair para a prévia pública e retornar ao editor no novo layout.
 
+- Personalização ampliada: upload real de MP4 de teste CC0, player com metadados carregados e controles, arquivo TXT com download, salvar/prévia/publicar e persistência após recarregar. Arquivos de teste retirados da biblioteca ao concluir.
+
 ## Limitações e próximos passos
 Demonstração estática em GitHub Pages. Tudo é público, inclusive os dados de exemplo no código e no armazenamento do navegador. Os controles de função são apenas simulações de interface; não são autenticação nem autorização real. Não cadastrar pessoas, fotos, contatos ou senhas reais.
 
-`Publicar neste navegador` não grava no GitHub, não modifica o site de outros visitantes e não sincroniza dispositivos. Cadastros e imagens ficam no localStorage, sujeito ao limite e à limpeza do navegador; imagens aceitas: PNG/JPEG/WebP até 500 KB por arquivo. O histórico local pode ser alterado pelo usuário e não é auditoria de segurança.
+`Publicar neste navegador` não grava no GitHub, não modifica o site de outros visitantes e não sincroniza dispositivos. Vídeos e documentos enviados ficam no IndexedDB deste navegador, sem envio ao servidor; metadados, cadastros e imagens ficam no localStorage, sujeito ao limite e à limpeza do navegador; imagens aceitas: PNG/JPEG/WebP até 500 KB por arquivo. O histórico local pode ser alterado pelo usuário e não é auditoria de segurança.
 
-Autenticação por username/senha, criação e recuperação de credenciais, autorização hierárquica no servidor, banco de dados, armazenamento de imagens, publicação compartilhada, auditoria e backups dependem de backend. A configuração de todos os textos e imagens de cada seção, edição de igrejas/redes existentes, histórico retroativo e reversão de conversões ainda precisam de evolução. Os relatórios usam categorias atuais e presenças/ausências efetivamente registradas no período; não são relatórios históricos de filiação.
+Autenticação por username/senha, criação e recuperação de credenciais, autorização hierárquica no servidor, banco de dados, armazenamento de imagens, publicação compartilhada, auditoria e backups dependem de backend. Edição de igrejas/redes existentes, histórico retroativo e reversão de conversões ainda precisam de evolução. Os relatórios usam categorias atuais e presenças/ausências efetivamente registradas no período; não são relatórios históricos de filiação.
 
 Nenhum endereço foi verificado: os mapas executam uma busca genérica por Igreja Videira. Vídeos/áudios, fotos oficiais, materiais, canais sociais e instruções de contribuição ainda precisam ser fornecidos. Não há pagamento, envio de mensagem nem recebimento de interesse de visitantes.
 
 ## Arquivos e publicação
-`index.html`, `original.css` (estilos recuperados), `app.css`, `app.js`, `dashboard.css`, `dashboard.js` e `assets/logo.png`. Sem dependências de compilação.
+`index.html`, `original.css` (estilos recuperados), `app.css`, `app.js`, `dashboard.css`, `dashboard.js`, `customize.css`, `customize.js` e `assets/logo.png`. Sem dependências de compilação.
 
 Prévia local: `python3 -m http.server 8765 --directory . --bind 127.0.0.1`.
 
