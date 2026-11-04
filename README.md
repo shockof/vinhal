@@ -21,6 +21,15 @@ Clique em **Login** e digite um dos usuários: `master`, `supervisor`, `pastor`,
 - Relatórios por igreja/município, filtros por igreja, rede e período, contagem de pessoas/membros/visitantes, presenças e frequência; exportação CSV.
 - Histórico local ilustrativo e restauração da demonstração.
 
+## Painéis inspirados nos previews recuperados
+- Tela de login com identidade roxa/verde-água e atalhos explícitos para os perfis demonstrativos.
+- Gestão com barra lateral roxa, avatar de iniciais/foto local, navegação com ícones e visão específica de cada função.
+- Cartões coloridos com ações de navegação; gráfico circular de frequência, evolução por encontro e últimos registros calculados a partir dos dados locais.
+- Filtros de igreja, rede e período nos painéis gerais; relatório com comparação de membros/visitantes por rede e municípios clicáveis.
+- Cartões de células com detalhamento; seleção visual entre novo membro e visitante; presença com status, contagem ao vivo, marcar todos/limpar e confirmação visual com destaque para conversões.
+- Celular com cabeçalho roxo, cartões em duas colunas, atalhos inferiores e menu lateral para as demais funções.
+- Sem fotos reais ou indicadores inventados: as iniciais e os números correspondem aos cadastros fictícios do demo.
+
 ## Testes realizados em navegador
 - Login dos seis papéis principais e verificação de células/abas correspondentes.
 - Rascunho sem alterar o site publicado; prévia com título alterado; publicação aplicada somente no navegador.
@@ -30,18 +39,23 @@ Clique em **Login** e digite um dos usuários: `master`, `supervisor`, `pastor`,
 - Filtro de relatório para Videira Norte e download CSV.
 - Layout de painel em 390 × 844, sem transbordamento horizontal da página.
 - Verificação de sintaxe JavaScript e ausência de erros de execução capturados durante os fluxos acima.
+- Painéis visuais: cartões/atalhos, detalhes de célula, marcar todos/limpar, contagem de presença e confirmação com conversão em membro.
+- Seleção visual de categoria com cadastro de membro; relatórios de líder e supervisor com gráficos calculados.
+- Filtros gerais por igreja, troca de papel sem herdar o filtro de outra liderança, tela vazia para célula sem encontros.
+- Menu móvel, atalhos inferiores e relatório a 390 × 844 sem transbordamento horizontal da página.
+- Master: salvar rascunho, sair para a prévia pública e retornar ao editor no novo layout.
 
 ## Limitações e próximos passos
 Demonstração estática em GitHub Pages. Tudo é público, inclusive os dados de exemplo no código e no armazenamento do navegador. Os controles de função são apenas simulações de interface; não são autenticação nem autorização real. Não cadastrar pessoas, fotos, contatos ou senhas reais.
 
 `Publicar neste navegador` não grava no GitHub, não modifica o site de outros visitantes e não sincroniza dispositivos. Cadastros e imagens ficam no localStorage, sujeito ao limite e à limpeza do navegador; imagens aceitas: PNG/JPEG/WebP até 500 KB por arquivo. O histórico local pode ser alterado pelo usuário e não é auditoria de segurança.
 
-Autenticação por username/senha, criação e recuperação de credenciais, autorização hierárquica no servidor, banco de dados, armazenamento de imagens, publicação compartilhada, auditoria e backups dependem de backend. A configuração de todos os textos e imagens de cada seção, edição de igrejas/redes existentes, histórico retroativo e reversão de conversões ainda precisam de evolução. Os relatórios usam categorias atuais e o conjunto atual de pessoas como denominador; não são relatórios históricos de filiação.
+Autenticação por username/senha, criação e recuperação de credenciais, autorização hierárquica no servidor, banco de dados, armazenamento de imagens, publicação compartilhada, auditoria e backups dependem de backend. A configuração de todos os textos e imagens de cada seção, edição de igrejas/redes existentes, histórico retroativo e reversão de conversões ainda precisam de evolução. Os relatórios usam categorias atuais e presenças/ausências efetivamente registradas no período; não são relatórios históricos de filiação.
 
 Nenhum endereço foi verificado: os mapas executam uma busca genérica por Igreja Videira. Vídeos/áudios, fotos oficiais, materiais, canais sociais e instruções de contribuição ainda precisam ser fornecidos. Não há pagamento, envio de mensagem nem recebimento de interesse de visitantes.
 
 ## Arquivos e publicação
-`index.html`, `original.css` (estilos recuperados), `app.css`, `app.js` e `assets/logo.png`. Sem dependências de compilação.
+`index.html`, `original.css` (estilos recuperados), `app.css`, `app.js`, `dashboard.css`, `dashboard.js` e `assets/logo.png`. Sem dependências de compilação.
 
 Prévia local: `python3 -m http.server 8765 --directory . --bind 127.0.0.1`.
 
