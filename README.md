@@ -79,3 +79,8 @@ Os destaques alternam a cada 6 segundos, com anterior/próxima/pausar, pausa em 
 
 ## Atualização do mapa vetorial
 O mapa foi migrado de Leaflet com imagens raster para MapLibre GL JS 4.7.1 / OpenFreeMap Liberty, com renderização vetorial, zoom até 20 e tela cheia. Filtros, coordenadas, marcadores e fotos da liderança foram preservados. Depende de WebGL e conexão para carregar os dados. Sem suporte gráfico, a lista e os links Como chegar continuam disponíveis. Atribuições do provedor preservadas. Verificado zoom, filtro por igreja e popup de liderança.
+
+## Rede Kids e funções
+Rede Kids cadastrada inicialmente na Videira Centro (primeira igreja do demo), com migração aditiva dos navegadores existentes, sem substituir células ou vínculos. Não duplica a rede ao recarregar. Novas redes chamadas Rede Kids também recebem a identidade Kids. Funções exibem Pastor (a), Discipulador (a), Obreiro (a), preservando identificadores de acesso.
+
+Logo extraída da primeira página do PDF fornecido pelo usuário, preservando a arte; arquivo assets/rede-kids.png. Marcadores e popups das células vinculadas à Rede Kids exibem essa logo automaticamente. Verificado cadastro da rede, seleção no formulário e criação de célula fictícia local Kids · Exemplo com logo no marcador e no popup. Essa célula de teste não foi incluída nos dados iniciais publicados.
