@@ -13,9 +13,9 @@ function refreshSlides(d){
   const list=slideList(d,group);if(!list.length)continue;
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');let index=0,paused=reduced.matches,request=0,disposed=false;
   const controls=document.createElement('div');controls.className='slide-controls';controls.setAttribute('aria-label','Fotos dos eventos');
-  controls.innerHTML=`<div class="slide-dots" role="group" aria-label="Escolher foto">${list.map((x,i)=>`<button type="button" class="slide-dot" aria-label="Ver foto ${i+1} de ${list.length}"><span></span></button>`).join('')}</div><button type="button" class="slide-pause"></button>`;
-  hero.append(controls);const dots=[...controls.querySelectorAll('.slide-dot')],pause=controls.querySelector('.slide-pause');
-  const paint=()=>{dots.forEach((dot,i)=>{dot.classList.toggle('active',i===index);dot.setAttribute('aria-current',i===index?'true':'false')});pause.textContent=paused?'Retomar fotos':'Pausar fotos';pause.setAttribute('aria-pressed',String(paused))};
+  controls.innerHTML=`<div class="slide-dots" role="group" aria-label="Escolher foto">${list.map((x,i)=>`<button type="button" class="slide-dot" aria-label="Ver foto ${i+1} de ${list.length}"><span></span></button>`).join('')}</div>`;
+  hero.append(controls);const dots=[...controls.querySelectorAll('.slide-dot')];
+  const paint=()=>{dots.forEach((dot,i)=>{dot.classList.toggle('active',i===index);dot.setAttribute('aria-current',i===index?'true':'false')})};
   async function select(next){if(next===index)return;const token=++request,loader=new Image();loader.src=list[next].src;try{await loader.decode()}catch{return}if(disposed||token!==request)return;
    image.getAnimations().forEach(a=>a.cancel());hero.querySelectorAll('.slide-outgoing').forEach(x=>x.remove());
    const old=image.cloneNode();old.className='slide-outgoing';old.alt='';old.setAttribute('aria-hidden','true');image.after(old);
@@ -24,7 +24,7 @@ function refreshSlides(d){
    image.animate([{transform:'scale(1.045)',opacity:.7},{transform:'scale(1)',opacity:1}],{duration:1000,easing:'cubic-bezier(.2,.65,.3,1)'});
    const fade=old.animate([{opacity:1},{opacity:0}],{duration:850,easing:'ease-in-out',fill:'forwards'});fade.onfinish=()=>old.remove();
   }
-  dots.forEach((dot,i)=>dot.onclick=()=>select(i));pause.onclick=()=>{paused=!paused;paint()};controls.hidden=list.length<2;
+  dots.forEach((dot,i)=>dot.onclick=()=>select(i));controls.hidden=list.length<2;
   image.src=list[0].src;image.alt=list[0].alt||'Foto de evento';paint();
   const timer=setInterval(()=>{if(!paused&&!document.hidden&&hero.closest('.page-section').classList.contains('active')&&!hero.contains(document.activeElement)&&!hero.matches(':hover'))select((index+1)%list.length)},6000);
   slidePlayers.push({dispose(){disposed=true;request++;clearInterval(timer);image.getAnimations().forEach(a=>a.cancel())}});
