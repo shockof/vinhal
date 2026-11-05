@@ -7,3 +7,5 @@ button.cell-map-pin{padding:0;width:36px;height:38px;cursor:pointer}.maplibregl-
 button.cell-map-kids{width:48px;height:64px;background:transparent;filter:drop-shadow(0 3px 3px #39225640)}.cell-map-kids>img{width:100%;height:100%;object-fit:contain}.kids-popup-logo{display:block;width:48px;height:66px;object-fit:contain;margin:0 0 10px}
 
 button.cell-map-kids{width:36px;height:38px;filter:none}.cell-map-kids .kids-pin-balloon{background:#7144b8;overflow:hidden}.kids-pin-balloon img{width:23px;height:27px;object-fit:contain;transform:rotate(45deg);background:white;border-radius:4px;padding:1px}
+
+.kids-pin-balloon img{background:transparent;border-radius:0;padding:0}
