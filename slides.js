@@ -15,7 +15,7 @@ function refreshSlides(d){
   const controls=document.createElement('div');controls.className='slide-controls';controls.setAttribute('aria-label','Fotos dos eventos');
   controls.innerHTML=`<div class="slide-dots" role="group" aria-label="Escolher foto">${list.map((x,i)=>`<button type="button" class="slide-dot" aria-label="Ver foto ${i+1} de ${list.length}"><span></span></button>`).join('')}</div>`;
   hero.append(controls);const dots=[...controls.querySelectorAll('.slide-dot')];
-  const paint=()=>{dots.forEach((dot,i)=>{dot.classList.toggle('active',i===index);dot.setAttribute('aria-current',i===index?'true':'false')})};
+  const paint=()=>{controls.querySelector('.slide-dots').style.setProperty('--slide-index',index);dots.forEach((dot,i)=>{dot.classList.toggle('active',i===index);dot.setAttribute('aria-current',i===index?'true':'false')})};
   async function select(next){if(next===index)return;const token=++request,loader=new Image();loader.src=list[next].src;try{await loader.decode()}catch{return}if(disposed||token!==request)return;
    image.getAnimations().forEach(a=>a.cancel());hero.querySelectorAll('.slide-outgoing').forEach(x=>x.remove());
    const old=image.cloneNode();old.className='slide-outgoing';old.alt='';old.setAttribute('aria-hidden','true');image.after(old);
