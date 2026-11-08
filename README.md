@@ -20,7 +20,7 @@ Clique em **Login** e digite um dos usuários: `master`, `supervisor`, `pastor`,
 - Presença/ausência por encontro; bloqueio de datas repetidas ou fora de ordem; histórico de encontros e registros individuais; visitante convertido em membro após três encontros consecutivos com presença. Todas as reuniões precisam ser registradas para a sequência refletir a realidade.
 - Visão geral com contagens calculadas e acompanhamento de células/liderados.
 - Criação de igrejas/municípios e redes; criação/edição de células, horários e endereços; vínculos com líder e discipulador.
-- Relatórios por igreja/município, filtros por igreja, rede e período, contagem de pessoas/membros/visitantes, presenças e frequência; exportação CSV.
+- Relatórios por igreja/município, filtros por igreja, rede e período, contagem de pessoas/membros/visitantes, presenças e frequência; exportação Excel formatada (.xlsx).
 - Histórico local ilustrativo e restauração da demonstração.
 
 ## Painéis inspirados nos previews recuperados
@@ -84,3 +84,10 @@ O mapa foi migrado de Leaflet com imagens raster para MapLibre GL JS 4.7.1 / Ope
 Rede Kids cadastrada inicialmente na Videira Centro (primeira igreja do demo), com migração aditiva dos navegadores existentes, sem substituir células ou vínculos. Não duplica a rede ao recarregar. Novas redes chamadas Rede Kids também recebem a identidade Kids. Funções exibem Pastor (a), Discipulador (a), Obreiro (a), preservando identificadores de acesso.
 
 Logo extraída da primeira página do PDF fornecido pelo usuário, preservando a arte; arquivo assets/rede-kids.png. Marcadores e popups das células vinculadas à Rede Kids exibem essa logo automaticamente. Verificado cadastro da rede, seleção no formulário e criação de célula fictícia local Kids · Exemplo com logo no marcador e no popup. Essa célula de teste não foi incluída nos dados iniciais publicados.
+
+## Exportação Excel pelo site
+O botão dos relatórios agora gera um arquivo .xlsx real no navegador, no modelo aprovado: título e escopo da função, responsável, período selecionado e data de geração; tabela filtrável com igreja, município, células, pessoas, membros, visitantes, presenças, registros e frequência; totais por fórmula e gráfico de membros/visitantes editável. Cada arquivo contém somente o relatório do usuário atual, respeitando os filtros e o escopo visual do demo, sem incluir abas de outras funções.
+
+Frequência total usa soma de presenças / soma de registros, não média das porcentagens. Sem registros exibe —. Período invertido bloqueia a exportação. Nomes são texto literal, nunca fórmulas; sem macros ou vínculos externos. Geração local, sem dependência de serviço ou biblioteca externa. Arquivo adicional: reports-excel.js.
+
+Validado com downloads reais de supervisor, pastor, obreiro e discipulador; filtro por igreja e período, incluindo uma única data; arquivo sem registros de presença; integridade ZIP/XML; leitura de fórmulas e valores por leitor independente; tabela com filtros e gráfico nativo; renderização do Excel baixado. Conferida preservação do destaque de navegação e da transição de fotos. A segurança por função continua sendo uma simulação local, sem backend.
