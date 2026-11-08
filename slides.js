@@ -21,7 +21,7 @@ function refreshSlides(d){
    const old=image.cloneNode();old.className='slide-outgoing';old.alt='';old.setAttribute('aria-hidden','true');image.after(old);
    index=next;image.src=list[index].src;image.alt=list[index].alt||'Foto de evento';paint();const rail=controls.querySelector('.slide-dots');rail.classList.remove('is-moving');void rail.offsetWidth;if(!reduced.matches)rail.classList.add('is-moving');
    if(reduced.matches){old.remove();return}
-   image.animate([{transform:'scale(1.045)',opacity:.7},{transform:'scale(1)',opacity:1}],{duration:1000,easing:'cubic-bezier(.2,.65,.3,1)'});
+   image.animate([{transform:'scale(1.045)'},{transform:'scale(1)'}],{duration:1000,easing:'cubic-bezier(.2,.65,.3,1)'});
    const fade=old.animate([{opacity:1},{opacity:0}],{duration:850,easing:'ease-in-out',fill:'forwards'});fade.onfinish=()=>old.remove();
   }
   dots.forEach((dot,i)=>dot.onclick=()=>select(i));controls.hidden=list.length<2;

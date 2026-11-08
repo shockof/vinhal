@@ -3,3 +3,5 @@
 @media(max-width:420px){.metrics{gap:8px}.metrics .kpi{padding:12px}.login{font-size:12px;padding:9px 10px}.nav-actions{gap:6px}.menu-toggle{width:36px;height:36px}.container{width:calc(100% - 28px)}.team-grid{grid-template-columns:1fr 1fr}.profile-initials,.profile-photo{height:140px}.person-copy{padding:12px}.person h3{font-size:13px}.person p{font-size:11px}.toolbar .btn{font-size:12px}dialog{padding:22px}#dashboard .toolbar .dash-button{font-size:12px}}
 
 .church-logo{object-fit:cover}#previewbar{position:fixed;top:auto!important;bottom:0;left:0;right:0;box-shadow:0 -5px 20px #0002}#toast{bottom:75px}
+
+#navlinks a.nav-active{color:var(--purple);font-weight:750}#navlinks a{transition:color .2s ease}@media(prefers-reduced-motion:reduce){#navlinks a{transition:none}}

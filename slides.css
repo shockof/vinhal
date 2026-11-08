@@ -10,3 +10,6 @@
 .slide-dots{--dot-step:24px;--dot-start:16px}.slide-controls .slide-dot{width:24px;height:32px}.slide-dot span{width:6px;height:6px}.slide-dots:before{width:10px;height:10px;transition:left .95s cubic-bezier(.42,0,.2,1)}.slide-dots.is-moving:before{animation:slide-metaball .95s ease-in-out}@keyframes slide-metaball{0%{transform:translate(-50%,-50%) scale(1)}35%{transform:translate(-50%,-50%) scale(1.85,.72)}65%{transform:translate(-50%,-50%) scale(1.5,.8)}84%{transform:translate(-50%,-50%) scale(.88,1.12)}100%{transform:translate(-50%,-50%) scale(1)}}@media(max-width:600px){.slide-dots{--dot-step:22px;--dot-start:11px}.slide-controls .slide-dot{width:22px;height:32px}.slide-dot span{width:5px;height:5px}.slide-dots:before{width:9px;height:9px}}@media(prefers-reduced-motion:reduce){.slide-dots.is-moving:before{animation:none}.slide-dots:before{transition:none}}
 
 .slide-dots{--dot-step:18px;--dot-start:13px}.slide-controls .slide-dot{width:18px}@media(max-width:600px){.slide-dots{--dot-step:17px;--dot-start:8.5px}.slide-controls .slide-dot{width:17px}}
+
+/* Keep dimming in a fixed overlay so crossfading never changes brightness. */
+#public .hero .hero-image{opacity:1;z-index:0}#public .hero .slide-outgoing{z-index:0}#public .hero:after{content:"";position:absolute;inset:0;z-index:1;background:#20172b;opacity:.2;pointer-events:none}
