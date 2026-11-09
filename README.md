@@ -91,3 +91,16 @@ O botão dos relatórios agora gera um arquivo .xlsx real no navegador, no model
 Frequência total usa soma de presenças / soma de registros, não média das porcentagens. Sem registros exibe —. Período invertido bloqueia a exportação. Nomes são texto literal, nunca fórmulas; sem macros ou vínculos externos. Geração local, sem dependência de serviço ou biblioteca externa. Arquivo adicional: reports-excel.js.
 
 Validado com downloads reais de supervisor, pastor, obreiro e discipulador; filtro por igreja e período, incluindo uma única data; arquivo sem registros de presença; integridade ZIP/XML; leitura de fórmulas e valores por leitor independente; tabela com filtros e gráfico nativo; renderização do Excel baixado. Conferida preservação do destaque de navegação e da transição de fotos. A segurança por função continua sendo uma simulação local, sem backend.
+
+
+## Gestão conectada ao Supabase — 08/11/2026
+
+Acesse `gestao.html` ou o botão Login do cabeçalho. A demonstração permanece separada no rodapé. Não há importação automática dos exemplos.
+
+Implementado: autenticação por username/senha via Edge Function, consulta por perfil com RLS, cadastro/edição de igrejas e município, redes (incluindo Kids), células e vínculos, pessoas, encontro/presenças com conversão transacional após três presenças consecutivas; relatório Excel com dados reais autorizados e filtros. As contas são consultáveis; provisionamento de novas contas e permissões segue administrativo no Supabase nesta etapa.
+
+Sessão somente em memória; recarregar exige novo login. Senhas não são persistidas no navegador. A chave no arquivo gestao-config.js é anon pública, nunca service_role. A função mantém Verify JWT with legacy secret ativo usando a chave anon na borda; a sessão do usuário segue em X-Videira-Session e é validada no Supabase Auth. Todas as operações do portal consultam RLS com o JWT do usuário. A busca privada de username/e-mail e o limite de tentativas somente podem ser executados pelo servidor. O esquema videira permanece fora da exposição direta da Data API.
+
+Pendente: fluxo de provisionamento/recuperação de contas no site, MFA, compartilhamento/publicação real do CMS e materiais/fotos, backup/restauração testados. A personalização e os arquivos do painel demonstrativo continuam locais. O diretório público e os dados internos não foram unidos. A chave anon legada exige migração antes da retirada anunciada pelo Supabase para 2027; a chave pública nova não funciona com a verificação JWT legada ativa.
+
+Testes: funções SQL com seis perfis e dois tenants; criação e edição em transações descartadas, presença via API, consulta anônima e busca de login negadas, limite de tentativas, validação sintática JS e rejeição real de login inexistente pelo navegador. O primeiro login pessoal deve ser feito pelo responsável; senha não acessada pelo agente.

@@ -1,0 +1,2 @@
+// Public connection settings only. Never add a service-role key here.
+window.VIDEIRA_CONFIG={url:'https://jlnjgjtqpnomofylacgu.supabase.co',gateway:'https://jlnjgjtqpnomofylacgu.supabase.co/functions/v1/videira-gateway',publicKey:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpsbmpnanRxcG5vbW9meWxhY2d1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQxODI0NTksImV4cCI6MjEwOTc1ODQ1OX0.Y7ywk8LGGa_KZY81DcaY1I1U2Osge9YGqKOnqtGS2-Q'};
