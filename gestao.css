@@ -2,3 +2,5 @@
 .cell-location{border:1px solid var(--line);border-radius:14px;padding:20px;background:#fcfaff}.cell-location h3{margin:0 0 12px}.cell-location .actions{margin:0 0 10px}.location-help{font-size:12px;margin:12px 0;color:var(--muted)}.location-feedback{margin-top:18px}.location-feedback.error{background:#fff0f0;border-color:#b83d51;color:#9f3145}.location-advanced{margin-top:18px}.location-advanced summary{cursor:pointer;color:var(--purple);font-weight:650;font-size:13px;margin-bottom:14px}.legacy-address{margin-top:18px}
 
 label[hidden]{display:none!important}
+
+.account-list-toolbar{display:flex;align-items:center;justify-content:space-between;gap:20px}.account-list-toolbar h2{margin:0 0 4px}.account-list-toolbar small{color:var(--muted)}.account-list-toolbar label{min-width:240px}.account-order-note{font-size:12px;margin:18px 0;color:var(--muted)}@media(max-width:600px){.account-list-toolbar{align-items:stretch;flex-direction:column}.account-list-toolbar label{min-width:0}}

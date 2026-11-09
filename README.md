@@ -140,3 +140,8 @@ Migração 202611090003_optional_email_admin_roles aplicada. Testes SQL dos seis
 A seleção Líder no cadastro/edição de células inclui Master e Pastor Supervisor ativos da própria organização, mesmo sem vínculo fixo de igreja/rede no perfil. Líderes comuns e discipuladores continuam limitados à igreja/rede correspondente; os seletores filtram esses vínculos. Na aba Presenças, Master e Supervisor recebem apenas as células em que leader_id corresponde à própria conta. A operação de gravação no banco exige esse mesmo vínculo para esses dois cargos. Visão geral, leitura e relatórios mantêm o escopo administrativo. Outras funções mantêm as regras anteriores.
 
 Migração 202611090004_admin_cell_leaders aplicada. Testes SQL com rollback: vínculo Master/Supervisor e chamadas próprias passam; chamadas sem vínculo e vínculos com outra organização/inativos são rejeitados; acompanhamento administrativo permanece. Interface com fixture local: dois grupos na visão geral, somente a própria célula na seleção de chamada, Master/Supervisor na lista de líderes. Nenhum vínculo ou encontro real foi alterado para testar.
+
+
+## Organização e filtro das contas — 09/11/2026
+
+Contas vinculadas ordenadas por Master, Pastor Supervisor, pastores de rede/obreiros (mesmo nível), discipuladores e líderes. Dentro de cada nível, ordem alfabética pt-BR, com username como desempate. Filtro por função com Todas as funções e contador de resultados. Filtrar atualiza apenas a tabela e o contador, preservando o formulário de cadastro em preenchimento. Nenhuma alteração de cadastros/permissões no banco. Conferido no navegador com sete contas fictícias em ordem embaralhada, nomes acentuados, filtro de discipulador e preservação de campo não salvo.
