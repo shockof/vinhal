@@ -44,3 +44,8 @@ Migração 202611090002_cell_location aplicada: coluna privada address_details e
 ## E-mail opcional e contas Master/Supervisor — 09/11/2026
 
 Migração 202611090003_optional_email_admin_roles aplicada; gateway aceita e-mail vazio e usa alias aleatório não entregável somente no Auth. Master pode provisionar Master e Pastor Supervisor na própria organização, sem igreja/rede; demais funções mantêm validação de escopo. Somente Master ativo pode chamar o fluxo via gateway. Testes dos seis cargos/isolamento/auditoria passaram em rollback, gateway sem e-mail passou em teste simulado e formulário foi testado localmente. Nenhuma conta real adicional criada pelo agente.
+
+
+## Chamada pessoal de Master e Pastor Supervisor — 09/11/2026
+
+Migração 202611090004_admin_cell_leaders aplicada. Os dois cargos podem liderar células da própria organização. Para esses cargos, record_meeting exige leader_id igual ao usuário autenticado; consultas administrativas permanecem amplas. Testes de vínculo ativo/organização, chamada própria e recusa sem vínculo passaram em rollback; interface filtrada conferida localmente.
