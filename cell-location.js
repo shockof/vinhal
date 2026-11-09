@@ -1,0 +1,55 @@
+'use strict';
+// Private cell address editing. Only the CEP is sent to postal services.
+// Device coordinates remain in the form until the user saves to Supabase.
+window.VideiraLocation=(()=>{
+ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const digits=v=>String(v||'').replace(/\D/g,'');
+ const numeric=v=>v!==null&&v!==undefined&&String(v).trim()!==''&&Number.isFinite(Number(v));
+ const valid=(lat,lon)=>numeric(lat)&&numeric(lon)&&Math.abs(Number(lat))<=90&&Math.abs(Number(lon))<=180;
+ const cache=new Map();
+ function normalize(data,cep){
+  if(data.erro||data.errors||data.cep&&digits(data.cep)!==cep)throw Error('CEP não encontrado. Confira os oito dígitos.');
+  const c=data.location?.coordinates||{},lat=c.latitude,lon=c.longitude;
+  const position=valid(lat,lon)&&Number(lat)>=-34&&Number(lat)<=6&&Number(lon)>=-74&&Number(lon)<=-28?{latitude:Number(lat),longitude:Number(lon)}:null;
+  if(!(data.city||data.localidade))throw Error('CEP não encontrado.');
+  return {postal_code:cep,street:data.street||data.logradouro||'',neighborhood:data.neighborhood||data.bairro||'',city:data.city||data.localidade||'',state:data.state||data.uf||'',position};
+ }
+ async function postal(cep,signal){
+  if(!/^\d{8}$/.test(cep))throw Error('Informe um CEP com oito dígitos.');
+  if(cache.has(cep))return cache.get(cep);
+  async function request(url){const controller=new AbortController(),cancel=()=>controller.abort();signal.addEventListener('abort',cancel,{once:true});if(signal.aborted)controller.abort();const timer=setTimeout(cancel,8000);try{const response=await fetch(url,{signal:controller.signal,referrerPolicy:'no-referrer',credentials:'omit'});if(!response.ok)throw Error('Consulta de CEP indisponível.');return normalize(await response.json(),cep)}finally{clearTimeout(timer);signal.removeEventListener('abort',cancel)}}
+  let result;
+  try{result=await request('https://brasilapi.com.br/api/cep/v2/'+cep)}catch(e){if(signal.aborted)throw e;result=await request('https://viacep.com.br/ws/'+cep+'/json/')}
+  if(signal.aborted)throw Error('Consulta cancelada');cache.set(cep,result);return result;
+ }
+ function fields(item={}){const d=item.address_details||{},input=(name,title,value='',extra='')=>`<label>${title}<input name="${name}" value="${esc(value)}" ${extra}></label>`;return `<section class="wide cell-location"><h3>Local da célula</h3><div class="actions"><button type="button" class="secondary" id="useDeviceLocation">◎ Usar localização do aparelho</button><button type="button" class="secondary" id="lookupCellCep">Buscar CEP</button></div><p class="location-help">Use o aparelho no local do encontro ou preencha o endereço abaixo. O CEP busca o endereço e a posição aproximada automaticamente.</p><div class="gridform">${input('postal_code','CEP',d.postal_code?digits(d.postal_code).replace(/^(\d{5})(\d{3})$/,'$1-$2'):'','inputmode="numeric" autocomplete="postal-code" maxlength="9" pattern="[0-9]{5}-?[0-9]{3}" placeholder="00000-000"')}${input('street','Rua / logradouro',d.street,'maxlength="180" autocomplete="address-line1"')}${input('house_number','Número da residência',d.house_number,'maxlength="30" placeholder="Ex.: 125 ou S/N"')}${input('complement','Complemento',d.complement,'maxlength="180" autocomplete="address-line2"')}${input('neighborhood','Bairro',d.neighborhood,'maxlength="100"')}${input('city','Cidade',d.city,'maxlength="100" autocomplete="address-level2"')}${input('state','UF',d.state,'maxlength="2" pattern="[A-Za-z]{2}" placeholder="AL" autocomplete="address-level1"')}</div>${![d.postal_code,d.street,d.house_number,d.neighborhood,d.city].some(Boolean)&&item.private_address?`<label class="legacy-address">Endereço já cadastrado<input name="legacy_address" value="${esc(item.private_address)}" maxlength="1000"></label>`:''}<div id="cellLocationStatus" class="notice location-feedback" role="status" aria-live="polite"></div><p class="location-help"><a id="cellLocationMaps" target="_blank" rel="noopener noreferrer" hidden>Conferir posição no Google Maps ↗</a></p><details class="location-advanced"><summary>Coordenadas / ajuste manual</summary><div class="gridform">${input('latitude','Latitude',item.latitude??'','type="number" step="any" min="-90" max="90"')}${input('longitude','Longitude',item.longitude??'','type="number" step="any" min="-180" max="180"')}</div></details><p class="location-help">O endereço e a posição ficam no cadastro interno. Não são publicados automaticamente no site.</p></section>`}
+ function bind(form,item={}){
+  const e=form.elements,feedback=form.querySelector('#cellLocationStatus'),maps=form.querySelector('#cellLocationMaps'),device=form.querySelector('#useDeviceLocation');
+  let source=item.address_details?.source||(valid(e.latitude.value,e.longitude.value)?'manual':null),accuracy=item.address_details?.accuracy_m??null,version=0,controller=null,timer=null,pending=null,lastCep=digits(e.postal_code.value),working=false;
+  const say=(text,error=false)=>{if(!form.isConnected)return;feedback.textContent=text;feedback.classList.toggle('error',error)};
+  const show=()=>{const ok=valid(e.latitude.value,e.longitude.value);maps.hidden=!ok;if(ok)maps.href='https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(e.latitude.value+','+e.longitude.value);else maps.removeAttribute('href');};
+  const description=()=>!valid(e.latitude.value,e.longitude.value)?'Nenhuma posição definida. Informe o CEP ou use a localização do aparelho.':source==='cep'?'Posição aproximada do CEP carregada. Ela pode não corresponder à residência; confira o local antes de salvar.':source==='device'?'Localização do aparelho carregada.'+(numeric(accuracy)?' Precisão informada: ± '+Math.round(Number(accuracy))+' m.':''):'Coordenadas preenchidas manualmente. Confira a posição antes de salvar.';
+  function stop(){version++;clearTimeout(timer);controller?.abort();controller=null;pending=null;working=false;device.disabled=false;}
+  async function lookup(cep){
+   stop();lastCep=cep;const own=version;controller=new AbortController();const snapshot=Object.fromEntries(['street','neighborhood','city','state'].map(k=>[k,e[k].value]));working=true;say('Buscando endereço e posição pelo CEP…');
+   pending=(async()=>{try{const result=await postal(cep,controller.signal);if(own!==version||!form.isConnected)return;
+    for(const key of ['street','neighborhood','city','state'])if(e[key].value===snapshot[key])e[key].value=result[key];
+    const preserve=valid(e.latitude.value,e.longitude.value)&&['device','manual'].includes(source);
+    if(result.position&&!preserve){e.latitude.value=result.position.latitude;e.longitude.value=result.position.longitude;source='cep';accuracy=null;}
+    lastCep=cep;show();say(preserve?'Endereço preenchido pelo CEP. Sua posição do aparelho ou ajuste manual foi mantido.':result.position?description():'Endereço preenchido, mas este CEP não forneceu coordenadas. Use a localização do aparelho ou informe latitude e longitude.');
+   }catch(error){if(own===version&&form.isConnected)say('Não foi possível consultar este CEP. Confira os oito dígitos ou preencha o endereço manualmente.',true)}finally{if(own===version)working=false}})();
+   return pending;
+  }
+  e.postal_code.addEventListener('input',()=>{const cep=digits(e.postal_code.value).slice(0,8);e.postal_code.value=cep.length>5?cep.slice(0,5)+'-'+cep.slice(5):cep;stop();if(source==='cep'&&cep!==lastCep){e.latitude.value='';e.longitude.value='';source=null;accuracy=null;show();say('CEP alterado. Busque a nova posição antes de salvar.')}if(cep.length===8&&cep!==lastCep){timer=setTimeout(()=>lookup(cep),500)}else if(cep.length&&cep.length!==8)say('Complete os oito dígitos do CEP.');});
+  e.postal_code.addEventListener('blur',()=>{const cep=digits(e.postal_code.value);if(cep.length===8&&cep!==lastCep&&!working){clearTimeout(timer);lookup(cep)}});
+  form.querySelector('#lookupCellCep').onclick=()=>{const cep=digits(e.postal_code.value);if(cep.length!==8)return say('Informe um CEP com oito dígitos.',true);lookup(cep)};
+  device.onclick=()=>{
+   stop();if(!navigator.geolocation){say('Este navegador não oferece localização. Use o CEP ou preencha as coordenadas.',true);return}const own=version;device.disabled=true;working=true;say('Aguardando permissão e localização do aparelho…');
+   pending=new Promise(resolve=>navigator.geolocation.getCurrentPosition(position=>{if(own===version&&form.isConnected){const c=position.coords;if(valid(c.latitude,c.longitude)){e.latitude.value=Number(c.latitude).toFixed(7);e.longitude.value=Number(c.longitude).toFixed(7);source='device';accuracy=numeric(c.accuracy)&&Number(c.accuracy)>=0?Number(c.accuracy):null;show();say(description())}else say('O aparelho não retornou uma posição válida.',true);device.disabled=false;working=false}resolve()},error=>{if(own===version&&form.isConnected){say(error.code===1?'Permissão de localização negada. Você pode autorizá-la nas configurações do navegador ou usar o CEP.':error.code===3?'O aparelho demorou para localizar. Tente novamente ou use o CEP.':'Não foi possível obter a localização. Tente novamente ou use o CEP.',true);device.disabled=false;working=false}resolve()},{enableHighAccuracy:true,timeout:15000,maximumAge:0}));
+  };
+  for(const key of ['latitude','longitude'])e[key].addEventListener('input',()=>{stop();source=valid(e.latitude.value,e.longitude.value)?'manual':null;accuracy=null;show();say(description())});
+  show();say(description());
+  return {async wait(){const cep=digits(e.postal_code.value);if(cep.length===8&&cep!==lastCep&&!working){clearTimeout(timer);await lookup(cep)}else if(pending)await pending},isBusy:()=>working,read(){const detail={};for(const k of ['postal_code','street','house_number','complement','neighborhood','city','state'])detail[k]=e[k].value.trim();detail.postal_code=digits(detail.postal_code);detail.state=detail.state.toUpperCase();detail.source=valid(e.latitude.value,e.longitude.value)?source||'manual':null;detail.accuracy_m=detail.source==='device'?accuracy:null;const address=[detail.street,detail.house_number,detail.complement,detail.neighborhood,[detail.city,detail.state].filter(Boolean).join(' / '),detail.postal_code?'CEP '+detail.postal_code.replace(/^(\d{5})(\d{3})$/,'$1-$2'):''].filter(Boolean).join(', ')||(e.legacy_address?e.legacy_address.value.trim():'');return {address_details:detail,private_address:address}}};
+ }
+ return {fields,bind,normalize,valid,postal};
+})();

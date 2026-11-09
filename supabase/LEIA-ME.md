@@ -34,3 +34,8 @@ Migração 202611080003_portal aplicada e testes portal.sql + portal_crud.sql ap
 ## Contas de liderança — 09/11/2026
 
 Migração 202611090001_leadership_accounts aplicada e gateway atualizado. Cadastro Master de líder, discipulador, pastor de rede e obreiro, com pré-validação, organização derivada do ator, auditoria e criação Auth somente no servidor. Testes SQL revertidos, testes do gateway simulados e formulário conferido localmente. Senhas iniciais são definidas e submetidas pelo próprio responsável no site, nunca pelo agente em contas reais. O cadastro não envia e-mails. Recuperação, troca de senha e edição/desativação de contas no site continuam pendentes.
+
+
+## Endereço e posição de células — 09/11/2026
+
+Migração 202611090002_cell_location aplicada: coluna privada address_details e atualização da operação cell, sem migração/publicação de endereços. Mantém RLS e cadastros anteriores. Testes de formato, origem/precisão, preservação e autorização passaram em rollback. O aparelho só é consultado a pedido do usuário; o botão Salvar grava a posição no Supabase. Consulta de CEP no cliente envia somente o CEP a BrasilAPI/ViaCEP.
