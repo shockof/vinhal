@@ -29,3 +29,8 @@ Nenhuma senha ou chave secreta integra estes arquivos. Não enviar service_role 
 ## Integração de 08/11/2026
 
 Migração 202611080003_portal aplicada e testes portal.sql + portal_crud.sql aprovados em transações descartadas. Função videira-gateway publicada. O portal gestao.html já usa autenticação real e operações de cadastro/presença com RLS. Não confundir com a personalização e os uploads demonstrativos, que ainda são locais. Cadastro de novas contas, recuperação, MFA, CMS compartilhado e backup/restauração continuam pendentes. Exige validação do primeiro login pelo próprio responsável.
+
+
+## Contas de liderança — 09/11/2026
+
+Migração 202611090001_leadership_accounts aplicada e gateway atualizado. Cadastro Master de líder, discipulador, pastor de rede e obreiro, com pré-validação, organização derivada do ator, auditoria e criação Auth somente no servidor. Testes SQL revertidos, testes do gateway simulados e formulário conferido localmente. Senhas iniciais são definidas e submetidas pelo próprio responsável no site, nunca pelo agente em contas reais. O cadastro não envia e-mails. Recuperação, troca de senha e edição/desativação de contas no site continuam pendentes.

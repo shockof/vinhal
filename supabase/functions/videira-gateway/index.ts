@@ -31,6 +31,35 @@ Deno.serve(async (req: Request) => {
   if(!token||token===secret)return reply({error:'Entre novamente'},401);
   const checked=await fetch(base+'/auth/v1/user',{headers:{apikey:secret,Authorization:'Bearer '+token}});
   if(!checked.ok)return reply({error:'Sessão encerrada. Entre novamente.'},401);
+  if(body.action==='create_account'){
+   const actor=await checked.json(),d=body.data||{};
+   // Verify the caller's current profile before invoking any privileged Auth operation.
+   const scope=await fetch(base+'/rest/v1/rpc/videira_portal',{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({p_action:'load',p_data:{}})});
+   if(!scope.ok)return reply({error:'Acesso indisponível'},403);
+   const context=await scope.json();
+   if(context.profile?.role!=='master'||!context.profile?.active)return reply({error:'Somente o Master pode cadastrar acessos.'},403);
+   const email=String(d.email||'').trim().toLowerCase(),password=String(d.password||'');
+   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return reply({error:'Informe um e-mail válido para a conta.'},400);
+   if(password.length<12||password.length>128)return reply({error:'A senha inicial deve ter entre 12 e 128 caracteres.'},400);
+   const profile={username:String(d.username||'').trim().toLowerCase(),display_name:String(d.display_name||'').trim(),role:d.role,church_id:d.church_id,network_id:d.network_id||null};
+   const adminHeaders={apikey:secret,Authorization:'Bearer '+secret,'Content-Type':'application/json'};
+   const args={p_actor:actor.id,p_auth_user:null,p_data:profile,p_check_only:true};
+   const preflight=await fetch(base+'/rest/v1/rpc/videira_account_provision',{method:'POST',headers:adminHeaders,body:JSON.stringify(args)});
+   if(!preflight.ok){const fail=await preflight.json();return reply({error:String(fail.message||'Confira os dados e vínculos.').slice(0,200)},400)}
+   // Admin create_user does not send invitation or recovery emails.
+   const created=await fetch(base+'/auth/v1/admin/users',{method:'POST',headers:adminHeaders,body:JSON.stringify({email,password,email_confirm:true})});
+   const account=await created.json();
+   if(!created.ok||!account.id)return reply({error:'Não foi possível criar o acesso. Confira se o e-mail já está em uso e se a senha atende à política do projeto.'},400);
+   let provisioned;
+   try{provisioned=await fetch(base+'/rest/v1/rpc/videira_account_provision',{method:'POST',headers:adminHeaders,body:JSON.stringify({...args,p_auth_user:account.id,p_check_only:false})})}catch{return reply({error:'A autenticação foi criada, mas o vínculo não pôde ser confirmado. Não repita o cadastro; solicite a conferência administrativa no Supabase.'},503)}
+   if(!provisioned.ok){
+    const failure=await provisioned.json();
+    // Compensate only the new, unlinked Auth identity from this request.
+    const undone=await fetch(base+'/auth/v1/admin/users/'+encodeURIComponent(account.id),{method:'DELETE',headers:adminHeaders});
+    return reply({error:undone.ok?String(failure.message||'Não foi possível vincular esta conta.').slice(0,200):'A autenticação foi criada sem vínculo confirmado. Solicite a conferência administrativa no Supabase antes de tentar novamente.'},400);
+   }
+   return reply(await provisioned.json());
+  }
   if(body.action==='logout'){
    await fetch(base+'/auth/v1/logout?scope=local',{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+token}});return reply({ok:true});
   }
