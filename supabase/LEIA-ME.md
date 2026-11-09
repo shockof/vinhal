@@ -39,3 +39,8 @@ Migração 202611090001_leadership_accounts aplicada e gateway atualizado. Cadas
 ## Endereço e posição de células — 09/11/2026
 
 Migração 202611090002_cell_location aplicada: coluna privada address_details e atualização da operação cell, sem migração/publicação de endereços. Mantém RLS e cadastros anteriores. Testes de formato, origem/precisão, preservação e autorização passaram em rollback. O aparelho só é consultado a pedido do usuário; o botão Salvar grava a posição no Supabase. Consulta de CEP no cliente envia somente o CEP a BrasilAPI/ViaCEP.
+
+
+## E-mail opcional e contas Master/Supervisor — 09/11/2026
+
+Migração 202611090003_optional_email_admin_roles aplicada; gateway aceita e-mail vazio e usa alias aleatório não entregável somente no Auth. Master pode provisionar Master e Pastor Supervisor na própria organização, sem igreja/rede; demais funções mantêm validação de escopo. Somente Master ativo pode chamar o fluxo via gateway. Testes dos seis cargos/isolamento/auditoria passaram em rollback, gateway sem e-mail passou em teste simulado e formulário foi testado localmente. Nenhuma conta real adicional criada pelo agente.

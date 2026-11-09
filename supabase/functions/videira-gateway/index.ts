@@ -38,8 +38,10 @@ Deno.serve(async (req: Request) => {
    if(!scope.ok)return reply({error:'Acesso indisponível'},403);
    const context=await scope.json();
    if(context.profile?.role!=='master'||!context.profile?.active)return reply({error:'Somente o Master pode cadastrar acessos.'},403);
-   const email=String(d.email||'').trim().toLowerCase(),password=String(d.password||'');
-   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return reply({error:'Informe um e-mail válido para a conta.'},400);
+   const contactEmail=String(d.email||'').trim().toLowerCase(),password=String(d.password||'');
+   // Auth still requires an identity address; use a non-deliverable random alias when omitted.
+   const email=contactEmail||crypto.randomUUID()+'@accounts.videira.invalid';
+   if(contactEmail&&(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)||contactEmail.length>254))return reply({error:'Informe um e-mail válido para a conta.'},400);
    if(password.length<12||password.length>128)return reply({error:'A senha inicial deve ter entre 12 e 128 caracteres.'},400);
    const profile={username:String(d.username||'').trim().toLowerCase(),display_name:String(d.display_name||'').trim(),role:d.role,church_id:d.church_id,network_id:d.network_id||null};
    const adminHeaders={apikey:secret,Authorization:'Bearer '+secret,'Content-Type':'application/json'};

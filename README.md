@@ -108,7 +108,7 @@ Testes: funções SQL com seis perfis e dois tenants; criação e edição em tr
 
 ## Cadastro de liderança pelo Master — 09/11/2026
 
-Aba Contas e liderança: nome, username único, e-mail, função, igreja, rede e senha inicial com confirmação (12–128 caracteres). Somente Master ativo pode criar as quatro funções solicitadas; não permite criar Master ou supervisor. Obreiro tem escopo de igreja; pastor de rede tem escopo de rede; líderes e discipuladores precisam ser vinculados às células após a criação. E-mail/senha não são incluídos no perfil ou na listagem. A senha é enviada somente para a autenticação do Supabase, sem armazenamento no código/localStorage/logs. Não há envio automático de e-mail. O Master entrega os dados iniciais por um meio privado. Não existe ainda troca de senha ou recuperação pelo próprio site.
+Aba Contas e liderança: nome, username único, e-mail, função, igreja, rede e senha inicial com confirmação (12–128 caracteres). Somente Master ativo pode criar contas, incluindo Master e Pastor Supervisor, conforme atualização abaixo. Obreiro tem escopo de igreja; pastor de rede tem escopo de rede; líderes e discipuladores precisam ser vinculados às células após a criação. E-mail/senha não são incluídos no perfil ou na listagem. A senha é enviada somente para a autenticação do Supabase, sem armazenamento no código/localStorage/logs. Não há envio automático de e-mail. O Master entrega os dados iniciais por um meio privado. Não existe ainda troca de senha ou recuperação pelo próprio site.
 
 O gateway valida a sessão com Auth e a função Master com RLS antes de chamar a API administrativa. Pré-valida nome de usuário, função, igreja e rede no servidor; a organização vem do Master. Após criar Auth, grava o perfil e audita o autor. Se o vínculo falhar de forma confirmada, tenta reverter apenas a nova identidade criada naquela requisição; em falha de rede ou compensação pendente, informa conferência administrativa em vez de repetir a criação. Contas preexistentes não são substituídas.
 
@@ -124,3 +124,12 @@ Somente o CEP é enviado a BrasilAPI CEP V2 (fallback ViaCEP para endereço). Co
 Validações: teste unitário do controlador (CEP, GPS simulado e negado, respostas atrasadas, ausência de coordenadas, privacidade dos parâmetros), teste SQL com rollback (preservação de texto/coords antigos, componentes e origem/precisão, formato de CEP e permissões), navegador com consulta real do CEP público 01001-000, captura de aparelho simulada e gravação/reabertura em fixture local. Não foi capturada a localização real do responsável para testar.
 
 Fontes: https://brasilapi.com.br/docs#tag/CEP-V2 e https://viacep.com.br/
+
+
+## E-mail opcional e funções administrativas — 09/11/2026
+
+E-mail de contato opcional no formulário e no gateway. Sem e-mail, Auth recebe um identificador aleatório não entregável no domínio reservado accounts.videira.invalid; ele fica apenas no Auth e na consulta privada de login, sem ser mostrado à pessoa. Login segue por username/senha e não envia mensagens. Contas existentes não são alteradas.
+
+Somente Master ativo pode criar os seis cargos, agora incluindo Master e Pastor (a) Supervisor (a). Os dois cargos globais recebem a própria organização do ator e church/network nulos, sem exigir igreja cadastrada. Pastor Supervisor mantém o escopo e permissões já existentes de supervisor; não ganha criação de contas. Igreja/rede continuam obrigatórias conforme a função para líderes, discipuladores e pastores de rede, e igreja para obreiros. O formulário esconde vínculos locais nas funções globais. Sem e-mail, não há endereço de contato para uma futura recuperação por e-mail; recuperação/troca de senha pelo site seguem pendentes.
+
+Migração 202611090003_optional_email_admin_roles aplicada. Testes SQL dos seis cargos, vínculo global, isolamento/auditoria e recusa a outros administradores/cliente anônimo, todos em rollback. Teste do gateway sem e-mail verifica identificador aleatório, ausência de credenciais no perfil/resposta e fluxo existente. Teste de interface local criou Master sem e-mail e sem igrejas (simulado), sem bloquear a validação HTML. Nenhuma conta administrativa real foi criada pelo agente.
