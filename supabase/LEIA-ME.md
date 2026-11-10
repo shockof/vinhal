@@ -54,3 +54,8 @@ Migração 202611090004_admin_cell_leaders aplicada. Os dois cargos podem lidera
 ## Meu perfil — 09/11/2026
 
 Migração 202611090005_my_profile aplicada. Contatos próprios em videira_private.profile_details, RPC própria autenticada com campos limitados, bucket privado videira-avatars com RLS por proprietário ativo. Gateway aceita leitura/edição própria e troca de senha com current_password pelo endpoint Auth de usuário. Contato de e-mail não altera a identidade de login. Testes SQL revertidos e testes de gateway/interface com dados simulados passaram. Nenhuma senha ou foto pessoal real foi usada para testar.
+
+
+## Edição administrativa e Maps — 10/11/2026
+
+Migração 202611090006_admin_edit_and_maps aplicada e testes SQL revertidos aprovados. RPC Master-only para edição de contas da própria organização; proteção de acesso próprio, vínculos e auditoria; limite de redefinições. Senha é verificada/alterada apenas no Auth, sem trafegar no p_data SQL. Gateway resolve URLs de Maps e importa dados contidos no link. GOOGLE_MAPS_API_KEY não configurada: geocodificação oficial de coordenadas para rua permanece bloqueada por falta de projeto/chave Google Maps Platform. Nenhum serviço pago ativado.

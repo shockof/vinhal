@@ -2,6 +2,34 @@
 const base = Deno.env.get('SUPABASE_URL')!;
 const secret = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const origins = new Set(['https://shockof.github.io','http://127.0.0.1:8765','http://localhost:8765']);
+// Only public Google Maps URLs may be resolved. No arbitrary URL proxy.
+function checkedMapsUrl(value:string){const u=new URL(value);const h=u.hostname.toLowerCase();const allowed=['google.com','www.google.com','maps.google.com','google.com.br','www.google.com.br','maps.google.com.br','maps.app.goo.gl','goo.gl'];if(u.protocol!=='https:'||u.username||u.password||u.port||!allowed.includes(h)||value.length>4096)throw Error('Use um link HTTPS do Google Maps.');if(h==='goo.gl'&&!u.pathname.startsWith('/maps/'))throw Error('Link do Google Maps inválido.');if(!['maps.app.goo.gl','goo.gl'].includes(h)&&!u.pathname.startsWith('/maps')&&!(h.startsWith('maps.')&&u.pathname==='/'))throw Error('Use um link de localização do Google Maps.');return u}
+function mapsFields(u:URL){
+ const dec=(s:string)=>{try{return decodeURIComponent(s.replace(/\+/g,' '))}catch{return s}};
+ const query=u.searchParams.get('query')||u.searchParams.get('q')||'',path=dec(u.pathname.match(/\/place\/([^/]+)/)?.[1]||'');
+ const point=dec(u.href).match(/!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/)||query.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+ const coordinate=point&&Number.isFinite(+point[1])&&Number.isFinite(+point[2])&&Math.abs(+point[1])<=90&&Math.abs(+point[2])<=180?{latitude:+point[1],longitude:+point[2]}:null;
+ const text=path||query;let street='';if(/^(?:Rua\b|R\.\s|Avenida\b|Av\.\s|Travessa\b|Trav\.\s|Alameda\b|Estrada\b|Rodovia\b|Pra[çc]a\b|Largo\b|Viela\b)/i.test(text.trim()))street=text.split(',')[0].split(/\s+-\s+/)[0].replace(/\s+n[ºo°.]\s*\d+.*$/i,'').trim().slice(0,180);
+ return {coordinate,street,query:text};
+}
+async function resolveMapsLink(value:string){
+ let u=checkedMapsUrl(value);const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+ try{
+  for(let n=0;['maps.app.goo.gl','goo.gl'].includes(u.hostname)||n>0;n++){
+   if(n>=5)throw Error('O link teve redirecionamentos demais. Copie o link completo do Maps.');
+   const response=await fetch(u.href,{redirect:'manual',signal:controller.signal,headers:{'User-Agent':'VideiraCellLocation/1.0','Accept':'text/html'}});const location=response.headers.get('location');await response.body?.cancel();if(response.status>=300&&response.status<400&&location){u=checkedMapsUrl(new URL(location,u).href);if(!['maps.app.goo.gl','goo.gl'].includes(u.hostname))break}else break;
+  }
+  if(['maps.app.goo.gl','goo.gl'].includes(u.hostname))throw Error('Não foi possível abrir este link curto. Copie o link completo do navegador.');
+  const parsed=mapsFields(u);const result:Record<string,unknown>={maps_url:value,street:parsed.street,house_number:'',...(parsed.coordinate||{})};
+  const key=Deno.env.get('GOOGLE_MAPS_API_KEY');
+  if(key&&(parsed.coordinate||parsed.street)){
+   const url=new URL('https://maps.googleapis.com/maps/api/geocode/json');url.searchParams.set('key',key);url.searchParams.set('language','pt-BR');if(parsed.coordinate)url.searchParams.set('latlng',parsed.coordinate.latitude+','+parsed.coordinate.longitude);else url.searchParams.set('address',parsed.query);
+   const response=await fetch(url,{signal:controller.signal});const json=await response.json();if(response.ok&&json.status==='OK'&&json.results?.length){const entry=json.results[0],components=entry.address_components||[],part=(type:string,short=false)=>{const c=components.find((x:any)=>x.types.includes(type));return c?.[short?'short_name':'long_name']||''};result.street=part('route')||result.street;result.postal_code=part('postal_code').replace(/\D/g,'');result.neighborhood=part('sublocality_level_1')||part('neighborhood');result.city=part('administrative_area_level_2')||part('locality');result.state=part('administrative_area_level_1',true);if(!parsed.coordinate&&entry.geometry?.location){result.latitude=entry.geometry.location.lat;result.longitude=entry.geometry.location.lng}}
+  }
+  result.street_available=Boolean(result.street);result.geocoding_configured=Boolean(key);return result;
+ }finally{clearTimeout(timer)}
+}
+
 Deno.serve(async (req: Request) => {
  const origin=req.headers.get('origin')||'';
  const headers={'Access-Control-Allow-Origin':origins.has(origin)?origin:'https://shockof.github.io','Access-Control-Allow-Headers':'authorization, apikey, content-type, x-videira-session','Access-Control-Allow-Methods':'POST, OPTIONS','Vary':'Origin','Content-Type':'application/json','Cache-Control':'no-store'};
@@ -31,6 +59,25 @@ Deno.serve(async (req: Request) => {
   if(!token||token===secret)return reply({error:'Entre novamente'},401);
   const checked=await fetch(base+'/auth/v1/user',{headers:{apikey:secret,Authorization:'Bearer '+token}});
   if(!checked.ok)return reply({error:'Sessão encerrada. Entre novamente.'},401);
+  if(['account_get','account_save','account_reset_password','resolve_maps'].includes(body.action)){
+   const actor=await checked.json(),d=body.data||{},userHeaders={apikey:secret,Authorization:'Bearer '+token,'Content-Type':'application/json'};
+   if(body.action==='resolve_maps'){
+    const scope=await fetch(base+'/rest/v1/rpc/videira_portal',{method:'POST',headers:userHeaders,body:JSON.stringify({p_action:'load'})});if(!scope.ok)return reply({error:'Acesso indisponível'},403);const context=await scope.json();if(!['master','supervisor'].includes(context.profile?.role)||!context.profile?.active)return reply({error:'Sem permissão para editar células'},403);
+    try{return reply(await resolveMapsLink(String(d.url||'')))}catch(error){const message=error instanceof Error?error.message:'';const known=['Use um link HTTPS do Google Maps.','Link do Google Maps inválido.','Use um link de localização do Google Maps.','O link teve redirecionamentos demais. Copie o link completo do Maps.','Não foi possível abrir este link curto. Copie o link completo do navegador.'];return reply({error:known.includes(message)?message:'Não foi possível importar o link. Copie o endereço completo do Google Maps e tente novamente.'},400)}
+   }
+   const operation=body.action==='account_save'?'save':body.action==='account_reset_password'?'password_check':'get';
+   const clean=operation==='save'?{id:d.id,display_name:d.display_name,username:d.username,role:d.role,church_id:d.church_id,network_id:d.network_id,active:d.active,phone:d.phone,contact_email:d.contact_email}:{id:d.id};
+   const response=await fetch(base+'/rest/v1/rpc/videira_admin_account',{method:'POST',headers:userHeaders,body:JSON.stringify({p_action:operation,p_data:clean})});const target=await response.json();
+   if(!response.ok)return reply({error:String(target.message||'Conta indisponível').slice(0,220)},response.status===403?403:400);
+   if(body.action!=='account_reset_password')return reply(target);
+   const password=String(d.new_password||''),current=String(d.master_password||'');if(password.length<12||password.length>128||!current||current.length>1024)return reply({error:'Informe sua senha Master e uma nova senha de 12 a 128 caracteres.'},400);
+   const limit=await fetch(base+'/rest/v1/rpc/videira_admin_reset_limit',{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+secret,'Content-Type':'application/json'},body:JSON.stringify({p_actor:actor.id})});if(!limit.ok||await limit.json()!==true)return reply({error:'Limite de tentativas de redefinição atingido. Aguarde 15 minutos.'},429);
+   const verified=await fetch(base+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:secret,'Content-Type':'application/json'},body:JSON.stringify({email:actor.email,password:current})});const proof=await verified.json();if(!verified.ok||proof.user?.id!==actor.id)return reply({error:'Não foi possível confirmar sua senha Master.'},400);
+   await fetch(base+'/auth/v1/logout?scope=local',{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+proof.access_token}});
+   const updated=await fetch(base+'/auth/v1/admin/users/'+encodeURIComponent(target.id),{method:'PUT',headers:{apikey:secret,Authorization:'Bearer '+secret,'Content-Type':'application/json'},body:JSON.stringify({password})});
+   if(!updated.ok)return reply({error:'Não foi possível redefinir a senha. Confira a política de senha do projeto.'},400);
+   await fetch(base+'/rest/v1/rpc/videira_admin_password_event',{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+secret,'Content-Type':'application/json'},body:JSON.stringify({p_actor:actor.id,p_target:target.id})});return reply({ok:true});
+  }
   if(['profile_get','profile_save','change_password'].includes(body.action)){
    const actor=await checked.json(),d=body.data||{};
    const userHeaders={apikey:secret,Authorization:'Bearer '+token,'Content-Type':'application/json'};
