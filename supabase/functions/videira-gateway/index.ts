@@ -62,7 +62,7 @@ Deno.serve(async (req: Request) => {
   if(['account_get','account_save','account_reset_password','resolve_maps'].includes(body.action)){
    const actor=await checked.json(),d=body.data||{},userHeaders={apikey:secret,Authorization:'Bearer '+token,'Content-Type':'application/json'};
    if(body.action==='resolve_maps'){
-    const scope=await fetch(base+'/rest/v1/rpc/videira_portal',{method:'POST',headers:userHeaders,body:JSON.stringify({p_action:'load'})});if(!scope.ok)return reply({error:'Acesso indisponível'},403);const context=await scope.json();if(!['master','supervisor'].includes(context.profile?.role)||!context.profile?.active)return reply({error:'Sem permissão para editar células'},403);
+    const scope=await fetch(base+'/rest/v1/rpc/videira_portal',{method:'POST',headers:userHeaders,body:JSON.stringify({p_action:'load'})});if(!scope.ok)return reply({error:'Acesso indisponível'},403);const context=await scope.json();if(!['master','supervisor','predio'].includes(context.profile?.role)||!context.profile?.active)return reply({error:'Sem permissão para editar células'},403);
     try{return reply(await resolveMapsLink(String(d.url||'')))}catch(error){const message=error instanceof Error?error.message:'';const known=['Use um link HTTPS do Google Maps.','Link do Google Maps inválido.','Use um link de localização do Google Maps.','O link teve redirecionamentos demais. Copie o link completo do Maps.','Não foi possível abrir este link curto. Copie o link completo do navegador.'];return reply({error:known.includes(message)?message:'Não foi possível importar o link. Copie o endereço completo do Google Maps e tente novamente.'},400)}
    }
    const operation=body.action==='account_save'?'save':body.action==='account_reset_password'?'password_check':'get';
@@ -144,7 +144,7 @@ Deno.serve(async (req: Request) => {
   if(body.action==='logout'){
    await fetch(base+'/auth/v1/logout?scope=local',{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+token}});return reply({ok:true});
   }
-  if(!['load','church','network','cell','person','meeting'].includes(body.action))return reply({error:'Operação inválida'},400);
+  if(!['load','church','network','cell','person','meeting','meeting_archive'].includes(body.action))return reply({error:'Operação inválida'},400);
   const result=await fetch(base+'/rest/v1/rpc/videira_portal',{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({p_action:body.action,p_data:body.data||{}})});
   const data=await result.json();
   if(!result.ok)return reply({error:data.code==='42501'?'Você não tem permissão para esta operação.':data.code==='23503'?'Confira os vínculos entre igreja, rede e célula.':data.code==='23505'?'Este registro já existe.':String(data.message||'Não foi possível salvar').slice(0,200)},400);

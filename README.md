@@ -199,3 +199,16 @@ O cadastro de célula oferece seleção de domingo a sábado e campo de horário
 Ao abrir a chamada, a data sugerida é a ocorrência mais recente do dia semanal, até hoje, no calendário de America/Maceio. O horário não bloqueia a chamada no próprio dia. A sugestão nunca é futura e só aparece se posterior à última chamada da célula. Caso já registrada, o campo fica vazio e é exibida a próxima data semanal prevista. Datas podem ser ajustadas para remarcações/encontros extras, respeitando as regras já existentes no servidor. Não há gravação automática ou alteração de chamadas anteriores.
 
 Testes: `node supabase/tests/weekly_schedule.cjs weekly-schedule.js` valida parsing legado, domingo, virada do ano, dia atual, bloqueio de sugestão duplicada e preservação do texto legado. Prévia local confirmou campos de cadastro, data sugerida e aviso de encontro já registrado sem gravações reais.
+
+
+## Chamada simplificada, exclusão recuperável e Pastor de prédio — 10/11/2026
+
+Aplicadas as migrações `202611100001_building_pastor_role.sql` (enum em transação separada) e `202611100002_call_archive_and_building_pastor.sql`. O gateway permite `meeting_archive`, sempre autorizado no banco pelo usuário autenticado. A confirmação para ampliar estas permissões foi fornecida pelo usuário nesta conversa.
+
+- A data usa o calendário local do dispositivo ao abrir o cartão. “Alterar data” expande o campo somente quando necessário. O servidor conserva a validação de data futura no fuso America/Maceio e de ordem cronológica; relógios incorretos podem exigir ajuste.
+- Master e Supervisor gerem chamadas da organização; Pastor de rede, da rede vinculada; Obreiro, da sua igreja; Pastor de prédio, da sua igreja. Líder e discipulador não excluem chamadas.
+- Exclusão é lógica, com autor/data e auditoria. Chamadas excluídas e suas presenças ficam fora dos painéis, relatórios e contagem de encontros consecutivos. O histórico é mantido e o mesmo perfil autorizado pode restaurar. Restauração é bloqueada se já houver outra chamada ativa na mesma data. Categorias atuais de membros não são revertidas automaticamente; isso evita desfazer cadastros ou conversões anteriores sem revisão.
+- A função `predio` aparece como Pastor (a) de prédio na criação/edição Master, filtros, ordenação e painel. Recebe uma igreja, sem rede específica. Lê pessoas, células e redes dessa igreja; pode cadastrar/editar redes e células, sem cadastrar outras igrejas ou administrar contas. Pode liderar células de sua igreja; a chamada pessoal depende desse vínculo. Perfil e fotos continuam disponíveis como nos demais acessos.
+- Não foram criadas contas reais, alteradas senhas ou excluídas chamadas reais durante os testes. Os testes SQL usaram identificadores reservados dentro de transação revertida. Cobrem os escopos por função, negação entre igrejas/organizações, cadastro de rede/célula pelo Pastor de prédio, criação de conta em modo de validação, exclusão/restauração e ausência dos registros excluídos nos relatórios. Testes locais cobrem data do dispositivo e fluxo visual com dados fictícios.
+
+A migração conserva as colunas e dados existentes. Ela substitui a unicidade de todas as chamadas por índice único de chamadas ativas, para permitir refazer uma chamada excluída. Não concede DELETE direto a usuários e não expõe dados anônimos.

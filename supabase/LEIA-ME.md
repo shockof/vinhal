@@ -59,3 +59,16 @@ Migração 202611090005_my_profile aplicada. Contatos próprios em videira_priva
 ## Edição administrativa e Maps — 10/11/2026
 
 Migração 202611090006_admin_edit_and_maps aplicada e testes SQL revertidos aprovados. RPC Master-only para edição de contas da própria organização; proteção de acesso próprio, vínculos e auditoria; limite de redefinições. Senha é verificada/alterada apenas no Auth, sem trafegar no p_data SQL. Gateway resolve URLs de Maps e importa dados contidos no link. GOOGLE_MAPS_API_KEY não configurada: geocodificação oficial de coordenadas para rua permanece bloqueada por falta de projeto/chave Google Maps Platform. Nenhum serviço pago ativado.
+
+
+## Chamada simplificada, exclusão recuperável e Pastor de prédio — 10/11/2026
+
+Aplicadas as migrações `202611100001_building_pastor_role.sql` (enum em transação separada) e `202611100002_call_archive_and_building_pastor.sql`. O gateway permite `meeting_archive`, sempre autorizado no banco pelo usuário autenticado. A confirmação para ampliar estas permissões foi fornecida pelo usuário nesta conversa.
+
+- A data usa o calendário local do dispositivo ao abrir o cartão. “Alterar data” expande o campo somente quando necessário. O servidor conserva a validação de data futura no fuso America/Maceio e de ordem cronológica; relógios incorretos podem exigir ajuste.
+- Master e Supervisor gerem chamadas da organização; Pastor de rede, da rede vinculada; Obreiro, da sua igreja; Pastor de prédio, da sua igreja. Líder e discipulador não excluem chamadas.
+- Exclusão é lógica, com autor/data e auditoria. Chamadas excluídas e suas presenças ficam fora dos painéis, relatórios e contagem de encontros consecutivos. O histórico é mantido e o mesmo perfil autorizado pode restaurar. Restauração é bloqueada se já houver outra chamada ativa na mesma data. Categorias atuais de membros não são revertidas automaticamente; isso evita desfazer cadastros ou conversões anteriores sem revisão.
+- A função `predio` aparece como Pastor (a) de prédio na criação/edição Master, filtros, ordenação e painel. Recebe uma igreja, sem rede específica. Lê pessoas, células e redes dessa igreja; pode cadastrar/editar redes e células, sem cadastrar outras igrejas ou administrar contas. Pode liderar células de sua igreja; a chamada pessoal depende desse vínculo. Perfil e fotos continuam disponíveis como nos demais acessos.
+- Não foram criadas contas reais, alteradas senhas ou excluídas chamadas reais durante os testes. Os testes SQL usaram identificadores reservados dentro de transação revertida. Cobrem os escopos por função, negação entre igrejas/organizações, cadastro de rede/célula pelo Pastor de prédio, criação de conta em modo de validação, exclusão/restauração e ausência dos registros excluídos nos relatórios. Testes locais cobrem data do dispositivo e fluxo visual com dados fictícios.
+
+A migração conserva as colunas e dados existentes. Ela substitui a unicidade de todas as chamadas por índice único de chamadas ativas, para permitir refazer uma chamada excluída. Não concede DELETE direto a usuários e não expõe dados anônimos.
