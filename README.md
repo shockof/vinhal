@@ -190,3 +190,12 @@ Sem migrações de banco ou alteração de permissões. Teste de agregação: `n
 Presenças abre uma grade de cartões com nome da célula, dia/horário semanal cadastrados e quantidade de participantes. Ao selecionar um cartão, a chamada aparece abaixo, com a data do encontro e somente as pessoas daquela célula. A troca de célula limpa data e marcações anteriores. Voltar às células fecha a chamada. As permissões de liderança foram preservadas, incluindo Master/Supervisor vinculados como líderes. Nenhuma regra de data ou conversão de visitantes foi alterada. Dia e horário permanecem no campo já existente `meeting_schedule`; a data de cada chamada continua sendo confirmada pelo usuário.
 
 Validado em prévia isolada: dois cartões, exclusão de célula de outro líder para Master, participantes separados, limpeza ao trocar, envio da célula selecionada e retorno à grade. Nenhuma chamada real foi criada no teste.
+
+
+## Dia semanal e sugestão de data — 10/11/2026
+
+O cadastro de célula oferece seleção de domingo a sábado e campo de horário. Os valores são salvos no campo existente `meeting_schedule`, no formato “Quarta-feira, 19:30”, mantendo compatibilidade com o servidor e os cartões. Horários antigos são preservados quando os campos permanecem inalterados; novos cadastros exigem dia e horário.
+
+Ao abrir a chamada, a data sugerida é a ocorrência mais recente do dia semanal, até hoje, no calendário de America/Maceio. O horário não bloqueia a chamada no próprio dia. A sugestão nunca é futura e só aparece se posterior à última chamada da célula. Caso já registrada, o campo fica vazio e é exibida a próxima data semanal prevista. Datas podem ser ajustadas para remarcações/encontros extras, respeitando as regras já existentes no servidor. Não há gravação automática ou alteração de chamadas anteriores.
+
+Testes: `node supabase/tests/weekly_schedule.cjs weekly-schedule.js` valida parsing legado, domingo, virada do ano, dia atual, bloqueio de sugestão duplicada e preservação do texto legado. Prévia local confirmou campos de cadastro, data sugerida e aviso de encontro já registrado sem gravações reais.
