@@ -183,3 +183,10 @@ A visão geral e os relatórios do portal real agora usam cartões coloridos, fr
 O período da visão geral inclui o mês atual e os 2, 5 ou 11 anteriores, ou todo o histórico. Nos relatórios os gráficos seguem os filtros existentes de igreja, rede e datas; a exportação Excel permanece disponível. Frequência é o total de presenças dividido pelos registros de chamada, e não a média das porcentagens de células. Membros/visitantes são o cadastro atual, sem reconstrução histórica. Os gráficos não inventam encontros em meses sem registros; ausência de chamadas aparece como “—”. A evolução mensal mostra até os 12 meses mais recentes com encontros.
 
 Sem migrações de banco ou alteração de permissões. Teste de agregação: `node supabase/tests/dashboard.cjs dashboard.js` no repositório publicado. Prévia visual foi validada com dados fictícios isolados, sem gravar cadastros reais, incluindo navegação, período, filtros, detalhes e largura de 390 px.
+
+
+## Chamada por cartões de célula — 10/11/2026
+
+Presenças abre uma grade de cartões com nome da célula, dia/horário semanal cadastrados e quantidade de participantes. Ao selecionar um cartão, a chamada aparece abaixo, com a data do encontro e somente as pessoas daquela célula. A troca de célula limpa data e marcações anteriores. Voltar às células fecha a chamada. As permissões de liderança foram preservadas, incluindo Master/Supervisor vinculados como líderes. Nenhuma regra de data ou conversão de visitantes foi alterada. Dia e horário permanecem no campo já existente `meeting_schedule`; a data de cada chamada continua sendo confirmada pelo usuário.
+
+Validado em prévia isolada: dois cartões, exclusão de célula de outro líder para Master, participantes separados, limpeza ao trocar, envio da célula selecionada e retorno à grade. Nenhuma chamada real foi criada no teste.
