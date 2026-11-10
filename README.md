@@ -145,3 +145,8 @@ Migração 202611090004_admin_cell_leaders aplicada. Testes SQL com rollback: v�
 ## Organização e filtro das contas — 09/11/2026
 
 Contas vinculadas ordenadas por Master, Pastor Supervisor, pastores de rede/obreiros (mesmo nível), discipuladores e líderes. Dentro de cada nível, ordem alfabética pt-BR, com username como desempate. Filtro por função com Todas as funções e contador de resultados. Filtrar atualiza apenas a tabela e o contador, preservando o formulário de cadastro em preenchimento. Nenhuma alteração de cadastros/permissões no banco. Conferido no navegador com sete contas fictícias em ordem embaralhada, nomes acentuados, filtro de discipulador e preservação de campo não salvo.
+
+
+## Filtro de contas por igreja — 09/11/2026
+
+Filtro Filtrar por igreja ao lado do filtro de função. Os critérios são combinados (AND), mantendo a hierarquia, ordem alfabética e contador. Todas as igrejas desativa o filtro; uma igreja específica seleciona o vínculo church_id; Acesso a todas (Master/Supervisor) reúne contas globais desses cargos. Filtros atualizam somente a lista, preservando cadastro não salvo. Verificado no navegador com quatro perfis fictícios de duas igrejas, combinação função+igreja, ausência de resultados e contas globais. Nenhuma mudança no banco/permissões.
