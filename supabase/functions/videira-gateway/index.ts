@@ -31,6 +31,38 @@ Deno.serve(async (req: Request) => {
   if(!token||token===secret)return reply({error:'Entre novamente'},401);
   const checked=await fetch(base+'/auth/v1/user',{headers:{apikey:secret,Authorization:'Bearer '+token}});
   if(!checked.ok)return reply({error:'Sessão encerrada. Entre novamente.'},401);
+  if(['profile_get','profile_save','change_password'].includes(body.action)){
+   const actor=await checked.json(),d=body.data||{};
+   const userHeaders={apikey:secret,Authorization:'Bearer '+token,'Content-Type':'application/json'};
+   const profileRpc=async(action:string,data:unknown={})=>fetch(base+'/rest/v1/rpc/videira_my_profile',{method:'POST',headers:userHeaders,body:JSON.stringify({p_action:action,p_data:data})});
+   const prior=await profileRpc('get');if(!prior.ok)return reply({error:'Perfil indisponível'},403);const old=await prior.json();
+   if(body.action==='change_password'){
+    const password=String(d.new_password||''),current=String(d.current_password||'');
+    if(!current||current.length>1024||password.length<12||password.length>128)return reply({error:'Informe sua senha atual e uma nova senha com 12 a 128 caracteres.'},400);
+    const updated=await fetch(base+'/auth/v1/user',{method:'PUT',headers:userHeaders,body:JSON.stringify({password,current_password:current})});
+    if(!updated.ok){const error=await updated.json();return reply({error:['reauthentication_needed','reauthentication_not_valid'].includes(error.error_code||error.code)?'Entre novamente e tente alterar sua senha.':'Não foi possível alterar. Confira a senha atual e use uma nova senha diferente, com pelo menos 12 caracteres.'},400)}
+    await fetch(base+'/auth/v1/logout?scope=global',{method:'POST',headers:userHeaders});return reply({ok:true});
+   }
+   let profile=old,newPath:string|null=null;
+   if(body.action==='profile_save'){
+    const data:Record<string,unknown>={display_name:String(d.display_name||'').trim(),phone:String(d.phone||'').trim(),contact_email:String(d.contact_email||'').trim()};
+    if(!data.display_name||String(data.display_name).length>180||String(data.phone).length>40||String(data.contact_email).length>254||data.contact_email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(data.contact_email)))return reply({error:'Confira o nome, telefone e e-mail de contato.'},400);
+    if(d.remove_photo===true)data.photo_path=null;
+    if(d.photo_base64){
+     const encoded=String(d.photo_base64);if(encoded.length>800000||!/^[A-Za-z0-9+/]*={0,2}$/.test(encoded))return reply({error:'Foto muito grande ou inválida.'},400);
+     const bytes=Uint8Array.from(atob(encoded),c=>c.charCodeAt(0));if(bytes.length<4||bytes[0]!==255||bytes[1]!==216||bytes[2]!==255)return reply({error:'Envie uma foto JPEG válida.'},400);
+     newPath=actor.id+'/'+crypto.randomUUID()+'.jpg';
+     const uploaded=await fetch(base+'/storage/v1/object/videira-avatars/'+newPath,{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+token,'Content-Type':'image/jpeg','x-upsert':'false'},body:bytes});
+     if(!uploaded.ok)return reply({error:'Não foi possível carregar a foto. Tente novamente.'},400);data.photo_path=newPath;
+    }
+    const saved=await profileRpc('save',data);if(!saved.ok){if(newPath)await fetch(base+'/storage/v1/object/videira-avatars',{method:'DELETE',headers:{apikey:secret,Authorization:'Bearer '+secret,'Content-Type':'application/json'},body:JSON.stringify({prefixes:[newPath]})});return reply({error:'Não foi possível salvar o perfil. Confira os dados.'},400)}
+    profile=await saved.json();
+    if(old.photo_path&&old.photo_path!==profile.photo_path)await fetch(base+'/storage/v1/object/videira-avatars',{method:'DELETE',headers:{apikey:secret,Authorization:'Bearer '+secret,'Content-Type':'application/json'},body:JSON.stringify({prefixes:[old.photo_path]})});
+   }
+   profile.photo_url=null;
+   if(profile.photo_path){const signed=await fetch(base+'/storage/v1/object/sign/videira-avatars/'+profile.photo_path,{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({expiresIn:3600})});if(signed.ok){const link=await signed.json();if(String(link.signedURL||'').startsWith('/object/sign/'))profile.photo_url=base+'/storage/v1'+link.signedURL;}}
+   delete profile.photo_path;return reply(profile);
+  }
   if(body.action==='create_account'){
    const actor=await checked.json(),d=body.data||{};
    // Verify the caller's current profile before invoking any privileged Auth operation.

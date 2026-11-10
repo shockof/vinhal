@@ -49,3 +49,8 @@ Migração 202611090003_optional_email_admin_roles aplicada; gateway aceita e-ma
 ## Chamada pessoal de Master e Pastor Supervisor — 09/11/2026
 
 Migração 202611090004_admin_cell_leaders aplicada. Os dois cargos podem liderar células da própria organização. Para esses cargos, record_meeting exige leader_id igual ao usuário autenticado; consultas administrativas permanecem amplas. Testes de vínculo ativo/organização, chamada própria e recusa sem vínculo passaram em rollback; interface filtrada conferida localmente.
+
+
+## Meu perfil — 09/11/2026
+
+Migração 202611090005_my_profile aplicada. Contatos próprios em videira_private.profile_details, RPC própria autenticada com campos limitados, bucket privado videira-avatars com RLS por proprietário ativo. Gateway aceita leitura/edição própria e troca de senha com current_password pelo endpoint Auth de usuário. Contato de e-mail não altera a identidade de login. Testes SQL revertidos e testes de gateway/interface com dados simulados passaram. Nenhuma senha ou foto pessoal real foi usada para testar.
