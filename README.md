@@ -212,3 +212,14 @@ Aplicadas as migrações `202611100001_building_pastor_role.sql` (enum em transa
 - Não foram criadas contas reais, alteradas senhas ou excluídas chamadas reais durante os testes. Os testes SQL usaram identificadores reservados dentro de transação revertida. Cobrem os escopos por função, negação entre igrejas/organizações, cadastro de rede/célula pelo Pastor de prédio, criação de conta em modo de validação, exclusão/restauração e ausência dos registros excluídos nos relatórios. Testes locais cobrem data do dispositivo e fluxo visual com dados fictícios.
 
 A migração conserva as colunas e dados existentes. Ela substitui a unicidade de todas as chamadas por índice único de chamadas ativas, para permitir refazer uma chamada excluída. Não concede DELETE direto a usuários e não expõe dados anônimos.
+
+
+## Resumo de células por responsável — 10/11/2026
+
+O painel agrupa células por `discipler_id` para Master, Supervisor, Pastor de prédio, Pastor de rede e Obreiro. Ao expandir o nome do discipulador, aparecem as células vinculadas. Para Discipulador o agrupamento usa `leader_id`, reunindo múltiplas células do mesmo líder. Para Líder as células continuam diretas. Os filtros de igreja/rede/período e os detalhes de cada célula são preservados; a frequência de um grupo é calculada sobre todos os registros de chamada, sem média simples de percentuais.
+
+Células sem vínculo ficam em “Sem discipulador vinculado” ou “Sem líder vinculado”. Identificadores diferentes permanecem separados mesmo se houver nomes iguais. Os dados não são redistribuídos e nenhum vínculo é alterado pelo agrupamento.
+
+Aplicada `202611100003_dashboard_hierarchy.sql`: o carregamento do portal inclui `cell_leadership`, somente ID/nome dos líderes/discipuladores associados às células ativas já permitidas a quem está conectado. Não inclui contatos, e-mails ou usuários, não amplia o escopo das células e não dá acesso anônimo. Isso resolve “Líder: A definir” quando o vínculo existe, mas a lista de perfis administrativos não estava disponível para a função.
+
+Validação: testes JavaScript de agrupamento, múltiplas células por responsável, frequência ponderada, grupos sem vínculo e visão direta do líder; teste SQL com transação revertida de nomes no escopo, ausência de contatos/nomes externos e bloqueio anônimo; prévia local com expansão e abertura dos detalhes de uma célula. Nenhum cadastro real modificado.
