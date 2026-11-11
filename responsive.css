@@ -1,0 +1,3 @@
+/* Keep layout within the device width without disabling pinch-to-zoom. */
+html,body{min-width:0;max-width:100%}body{width:100%}img,video,iframe{max-width:100%}input,select,textarea{min-width:0}h1,h2,h3,p,a,strong{overflow-wrap:break-word}.quick-grid>*,.team-grid>*,.vision>*,.message-grid>*,.location-grid>*,.cms-public-video-grid>*,.cms-public-file-grid>*{min-width:0}.nav,.nav-actions{min-width:0}.site-editor-frame{max-width:100%}
+@media(max-width:800px){input:not([type=checkbox]):not([type=radio]),select,textarea{font-size:16px!important}.quick-card,.person-copy{overflow-wrap:anywhere}.container{max-width:calc(100% - 28px)}.hero-content{min-width:0}.cms-public-video-grid,.cms-public-file-grid{grid-template-columns:minmax(0,1fr)}}

@@ -254,3 +254,10 @@ As células da gestão substituem os exemplos na lista e no mapa. O site lê ao 
 Endereço textual sem latitude/longitude fica na lista; não é criado um ponto estimado ou marcador em 0,0. O mapa exige a posição obtida no cadastro por CEP, GPS, link Maps com coordenadas ou ajuste manual. Não foi contratado serviço de geocodificação. As células do diretório real são editadas em Células na gestão, sem sobrescrita por textos de células demonstrativas do editor.
 
 Validação: SQL em transação revertida testa organização, células ativas e campos autorizados; teste do gateway confirma leitura pública sem sessão; prévia com duas células fictícias confirma lista com duas e mapa com um ponto, ignorando coordenadas nulas. Nenhum registro real foi criado/alterado no teste.
+
+
+## Centralização do cartão e ajuste móvel — 10/11/2026
+
+Clicar no marcador ou em Ver no mapa posiciona a célula para manter o cartão acima do ponto, dentro da área do mapa. Popup com âncora inferior, largura limitada ao mapa e rolagem interna para conteúdo longo. O deslocamento considera a altura do mapa; movimento reduzido respeitado. A nova folha responsive.css reforça limites de largura, quebra de textos longos e campos de 16 px em aparelhos pequenos para evitar zoom automático do Safari ao focar formulários. Não bloqueia zoom manual por gesto.
+
+Antes da mudança, medição de layout nas cinco páginas públicas em 320, 390 e 430 px não reproduziu estouro horizontal. As proteções adicionais cobrem conteúdo editado e formulários. Teste de centralização por marcador e por cartão, verificando que o popup cabe no mapa, e nova medição móvel após o ajuste. A folha de estilos e os scripts usam nova versão para renovar o cache. Nenhum dado/cadastro ou permissão foi alterado.
