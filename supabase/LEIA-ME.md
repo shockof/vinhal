@@ -109,3 +109,10 @@ As células da gestão substituem os exemplos na lista e no mapa. O site lê ao 
 Endereço textual sem latitude/longitude fica na lista; não é criado um ponto estimado ou marcador em 0,0. O mapa exige a posição obtida no cadastro por CEP, GPS, link Maps com coordenadas ou ajuste manual. Não foi contratado serviço de geocodificação. As células do diretório real são editadas em Células na gestão, sem sobrescrita por textos de células demonstrativas do editor.
 
 Validação: SQL em transação revertida testa organização, células ativas e campos autorizados; teste do gateway confirma leitura pública sem sessão; prévia com duas células fictícias confirma lista com duas e mapa com um ponto, ignorando coordenadas nulas. Nenhum registro real foi criado/alterado no teste.
+
+
+## Discipulador como líder — 11/11/2026
+
+Aplicada `202611110001_discipler_as_leader.sql`. Discipuladores ativos podem ser escolhidos como líderes de células da mesma igreja/rede. O acesso passa a incluir a união das células que lideram e das que acompanham como discipuladores. A validação de edição de contas preserva esse vínculo; mudança incompatível de função/escopo permanece bloqueada. Não altera atribuições existentes, não cria usuários e não concede exclusão de chamadas ao discipulador.
+
+Testes SQL com fixtures e ROLLBACK: vínculo aceito, supervisão anterior preservada, chamada da célula liderada, edição da conta com vínculo, negação a outra igreja/rede/organização e conta inativa. Prévia local confirmou a opção de discipulador no seletor Líder. Aviso do endereço no cadastro foi atualizado para refletir a publicação automática já autorizada de células ativas; complemento, membros, contatos e presenças continuam internos.

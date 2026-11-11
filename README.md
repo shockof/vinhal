@@ -261,3 +261,10 @@ Validação: SQL em transação revertida testa organização, células ativas e
 Clicar no marcador ou em Ver no mapa posiciona a célula para manter o cartão acima do ponto, dentro da área do mapa. Popup com âncora inferior, largura limitada ao mapa e rolagem interna para conteúdo longo. O deslocamento considera a altura do mapa; movimento reduzido respeitado. A nova folha responsive.css reforça limites de largura, quebra de textos longos e campos de 16 px em aparelhos pequenos para evitar zoom automático do Safari ao focar formulários. Não bloqueia zoom manual por gesto.
 
 Antes da mudança, medição de layout nas cinco páginas públicas em 320, 390 e 430 px não reproduziu estouro horizontal. As proteções adicionais cobrem conteúdo editado e formulários. Teste de centralização por marcador e por cartão, verificando que o popup cabe no mapa, e nova medição móvel após o ajuste. A folha de estilos e os scripts usam nova versão para renovar o cache. Nenhum dado/cadastro ou permissão foi alterado.
+
+
+## Discipulador como líder — 11/11/2026
+
+Aplicada `202611110001_discipler_as_leader.sql`. Discipuladores ativos podem ser escolhidos como líderes de células da mesma igreja/rede. O acesso passa a incluir a união das células que lideram e das que acompanham como discipuladores. A validação de edição de contas preserva esse vínculo; mudança incompatível de função/escopo permanece bloqueada. Não altera atribuições existentes, não cria usuários e não concede exclusão de chamadas ao discipulador.
+
+Testes SQL com fixtures e ROLLBACK: vínculo aceito, supervisão anterior preservada, chamada da célula liderada, edição da conta com vínculo, negação a outra igreja/rede/organização e conta inativa. Prévia local confirmou a opção de discipulador no seletor Líder. Aviso do endereço no cadastro foi atualizado para refletir a publicação automática já autorizada de células ativas; complemento, membros, contatos e presenças continuam internos.
