@@ -37,10 +37,13 @@ Deno.serve(async (req: Request) => {
  if(origin&&!origins.has(origin))return reply({error:'Origem não permitida'},403);
  if(req.method==='OPTIONS')return new Response(null,{status:204,headers});
  if(req.method!=='POST')return reply({error:'Método não permitido'},405);
- if(Number(req.headers.get('content-length')||0)>1000000)return reply({error:'Pedido muito grande'},413);
+ if(Number(req.headers.get('content-length')||0)>13000000)return reply({error:'Pedido muito grande'},413);
  try {
-  const raw=await req.text(); if(raw.length>1000000)return reply({error:'Pedido muito grande'},413);
+  const raw=await req.text(); if(raw.length>13000000)return reply({error:'Pedido muito grande'},413);
   const body=JSON.parse(raw);
+  if(body.action==='site_public'){
+   const response=await fetch(base+'/rest/v1/rpc/videira_site_public',{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+secret,'Content-Type':'application/json'},body:'{}'});return response.ok?reply(await response.json()):reply({error:'Conteúdo indisponível'},503);
+  }
   if(body.action==='login') {
    const username=String(body.username||'').trim().toLowerCase(),password=String(body.password||'');
    if(!/^[a-z0-9][a-z0-9._-]{2,49}$/.test(username)||password.length<1||password.length>1024)return reply({error:'Usuário ou senha inválidos. Aguarde antes de tentar novamente.'},401);
@@ -59,9 +62,12 @@ Deno.serve(async (req: Request) => {
   if(!token||token===secret)return reply({error:'Entre novamente'},401);
   const checked=await fetch(base+'/auth/v1/user',{headers:{apikey:secret,Authorization:'Bearer '+token}});
   if(!checked.ok)return reply({error:'Sessão encerrada. Entre novamente.'},401);
+   if(['site_editor_load','site_editor_save','site_editor_publish','site_editor_discard'].includes(body.action)){
+   const op=body.action.replace('site_editor_','');const result=await fetch(base+'/rest/v1/rpc/videira_site_editor',{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({p_action:op,p_data:body.data||{}})});const data=await result.json();return result.ok?reply(data):reply({error:data.code==='42501'?'Somente o Master pode editar o site.':String(data.message||'Não foi possível salvar o site').slice(0,200)},400);
+  }
   if(['account_get','account_save','account_reset_password','resolve_maps'].includes(body.action)){
    const actor=await checked.json(),d=body.data||{},userHeaders={apikey:secret,Authorization:'Bearer '+token,'Content-Type':'application/json'};
-   if(body.action==='resolve_maps'){
+  if(body.action==='resolve_maps'){
     const scope=await fetch(base+'/rest/v1/rpc/videira_portal',{method:'POST',headers:userHeaders,body:JSON.stringify({p_action:'load'})});if(!scope.ok)return reply({error:'Acesso indisponível'},403);const context=await scope.json();if(!['master','supervisor','predio'].includes(context.profile?.role)||!context.profile?.active)return reply({error:'Sem permissão para editar células'},403);
     try{return reply(await resolveMapsLink(String(d.url||'')))}catch(error){const message=error instanceof Error?error.message:'';const known=['Use um link HTTPS do Google Maps.','Link do Google Maps inválido.','Use um link de localização do Google Maps.','O link teve redirecionamentos demais. Copie o link completo do Maps.','Não foi possível abrir este link curto. Copie o link completo do navegador.'];return reply({error:known.includes(message)?message:'Não foi possível importar o link. Copie o endereço completo do Google Maps e tente novamente.'},400)}
    }
