@@ -98,3 +98,14 @@ Biblioteca `videira-site-media` com objetos imutáveis em caminhos aleatórios p
 O antigo `dashboard.js` da demonstração foi recuperado do histórico e separado em `demo-dashboard.js`, resolvendo o conflito com o novo painel real que impedia o carregamento do personalizador. Nenhuma senha Master foi adicionada ao código.
 
 Validação: SQL com fixtures sintéticas e ROLLBACK (Master cria rede/célula, rascunho não público, conflito de revisão, publicação, negação a não-Master/anônimo); testes do gateway para rotas do editor e leitura pública; testes de sintaxe; navegador com serviço simulado para salvar texto, ver prévia, enviar TXT fictício à biblioteca simulada e publicar sem modificar conteúdo real. A publicação compartilhada está configurada, mas o Master ainda deve salvar/publicar seu conteúdo oficial. Nenhum registro real foi criado ou alterado nos testes.
+
+
+## Células reais no site e mapa — 10/11/2026
+
+Aplicada `202611100005_public_cell_directory.sql`. A organização é vinculada uma vez ao diretório do site pela conta Master existente; renomear o login depois não altera o vínculo. O usuário confirmou a publicação automática de células ativas com nome, igreja/rede, horário, nome do líder, endereço e coordenadas. O endpoint público entrega somente esses campos e metadados públicos de igreja/rede; nenhum membro, telefone, usuário de login, presença, complemento residencial ou foto privada é incluído.
+
+As células da gestão substituem os exemplos na lista e no mapa. O site lê ao abrir, ao entrar em Células, ao retomar a aba e a cada 30 segundos quando a página Células está visível. Não há etapa de publicação no editor para cada célula. Somente dados modificados redesenham o mapa, preservando zoom/popups entre consultas iguais. Os filtros de igreja/rede, balão Kids e links Como chegar são mantidos. Células inativas são retiradas na próxima atualização.
+
+Endereço textual sem latitude/longitude fica na lista; não é criado um ponto estimado ou marcador em 0,0. O mapa exige a posição obtida no cadastro por CEP, GPS, link Maps com coordenadas ou ajuste manual. Não foi contratado serviço de geocodificação. As células do diretório real são editadas em Células na gestão, sem sobrescrita por textos de células demonstrativas do editor.
+
+Validação: SQL em transação revertida testa organização, células ativas e campos autorizados; teste do gateway confirma leitura pública sem sessão; prévia com duas células fictícias confirma lista com duas e mapa com um ponto, ignorando coordenadas nulas. Nenhum registro real foi criado/alterado no teste.

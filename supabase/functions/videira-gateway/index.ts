@@ -41,8 +41,8 @@ Deno.serve(async (req: Request) => {
  try {
   const raw=await req.text(); if(raw.length>13000000)return reply({error:'Pedido muito grande'},413);
   const body=JSON.parse(raw);
-  if(body.action==='site_public'){
-   const response=await fetch(base+'/rest/v1/rpc/videira_site_public',{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+secret,'Content-Type':'application/json'},body:'{}'});return response.ok?reply(await response.json()):reply({error:'Conteúdo indisponível'},503);
+  if(body.action==='site_public'||body.action==='public_cells'){
+   const response=await fetch(base+'/rest/v1/rpc/'+(body.action==='public_cells'?'videira_public_cells':'videira_site_public'),{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+secret,'Content-Type':'application/json'},body:'{}'});return response.ok?reply(await response.json()):reply({error:'Conteúdo indisponível'},503);
   }
   if(body.action==='login') {
    const username=String(body.username||'').trim().toLowerCase(),password=String(body.password||'');
