@@ -223,3 +223,8 @@ Células sem vínculo ficam em “Sem discipulador vinculado” ou “Sem líder
 Aplicada `202611100003_dashboard_hierarchy.sql`: o carregamento do portal inclui `cell_leadership`, somente ID/nome dos líderes/discipuladores associados às células ativas já permitidas a quem está conectado. Não inclui contatos, e-mails ou usuários, não amplia o escopo das células e não dá acesso anônimo. Isso resolve “Líder: A definir” quando o vínculo existe, mas a lista de perfis administrativos não estava disponível para a função.
 
 Validação: testes JavaScript de agrupamento, múltiplas células por responsável, frequência ponderada, grupos sem vínculo e visão direta do líder; teste SQL com transação revertida de nomes no escopo, ausência de contatos/nomes externos e bloqueio anônimo; prévia local com expansão e abertura dos detalhes de uma célula. Nenhum cadastro real modificado.
+
+
+## Filtro de igreja no painel do Supervisor — 10/11/2026
+
+Na visão geral do Supervisor, acima dos indicadores, o seletor de igreja permite uma igreja específica ou “Todas as igrejas”. O período e a igreja são combinados para atualizar cartões, redes, frequência, grupos de células e detalhes. Não há alterações no banco ou em permissões. Verificado com dados fictícios: todas, igreja específica, igreja sem células e troca de período mantendo a igreja.
