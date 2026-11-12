@@ -21,7 +21,7 @@ function cards(s,clickable=false,filter={}){
  ];
  return `<div class="dash-metrics">${metrics.map(([key,value,iconName,color])=>{
   const content=`${icon(iconName)}<span class="dash-metric-copy"><strong>${value}</strong><span>${metricTitles[key]}</span></span>`;
-  const query=new URLSearchParams({metric:key});
+  const query=new URLSearchParams({metric:key,v:"20261112-directory-nav"});
   for(const name of ['from','to','church'])if(filter[name])query.set(name,filter[name]);
   return clickable?`<a class="dash-metric ${color}" data-dash-metric="${key}" href="gestao.html?${esc(query)}" aria-label="${metricTitles[key]}, ${value}">${content}</a>`:
    `<article class="dash-metric ${color}">${content}</article>`;
