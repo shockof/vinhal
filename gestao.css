@@ -120,3 +120,18 @@ svg.meeting-card-icon{width:28px;height:28px;flex-shrink:0}
 .photo-crop-error { color: #9f2442; }
 
 #cropMyPhoto[hidden], #cropMemberPhoto[hidden] { display: none; }
+
+.dash-metric .dash-metric-copy { margin: 0; }
+button.dash-metric { text-align: left; width: 100%; }
+button.dash-metric:hover { filter: brightness(.94); }
+button.dash-metric:focus-visible { outline: 3px solid var(--purple); outline-offset: 3px; }
+.metric-filters { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,170px),1fr)); gap: 12px; margin: 0 0 20px; }
+.metric-filters label, .metric-fixed { min-width: 0; }
+.metric-fixed { display: grid; align-content: start; gap: 5px; padding: 8px 12px; background: #eee7f8; border-radius: 10px; overflow-wrap: anywhere; }
+.metric-fixed span { color: var(--muted); font-size: .8rem; }
+.metric-group { margin: 8px 0; border: 1px solid #e6ddfa; border-radius: 12px; background: #fff; }
+.metric-group summary { cursor: pointer; padding: 11px 14px; font-weight: 700; overflow-wrap: anywhere; }
+.metric-group-content { padding: 0 10px 10px; }
+.metric-people { padding: 5px 12px; overflow-wrap: anywhere; }
+.metric-people h3 { margin: 6px 0; }
+.metric-people ul { padding-inline-start: 20px; }
