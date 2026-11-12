@@ -122,9 +122,9 @@ svg.meeting-card-icon{width:28px;height:28px;flex-shrink:0}
 #cropMyPhoto[hidden], #cropMemberPhoto[hidden] { display: none; }
 
 .dash-metric .dash-metric-copy { margin: 0; }
-button.dash-metric { text-align: left; width: 100%; }
-button.dash-metric:hover { filter: brightness(.94); }
-button.dash-metric:focus-visible { outline: 3px solid var(--purple); outline-offset: 3px; }
+a.dash-metric { text-align: left; width: 100%; text-decoration: none; color: white; }
+a.dash-metric:hover { filter: brightness(.94); }
+a.dash-metric:focus-visible { outline: 3px solid var(--purple); outline-offset: 3px; }
 .metric-filters { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,170px),1fr)); gap: 12px; margin: 0 0 20px; }
 .metric-filters label, .metric-fixed { min-width: 0; }
 .metric-fixed { display: grid; align-content: start; gap: 5px; padding: 8px 12px; background: #eee7f8; border-radius: 10px; overflow-wrap: anywhere; }

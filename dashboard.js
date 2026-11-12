@@ -12,7 +12,7 @@ function summarize(db,{from='',to='',church='',network='',cell=''}={}){
  for(const a of attendance){const m=meetings.find(m=>m.id===a.meeting_id);months.get(m.meeting_date.slice(0,7)).push(a)}
  return {cells,meetings,attendance,people,groups,frequency:pct(attendance),present:attendance.filter(a=>a.present===true).length,absent:attendance.filter(a=>a.present!==true).length,members:people.filter(p=>p.category==='Membro').length,visitors:people.filter(p=>p.category==='Visitante').length,months:[...months].sort(([a],[b])=>a.localeCompare(b)).map(([month,a])=>({month,frequency:pct(a)}))};
 }
-function cards(s,clickable=false){
+function cards(s,clickable=false,filter={}){
  const metrics=[
   ['cells',s.cells.length,'cells','violet'],
   ['members',s.members,'people','blue'],
@@ -21,7 +21,9 @@ function cards(s,clickable=false){
  ];
  return `<div class="dash-metrics">${metrics.map(([key,value,iconName,color])=>{
   const content=`${icon(iconName)}<span class="dash-metric-copy"><strong>${value}</strong><span>${metricTitles[key]}</span></span>`;
-  return clickable?`<button type="button" class="dash-metric ${color}" data-dash-metric="${key}" aria-haspopup="dialog">${content}</button>`:
+  const query=new URLSearchParams({metric:key});
+  for(const name of ['from','to','church'])if(filter[name])query.set(name,filter[name]);
+  return clickable?`<a class="dash-metric ${color}" data-dash-metric="${key}" href="gestao.html?${esc(query)}" target="_blank" rel="opener" aria-label="${metricTitles[key]}, ${value}, abre em nova aba">${content}</a>`:
    `<article class="dash-metric ${color}">${content}</article>`;
  }).join('')}</div>`;
 }
@@ -152,33 +154,32 @@ function frequencyDetails(dialog,db,initial){
  update();
 }
 
-function openMetric(db,kind,filter,trigger){
+function metricTitle(db,kind){
+ return metricRoles.has(db.profile.role)&&Object.hasOwn(metricTitles,kind)?metricTitles[kind]:'';
+}
+
+function mountMetric(root,db,kind,filter){
+ if(!metricTitle(db,kind)){
+  root.textContent='Este indicador não está disponível para o seu perfil.';
+  return;
+ }
  const scoped=metricScope(db);
- const dialog=document.createElement('dialog');
- dialog.className='dash-dialog metric-details';
- dialog.setAttribute('aria-labelledby','metricDetailsTitle');
- dialog.innerHTML=`<div class="dash-dialog-head"><h2 id="metricDetailsTitle">${metricTitles[kind]}</h2>
-  <button class="secondary" type="button" data-close>Fechar</button></div><div class="metric-details-body"></div>`;
- if(kind==='frequency')frequencyDetails(dialog,scoped,filter);
+ root.innerHTML='<div class="metric-details-body"></div>';
+ if(kind==='frequency')frequencyDetails(root,scoped,filter);
  else{
-  const body=dialog.querySelector('.metric-details-body');
+  const body=root.querySelector('.metric-details-body');
   body.innerHTML=metricListing(kind,scoped,filter);
   bind(body,scoped,filter);
  }
- document.body.append(dialog);
- dialog.querySelector('[data-close]').onclick=()=>dialog.close();
- dialog.addEventListener('close',()=>{dialog.remove();if(trigger.isConnected)trigger.focus()},{once:true});
- dialog.showModal();
 }
 
-function visuals(db,filter={},showBirthdays=false){const s=summarize(db,filter),global=['master','supervisor','predio'].includes(db.profile.role);return `${cards(showBirthdays&&db.profile.role==='discipulador'?summarize(metricScope(db),filter):s,showBirthdays&&metricRoles.has(db.profile.role))}${showBirthdays?'<section class="dash-panel birthday-panel" id="birthdaysPanel"><h2>Aniversariantes do mês</h2><p role="status">Carregando aniversariantes…</p></section>':''}<div class="dash-grid"><article class="dash-panel"><div class="dash-panel-title"><h2>${global?'Desempenho das redes':db.profile.role==='discipulador'?'Células por líder':db.profile.role==='lider'?'Minhas células':'Células por discipulador'}</h2><span>${global?db.networks.filter(n=>s.cells.some(c=>c.network_id===n.id)).length+' redes':s.cells.length+' células'}</span></div>${global?networkBars(s,db):groupedCells(s,db)}</article><article class="dash-panel"><h2>Evolução da frequência</h2>${trend(s)}</article></div><div class="dash-grid dash-bottom"><article class="dash-panel"><h2>${global?'Células por discipulador':'Células do seu escopo'}</h2>${global?groupedCells(s,db):`<p class="dash-explainer">Acompanhe cada célula e abra os detalhes para conferir seus indicadores. Os números de membros e visitantes representam o cadastro atual.</p><div class="actions"><button data-view="reports">Ver relatório completo →</button><button class="secondary" data-view="meeting">Registrar presença</button></div>`}</article><article class="dash-panel"><h2>Resumo da participação</h2>${donut(s)}</article></div>`}
+function visuals(db,filter={},showBirthdays=false){const s=summarize(db,filter),global=['master','supervisor','predio'].includes(db.profile.role);return `${cards(showBirthdays&&db.profile.role==='discipulador'?summarize(metricScope(db),filter):s,showBirthdays&&metricRoles.has(db.profile.role),filter)}${showBirthdays?'<section class="dash-panel birthday-panel" id="birthdaysPanel"><h2>Aniversariantes do mês</h2><p role="status">Carregando aniversariantes…</p></section>':''}<div class="dash-grid"><article class="dash-panel"><div class="dash-panel-title"><h2>${global?'Desempenho das redes':db.profile.role==='discipulador'?'Células por líder':db.profile.role==='lider'?'Minhas células':'Células por discipulador'}</h2><span>${global?db.networks.filter(n=>s.cells.some(c=>c.network_id===n.id)).length+' redes':s.cells.length+' células'}</span></div>${global?networkBars(s,db):groupedCells(s,db)}</article><article class="dash-panel"><h2>Evolução da frequência</h2>${trend(s)}</article></div><div class="dash-grid dash-bottom"><article class="dash-panel"><h2>${global?'Células por discipulador':'Células do seu escopo'}</h2>${global?groupedCells(s,db):`<p class="dash-explainer">Acompanhe cada célula e abra os detalhes para conferir seus indicadores. Os números de membros e visitantes representam o cadastro atual.</p><div class="actions"><button data-view="reports">Ver relatório completo →</button><button class="secondary" data-view="meeting">Registrar presença</button></div>`}</article><article class="dash-panel"><h2>Resumo da participação</h2>${donut(s)}</article></div>`}
 function title(role){return ({master:'Visão geral da igreja',supervisor:'Relatórios gerais',predio:'Minha igreja',pastor:'Minha rede',obreiro:'Minha igreja',discipulador:'Minhas células',lider:'Minha célula'})[role]||'Visão geral'}
 function startDate(period){if(period==='all')return '';const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/Maceio'}),[year,month]=today.split('-').map(Number);const date=new Date(Date.UTC(year,month-Number(period),1));return date.toISOString().slice(0,10)}
 function overview(db){return `<section class="dashboard"><div class="dash-toolbar"><div><span class="dash-eyebrow">ACOMPANHAMENTO DE CÉLULAS</span><h1>${icon('cells')}${title(db.profile.role)}</h1><p>Uma visão do cuidado e da participação no seu escopo.</p></div><label>Período da chamada<select id="dashboardPeriod"><option value="3">Últimos 3 meses</option><option value="6">Últimos 6 meses</option><option value="12">Últimos 12 meses</option><option value="all">Todo o histórico</option></select></label></div>${db.profile.role==='supervisor'?`<div class="dash-church-filter"><label>Filtrar por igreja<select id="dashboardChurch"><option value="">Todas as igrejas</option>${db.churches.slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR')).map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></label><p>Os indicadores e gráficos acompanham a igreja selecionada.</p></div>`:''}<div id="dashboardVisuals">${visuals(db,{from:startDate('3')},true)}</div><p class="dash-footnote">Dados reais do seu escopo · Cadastros atuais e chamadas no período escolhido. Nenhum dado de exemplo é incluído.</p></section>`}
 function details(db,id,filter){const c=db.cells.find(c=>c.id===id);if(!c)return;const s=summarize(db,{...filter,cell:id}),d=document.createElement('dialog');d.className='dash-dialog';d.innerHTML=`<div class="dash-dialog-head"><div><span class="dash-eyebrow">DETALHES DA CÉLULA</span><h2>${esc(c.name)}</h2></div><button class="secondary" data-close aria-label="Fechar detalhes">Fechar ×</button></div><div class="dash-details-meta"><p><span>Líder</span><b>${esc(leadershipName(db,c.leader_id))}</b></p><p><span>Rede</span><b>${esc(db.networks.find(n=>n.id===c.network_id)?.name||'—')}</b></p><p><span>Igreja</span><b>${esc(db.churches.find(n=>n.id===c.church_id)?.name||'—')}</b></p><p><span>Encontro</span><b>${esc(c.meeting_schedule||'Não informado')}</b></p></div>${cards(s)}<div class="dash-grid"><article class="dash-panel"><h2>Frequência mensal</h2>${trend(s)}</article><article class="dash-panel"><h2>Participação no período</h2>${donut(s)}</article></div>`;document.body.append(d);d.querySelector('[data-close]').onclick=()=>d.close();d.addEventListener('close',()=>d.remove(),{once:true});d.showModal()}
 function bind(root,db,filter={}){
  root.querySelectorAll('[data-dash-cell]').forEach(button=>button.onclick=()=>details(db,button.dataset.dashCell,filter));
- root.querySelectorAll('[data-dash-metric]').forEach(button=>button.onclick=()=>openMetric(db,button.dataset.dashMetric,filter,button));
 }
-window.VideiraDashboard={overview,visuals,bind,summarize,title,startDate,hierarchy};
+window.VideiraDashboard={overview,visuals,bind,summarize,title,startDate,hierarchy,metricTitle,mountMetric};
 })();
