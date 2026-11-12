@@ -3,7 +3,7 @@
 const days=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function parse(value=''){
- const text=value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+ const text=(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
  const found=[...text.matchAll(/\b(domingo|segunda(?:-feira)?|terca(?:-feira)?|quarta(?:-feira)?|quinta(?:-feira)?|sexta(?:-feira)?|sabado)\b/g)];
  const day=found.length===1?['domingo','segunda','terca','quarta','quinta','sexta','sabado'].indexOf(found[0][1].split('-')[0]):null;
  const time=text.match(/\b([01]?\d|2[0-3])\s*[:h]\s*([0-5]\d)?\b/);

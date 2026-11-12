@@ -113,7 +113,7 @@ function mountDirectory(root,db,kind,filter){
    <tbody>${filtered.map(({name,cell})=>{
     const values=[name,...(isCells?[]:[cell.name]),label('church_id',cell.church_id),label('network_id',cell.network_id),
      label('discipler_id',cell.discipler_id),...(isCells?[leadershipName(db,cell.leader_id)]:[])];
-    return `<tr>${values.map((value,index)=>`<td data-label="${headers[index]}">${headers[index]==='Rede'?`<span class="directory-network">${esc(value)}</span>`:esc(value)}</td>`).join('')}
+    return `<tr>${values.map((value,index)=>`<td data-label="${headers[index]}">${headers[index]==='Rede'?`<span class="directory-network">${esc(value)}</span>`:esc(value)}${isCells&&index===0&&cell.is_paused?'<small class="directory-cell-status">Não está acontecendo</small>':''}</td>`).join('')}
      ${isCells?`<td class="directory-action"><button class="secondary" type="button" data-directory-cell="${esc(cell.id)}" aria-label="Ver detalhes de ${esc(cell.name)}">›</button></td>`:''}</tr>`;
    }).join('')}</tbody></table>`;
   body.querySelectorAll('[data-directory-cell]').forEach(button=>button.onclick=()=>{

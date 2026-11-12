@@ -175,3 +175,10 @@ a.dash-metric:focus-visible { outline: 3px solid var(--purple); outline-offset: 
  .directory-heading { padding-right: 190px; }
  .directory-back { position: absolute; right: 0; bottom: 8px; }
 }
+
+.directory-cell-status { display: block; color: #744a15; font-weight: 600; }
+
+.meeting-cell-card.meeting-cell-paused { background: linear-gradient(135deg,#a51d39,#c63549); }
+.meeting-cell-card.meeting-cell-paused[aria-pressed=true],
+.meeting-cell-card.meeting-cell-paused:focus-visible { outline-color: #8b172d; border-color: #8b172d; }
+.directory-cell-status { color: #a51d39; }
