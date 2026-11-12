@@ -1,3 +1,34 @@
 /* Keep layout within the device width without disabling pinch-to-zoom. */
 html,body{min-width:0;max-width:100%}body{width:100%}img,video,iframe{max-width:100%}input,select,textarea{min-width:0}h1,h2,h3,p,a,strong{overflow-wrap:break-word}.quick-grid>*,.team-grid>*,.vision>*,.message-grid>*,.location-grid>*,.cms-public-video-grid>*,.cms-public-file-grid>*{min-width:0}.nav,.nav-actions{min-width:0}.site-editor-frame{max-width:100%}
 @media(max-width:800px){input:not([type=checkbox]):not([type=radio]),select,textarea{font-size:16px!important}.quick-card,.person-copy{overflow-wrap:anywhere}.container{max-width:calc(100% - 28px)}.hero-content{min-width:0}.cms-public-video-grid,.cms-public-file-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* Shared dimensions for public and management form fields. */
+:root { --field-height: 46px; --field-radius: 10px; }
+input:not([type=checkbox],[type=radio],[type=range],[type=hidden],[type=submit],[type=reset],[type=button],[type=image]),
+select:not([multiple],[size]) {
+ box-sizing: border-box;
+ height: var(--field-height);
+ min-height: var(--field-height);
+ max-width: 100%;
+ border-radius: var(--field-radius);
+ padding-block: 0;
+ padding-inline: 12px;
+}
+select:not([multiple],[size]) {
+ appearance: none;
+ -webkit-appearance: none;
+ padding-inline-end: 32px;
+ background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+ background-position: calc(100% - 17px) 50%, calc(100% - 12px) 50%;
+ background-size: 5px 5px;
+ background-repeat: no-repeat;
+}
+input[type=file] { padding-block: 8px; }
+textarea, select[multiple], select[size] {
+ box-sizing: border-box;
+ min-height: var(--field-height);
+ max-width: 100%;
+ border-radius: var(--field-radius);
+}
+textarea { resize: vertical; }
+.gridform label:has(> input, > select, > textarea) { align-content: start; }

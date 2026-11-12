@@ -209,21 +209,3 @@ a.dash-metric:focus-visible { outline: 3px solid var(--purple); outline-offset: 
  .dash-cell > span:last-child { grid-column: 3; grid-row: 1; }
 }
 
-/* Align text, date and selection fields across registration forms. */
-#entityForm label { align-content: start; }
-#entityForm :is(input:not([type=checkbox],[type=radio],[type=file],[type=range],[type=hidden]), select) {
- width: 100%;
- height: 46px;
- min-height: 46px;
- padding: 0 12px;
- border-radius: 10px;
-}
-#entityForm select {
- appearance: none;
- -webkit-appearance: none;
- padding-inline-end: 34px;
- background-image: linear-gradient(45deg, transparent 50%, var(--ink) 50%), linear-gradient(135deg, var(--ink) 50%, transparent 50%);
- background-position: calc(100% - 17px) 50%, calc(100% - 12px) 50%;
- background-size: 5px 5px;
- background-repeat: no-repeat;
-}
