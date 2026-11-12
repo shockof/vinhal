@@ -413,7 +413,7 @@ loginForm.onsubmit=async event=>{
 async function restoreSession(){
  if(new URLSearchParams(location.search).get('senha')==='alterada'){clearSession();return}
  session=readSession(sessionStorage)||readSession(localStorage);
- if(!session)return;
+ if(!session){document.documentElement.classList.remove('restoring-management');return}
  sessionStore=readSession(sessionStorage)?sessionStorage:localStorage;
  busy=true;
  loginButton.disabled=true;
@@ -422,7 +422,7 @@ async function restoreSession(){
   if(error.status===401)clearSession();
   status(error.message,true);
   loginButton.disabled=false;
- }finally{busy=false}
+ }finally{busy=false;document.documentElement.classList.remove('restoring-management')}
 }
 
 window.addEventListener('storage',event=>{
