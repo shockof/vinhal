@@ -3,10 +3,15 @@
 const cfg=window.VIDEIRA_CONFIG,$=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const roles={master:'Master',supervisor:'Pastor (a) Supervisor (a)',predio:'Pastor (a) de prédio',pastor:'Pastor (a) de rede',obreiro:'Obreiro (a)',discipulador:'Discipulador (a)',lider:'Líder de célula'};
 let session=null,db=null,view='overview',edit=null,busy=false,accountRoleFilter='',accountChurchFilter='',ownProfile=null;
-const pageQuery=new URLSearchParams(location.search);
-const metricKind=pageQuery.get('metric');
-if(['cells','members','frequency','visitors'].includes(metricKind))view='metric';
-const metricFilter=Object.fromEntries(['from','to','church'].map(key=>[key,pageQuery.get(key)||'']));
+let metricKind,metricFilter;
+function readManagementRoute(){
+ const query=new URLSearchParams(location.search);
+ metricKind=query.get('metric');
+ view=['cells','members','frequency','visitors'].includes(metricKind)?'metric':'overview';
+ metricFilter=Object.fromEntries(['from','to','church'].map(key=>[key,query.get(key)||'']));
+ edit=null;
+}
+readManagementRoute();
 const names={overview:'Visão geral',profile:'Meu perfil',church:'Igrejas',network:'Redes',cell:'Células',person:'Membros e visitantes',meeting:'Presenças',reports:'Relatórios Excel',site:'Editar site',accounts:'Contas e liderança'};
 const memberTransferRoles=new Set(['master','supervisor','pastor','obreiro','predio']);
 const list={church:'churches',network:'networks',cell:'cells',person:'people'};
@@ -177,7 +182,7 @@ async function loadBirthdays(panel) {
  }
 }
 
-function render(){const tabs=['overview','profile',...(['master','supervisor'].includes(db.profile.role)?['church','network','cell']:db.profile.role==='predio'?['network','cell']:[]),'person','meeting','reports','accounts',...(db.profile.role==='master'?['site']:[])];$('#app').innerHTML=`<div class="shell"><aside><img src="assets/logo.png" alt="Videira"><nav aria-label="Gestão">${tabs.map(v=>`<button data-view="${v}" class="${view===v?'active':''}">${names[v]}</button>`).join('')}</nav><div class="identity"><div>${ownProfile?.photo_url?`<img class="identity-avatar" src="${esc(ownProfile.photo_url)}" alt="Sua foto">`:''}${esc(db.profile.display_name)}<small>${roles[db.profile.role]} · ${esc(db.profile.username)}</small></div><button class="secondary" id="logout">Sair</button></div></aside><main class="main ${view==='overview'?'dashboard-main':''}"><div class="top"><span class="badge">Conectado ao Supabase · Dados reais</span><a href="index.html">Ver site ↗</a></div>${view==='overview'?'':`<div class="heading ${view==='metric'?'directory-heading':''}"><small>${view==='metric'?'Gestão / Visão geral':'IGREJA VIDEIRA / GESTÃO'}</small><h1>${view==='metric'?window.VideiraDashboard.metricTitle(db,metricKind)||'Indicador':names[view]}</h1>${view==='metric'?'<a class="directory-back" href="gestao.html?v=20261112-directory-nav">← Voltar à Visão geral</a>':'<p>Somente os registros permitidos ao seu perfil.</p>'}</div>`}<div id="status" role="status" aria-live="polite"></div><div id="workspace">${view==='overview'?overview():view==='metric'?'<section id="metricPage" class="dashboard"></section>':view==='site'?'<div id="siteEditor"></div>':view==='profile'?'<div id="myProfile"></div>':list[view]?entityForm()+entityList():view==='meeting'?meeting():view==='reports'?report():accounts()}</div><small>Gravação no servidor. Membros, telefones e presenças não são publicados no site.</small></main></div>`;bind();}
+function render(){const tabs=['overview','profile',...(['master','supervisor'].includes(db.profile.role)?['church','network','cell']:db.profile.role==='predio'?['network','cell']:[]),'person','meeting','reports','accounts',...(db.profile.role==='master'?['site']:[])];$('#app').innerHTML=`<div class="shell"><aside><img src="assets/logo.png" alt="Videira"><nav aria-label="Gestão">${tabs.map(v=>`<button data-view="${v}" class="${view===v?'active':''}">${names[v]}</button>`).join('')}</nav><div class="identity"><div>${ownProfile?.photo_url?`<img class="identity-avatar" src="${esc(ownProfile.photo_url)}" alt="Sua foto">`:''}${esc(db.profile.display_name)}<small>${roles[db.profile.role]} · ${esc(db.profile.username)}</small></div><button class="secondary" id="logout">Sair</button></div></aside><main class="main ${view==='overview'?'dashboard-main':''}"><div class="top"><span class="badge">Conectado ao Supabase · Dados reais</span><a href="index.html">Ver site ↗</a></div>${view==='overview'?'':`<div class="heading ${view==='metric'?'directory-heading':''}"><small>${view==='metric'?'Gestão / Visão geral':'IGREJA VIDEIRA / GESTÃO'}</small><h1>${view==='metric'?window.VideiraDashboard.metricTitle(db,metricKind)||'Indicador':names[view]}</h1>${view==='metric'?'<a class="directory-back" href="gestao.html?v=20261112-panel-nav">← Voltar à Visão geral</a>':'<p>Somente os registros permitidos ao seu perfil.</p>'}</div>`}<div id="status" role="status" aria-live="polite"></div><div id="workspace">${view==='overview'?overview():view==='metric'?'<section id="metricPage" class="dashboard"></section>':view==='site'?'<div id="siteEditor"></div>':view==='profile'?'<div id="myProfile"></div>':list[view]?entityForm()+entityList():view==='meeting'?meeting():view==='reports'?report():accounts()}</div><small>Gravação no servidor. Membros, telefones e presenças não são publicados no site.</small></main></div>`;bind();}
 function bindMemberPhoto(form,id){
  const file=form.querySelector('#memberPhotoFile');
  const preview=form.querySelector('#memberPhotoPreview');
@@ -257,6 +262,30 @@ async function loadPersonPhotos(list){
  }
  await Promise.all(Array.from({length:Math.min(4,avatars.length)},load));
 }
+
+function renderManagementRoute(){
+ readManagementRoute();
+ document.title='Gestão · Igreja Videira';
+ render();
+ window.scrollTo(0,0);
+ const heading=$('main h1');
+ if(heading){
+  heading.tabIndex=-1;
+  heading.focus({preventScroll:true});
+ }
+}
+
+$('#app').addEventListener('click',event=>{
+ const link=event.target.closest('a[data-dash-metric],a.directory-back');
+ if(!link||!session||!db||event.defaultPrevented||event.button!==0||
+    event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+ event.preventDefault();
+ history.pushState(null,'',link.href);
+ renderManagementRoute();
+});
+window.addEventListener('popstate',()=>{
+ if(session&&db)renderManagementRoute();
+});
 
 function bind(){const bindViews=()=>document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{
  if(view==='metric'){history.replaceState(null,'','gestao.html');document.title='Gestão · Igreja Videira';}
