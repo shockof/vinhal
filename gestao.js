@@ -141,7 +141,7 @@ function entityForm(){const item=edit?db[list[view]].find(x=>x.id===edit):{};if(
   :`<label>Célula<input value="${esc(label(db.cells,item.cell_id))}" readonly></label>`)+field('phone','Telefone (opcional)',item.phone,'tel','maxlength="40"')+field('birth_date','Data de nascimento (opcional)',item.birth_date,'date','autocomplete="bday"')+`<label>Categoria<select name="category"><option value="Visitante">Visitante</option><option value="Membro" ${item.category==='Membro'?'selected':''}>Membro</option></select></label><label>Batismo<select name="baptized">${['Não informado','Sim','Não'].map(v=>`<option ${item.baptized===v?'selected':''}>${v}</option>`).join('')}</select></label><label>Estado civil<select name="marital_status">${['Não informado','Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)'].map(v=>`<option ${item.marital_status===v?'selected':''}>${v}</option>`).join('')}</select></label>`;
  return `<article class="panel"><h2>${edit?'Editar cadastro':'Novo cadastro'}</h2><form id="entityForm" class="gridform">${fields}<div class="wide actions"><button>Salvar no Supabase</button>${edit?'<button type="button" class="secondary" id="cancelEdit">Cancelar edição</button>':''}</div></form>${view==='person'?'<p><small>Três encontros consecutivos com presença convertem o visitante em membro. Faltas interrompem a sequência.</small></p>':''}</article>`;
 }
-function entityList(){const headers=view==='church'?['Igreja','Município','']:view==='network'?['Rede','Igreja','Tipo','']:view==='cell'?['Célula','Rede','Encontro','Situação','']:['Nome','Categoria','Célula',''];return `<article class="panel">${view==='person'?`<label class="member-search">Pesquisar por nome<input id="memberSearch" type="search" value="${esc(memberSearch)}" placeholder="Digite o nome do membro ou visitante" autocomplete="off"></label><p id="memberSearchEmpty" role="status" hidden>Nenhum cadastro encontrado para esse nome.</p>`:''}${table(headers,db[list[view]].map(x=>[...(view==='church'?[esc(x.name),esc(x.municipality)]:view==='network'?[esc(x.name),esc(label(db.churches,x.church_id)),x.kind==='kids'?'Kids':'Regular']:view==='cell'?[esc(x.name),esc(label(db.networks,x.network_id)),esc(x.meeting_schedule),x.is_paused?'Não está acontecendo':'Está acontecendo']:[esc(x.full_name),esc(x.category),esc(label(db.cells,x.cell_id))]),`<button class="secondary" data-edit="${x.id}">Editar</button>`]))}</article>`}
+function entityList(){const headers=view==='church'?['Igreja','Município','']:view==='network'?['Rede','Igreja','Tipo','']:view==='cell'?['Célula','Rede','Encontro','Situação','']:['Nome','Categoria','Célula',''];return `<article class="panel">${view==='person'?`<label class="member-search">Pesquisar cadastros<input id="memberSearch" type="search" value="${esc(memberSearch)}" placeholder="Nome, célula, nascimento, telefone…" autocomplete="off"></label><p id="memberSearchEmpty" role="status" hidden>Nenhum cadastro encontrado para essa busca.</p>`:''}${table(headers,db[list[view]].map(x=>[...(view==='church'?[esc(x.name),esc(x.municipality)]:view==='network'?[esc(x.name),esc(label(db.churches,x.church_id)),x.kind==='kids'?'Kids':'Regular']:view==='cell'?[esc(x.name),esc(label(db.networks,x.network_id)),esc(x.meeting_schedule),x.is_paused?'Não está acontecendo':'Está acontecendo']:[esc(x.full_name),esc(x.category),esc(label(db.cells,x.cell_id))]),`<button class="secondary" data-edit="${x.id}">Editar</button>`]))}</article>`}
 function meetingCells(){return ['master','supervisor','predio'].includes(db.profile.role)?db.cells.filter(c=>c.leader_id===db.profile.id):db.cells}
 function meeting(){const cells=meetingCells();return `<section class="meeting-picker"><h2>Escolha a célula para fazer a chamada</h2><p>Cada cartão mostra o dia e horário semanal cadastrados.</p>${['master','supervisor','predio'].includes(db.profile.role)?'<div class="notice">Aqui aparecem as células vinculadas a você como líder.</div>':''}<div class="meeting-cell-grid">${cells.map(c=>`<button type="button" class="meeting-cell-card${c.is_paused?' meeting-cell-paused':''}" data-meeting-cell="${esc(c.id)}" aria-pressed="false" aria-controls="meetingEntry"><svg class="meeting-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 2v6m10-6v6M3 11h18m-13 4h3m2 0h3"/></svg><strong>${esc(c.name)}</strong><span class="meeting-card-schedule">${c.is_paused?'Não está acontecendo':esc(c.meeting_schedule||'Dia e horário ainda não informados')}</span><small>${db.people.filter(p=>p.cell_id===c.id).length} pessoa(s) cadastrada(s)</small><span class="meeting-card-action">Fazer chamada →</span></button>`).join('')||'<div class="empty">Nenhuma célula disponível para sua chamada. Confira o vínculo do líder no cadastro da célula.</div>'}</div></section><article class="panel meeting-entry" id="meetingEntry" hidden><div class="meeting-entry-heading"><div><small>CHAMADA DA CÉLULA</small><h2 id="meetingCellTitle"></h2><p id="meetingCellSchedule"></p></div><button type="button" class="secondary" id="closeMeeting">Voltar às células</button></div><p>Confira os participantes e salve a chamada após o encontro. A data não pode ser futura, repetir ou preceder o último encontro registrado.</p><form id="meetingForm"><input type="hidden" name="cell_id"><div class="meeting-today"><span>Data do encontro: <strong id="meetingDateDisplay"></strong></span><details id="changeMeetingDate"><summary>Alterar data</summary>${field('date','Data do encontro','','date','required')}</details></div><p id="meetingDateHelp" class="notice" role="status"></p><div id="attendance" style="margin-top:20px"></div><div id="cellTrainee" class="notice" hidden>
  <label>Líder em treinamento (opcional)<select id="cellTraineeSelect"></select></label>
@@ -302,13 +302,28 @@ function bind(){const bindViews=()=>document.querySelectorAll('[data-view]').for
  if(view==='person'){
   const search=$('#memberSearch');
   const empty=$('#memberSearchEmpty');
-  const rows=[...document.querySelectorAll('#workspace tbody tr')];
-  const normalize=value=>value.normalize('NFD').replace(/\p{M}/gu,'').toLowerCase();
+  const normalize=value=>String(value??'').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().trim();
+  const people=new Map(db.people.map(person=>[person.id,person]));
+  const cells=new Map(db.cells.map(cell=>[cell.id,cell]));
+  const entries=[...document.querySelectorAll('#workspace tbody tr')].map(row=>{
+   const person=people.get(row.querySelector('[data-edit]').dataset.edit);
+   const cell=cells.get(person.cell_id);
+   const date=person.birth_date||'';
+   const phone=person.phone||'';
+   const fields=[person.full_name,cell?.name,person.category,person.baptized,person.marital_status,
+    label(db.churches,cell?.church_id),label(db.networks,cell?.network_id),date,
+    date.split('-').reverse().join('/'),phone];
+   return {row,text:fields.map(normalize).join(' '),digits:phone.replace(/\D/g,'')};
+  });
   const updateSearch=()=>{
    memberSearch=search.value;
-   const query=normalize(memberSearch.trim());
-   for(const row of rows)row.hidden=!normalize(row.cells[0].textContent).includes(query);
-   empty.hidden=!query||rows.some(row=>!row.hidden);
+   const query=normalize(memberSearch);
+   const terms=query.split(/\s+/);
+   const phoneQuery=/^[+()\d\s.-]+$/.test(query)?query.replace(/\D/g,''):'';
+   for(const {row,text,digits} of entries){
+    row.hidden=!terms.every(term=>text.includes(term))&&!(phoneQuery&&digits.includes(phoneQuery));
+   }
+   empty.hidden=!query||entries.some(({row})=>!row.hidden);
   };
   search.oninput=updateSearch;
   updateSearch();
