@@ -22,58 +22,93 @@ window.VideiraProfile=(()=>{
    dialog.className='photo-crop-dialog';
    dialog.setAttribute('aria-labelledby','photoCropTitle');
    dialog.innerHTML=`
-    <h2 id="photoCropTitle">Ajustar foto de perfil</h2>
-    <p>Arraste a foto ou use os controles para ajustar o enquadramento.</p>
-    <canvas width="512" height="512" role="img" aria-label="Prévia circular da foto"></canvas>
-    <label>Zoom <input name="zoom" type="range" min="1" max="4" step="0.01" value="1"></label>
-    <div class="photo-crop-position">
-     <label>Horizontal <input name="horizontal" type="range" min="-100" max="100" step="1" value="0"></label>
-     <label>Vertical <input name="vertical" type="range" min="-100" max="100" step="1" value="0"></label>
+    <h2 id="photoCropTitle">Mover e redimensionar</h2>
+    <div class="photo-crop-stage">
+     <canvas width="640" height="640" tabindex="0" aria-label="Enquadramento da foto" aria-describedby="photoCropHelp"></canvas>
     </div>
+    <p id="photoCropHelp">Arraste para mover. Use a pinça ou role sobre a foto para ampliar. Pelo teclado, use as setas e as teclas + e −.</p>
     <p class="photo-crop-error" role="alert"></p>
     <div class="actions">
      <button type="button" class="secondary" data-cancel>Cancelar</button>
-     <button type="button" data-apply>Usar este recorte</button>
+     <button type="button" data-apply>Escolher</button>
     </div>`;
    const canvas=dialog.querySelector('canvas');
    const ctx=canvas.getContext('2d');
-   const zoom=dialog.querySelector('[name=zoom]');
-   const horizontal=dialog.querySelector('[name=horizontal]');
-   const vertical=dialog.querySelector('[name=vertical]');
-   if(previous){
-    zoom.value=previous.zoom;
-    horizontal.value=previous.horizontal;
-    vertical.value=previous.vertical;
-   }
-   const extent=()=>Math.min(width,height)/Number(zoom.value);
+   const center=320;
+   const diameter=512;
+   const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
+   let zoom=Number(previous?.zoom)||1;
+   let x=Number(previous?.x) || width/2;
+   let y=Number(previous?.y) || height/2;
+   const scale=()=>diameter*zoom/Math.min(width,height);
    const draw=()=>{
-    const size=extent();
-    const x=(width-size)*(1+Number(horizontal.value)/100)/2;
-    const y=(height-size)*(1+Number(vertical.value)/100)/2;
+    const ratio=scale();
+    const radius=diameter/2/ratio;
+    x=clamp(x,radius,width-radius);
+    y=clamp(y,radius,height-radius);
+    ctx.fillStyle='#24192e';
+    ctx.fillRect(0,0,640,640);
     ctx.fillStyle='#fff';
-    ctx.fillRect(0,0,512,512);
-    ctx.drawImage(image,x,y,size,size,0,0,512,512);
+    ctx.fillRect(center-x*ratio,center-y*ratio,width*ratio,height*ratio);
+    ctx.drawImage(image,center-x*ratio,center-y*ratio,width*ratio,height*ratio);
+    ctx.fillStyle='rgba(0,0,0,.55)';
+    ctx.beginPath();
+    ctx.rect(0,0,640,640);
+    ctx.arc(center,center,diameter/2,0,2*Math.PI);
+    ctx.fill('evenodd');
    };
-   for(const control of [zoom,horizontal,vertical])control.oninput=draw;
-   let drag=null;
-   canvas.onpointerdown=event=>{
-    if(!event.isPrimary||event.button!==0)return;
-    canvas.setPointerCapture(event.pointerId);
-    drag={id:event.pointerId,x:event.clientX,y:event.clientY,
-     horizontal:Number(horizontal.value),vertical:Number(vertical.value)};
-   };
-   canvas.onpointermove=event=>{
-    if(drag?.id!==event.pointerId)return;
-    const size=extent();
-    const scale=size/canvas.getBoundingClientRect().width;
-    const move=(control,start,delta,available)=>{
-     if(available>0)control.value=String(Math.max(-100,Math.min(100,start-delta*scale*200/available)));
-    };
-    move(horizontal,drag.horizontal,event.clientX-drag.x,width-size);
-    move(vertical,drag.vertical,event.clientY-drag.y,height-size);
+   const adjust=(nextZoom,from,to=from)=>{
+    const ratio=scale();
+    const anchorX=x+(from.x-center)/ratio;
+    const anchorY=y+(from.y-center)/ratio;
+    zoom=clamp(nextZoom,1,4);
+    x=anchorX-(to.x-center)/scale();
+    y=anchorY-(to.y-center)/scale();
     draw();
    };
-   canvas.onlostpointercapture=()=>{drag=null};
+   const point=event=>{
+    const rect=canvas.getBoundingClientRect();
+    return {x:(event.clientX-rect.left)*640/rect.width,y:(event.clientY-rect.top)*640/rect.height};
+   };
+   const pointers=new Map();
+   const gesture=()=>{
+    const [first,second]=pointers.values();
+    if(!second)return {center:first,distance:0};
+    return {center:{x:(first.x+second.x)/2,y:(first.y+second.y)/2},
+     distance:Math.hypot(first.x-second.x,first.y-second.y)};
+   };
+   canvas.onpointerdown=event=>{
+    if(event.button!==0||pointers.size>=2)return;
+    canvas.focus({preventScroll:true});
+    canvas.setPointerCapture(event.pointerId);
+    pointers.set(event.pointerId,point(event));
+   };
+   canvas.onpointermove=event=>{
+    if(!pointers.has(event.pointerId))return;
+    const before=gesture();
+    pointers.set(event.pointerId,point(event));
+    const after=gesture();
+    const factor=before.distance>0&&after.distance>0?after.distance/before.distance:1;
+    adjust(zoom*factor,before.center,after.center);
+   };
+   const endPointer=event=>pointers.delete(event.pointerId);
+   canvas.onpointerup=canvas.onpointercancel=canvas.onlostpointercapture=endPointer;
+   canvas.addEventListener('wheel',event=>{
+    event.preventDefault();
+    const delta=event.deltaY*(event.deltaMode===1?16:event.deltaMode===2?640:1);
+    adjust(zoom*Math.exp(-delta*0.003),point(event));
+   },{passive:false});
+   canvas.onkeydown=event=>{
+    const origin={x:center,y:center};
+    const arrows={ArrowLeft:[-14,0],ArrowRight:[14,0],ArrowUp:[0,-14],ArrowDown:[0,14]};
+    if(event.key in arrows){
+     const [dx,dy]=arrows[event.key];
+     adjust(zoom,origin,{x:center+dx,y:center+dy});
+    }else if(['+','=','-','−'].includes(event.key)){
+     adjust(zoom*(event.key==='-'||event.key==='−'?1/1.12:1.12),origin);
+    }else return;
+    event.preventDefault();
+   };
    draw();
    document.body.append(dialog);
    return await new Promise(resolve=>{
@@ -86,9 +121,16 @@ window.VideiraProfile=(()=>{
     dialog.querySelector('[data-cancel]').onclick=()=>dialog.close();
     dialog.querySelector('[data-apply]').onclick=()=>{
      try{
-      const value=canvas.toDataURL('image/jpeg',0.85).split(',')[1];
+      const output=document.createElement('canvas');
+      output.width=output.height=diameter;
+      const final=output.getContext('2d');
+      const size=diameter/scale();
+      final.fillStyle='#fff';
+      final.fillRect(0,0,diameter,diameter);
+      final.drawImage(image,x-size/2,y-size/2,size,size,0,0,diameter,diameter);
+      const value=output.toDataURL('image/jpeg',0.85).split(',')[1];
       if(!value||value.length>700000)throw Error('Escolha uma foto menor.');
-      crop={value,position:{zoom:zoom.value,horizontal:horizontal.value,vertical:vertical.value}};
+      crop={value,position:{zoom,x,y}};
       dialog.close();
      }catch{
       dialog.querySelector('[role=alert]').textContent='Não foi possível usar este recorte. Tente selecionar a foto novamente.';
