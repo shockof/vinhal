@@ -58,6 +58,21 @@ Deno.serve(async (req: Request) => {
    if(!response.ok)return reply({error:'Usuário ou senha inválidos. Aguarde antes de tentar novamente.'},401);
    return reply({access_token:session.access_token,refresh_token:session.refresh_token,expires_in:session.expires_in});
   }
+  if(body.action==='refresh'){
+   const refreshToken=body.data?.refresh_token;
+   if(typeof refreshToken!=='string'||!refreshToken||refreshToken.length>2048)
+    return reply({error:'Sessão encerrada. Entre novamente.'},401);
+   const response=await fetch(base+'/auth/v1/token?grant_type=refresh_token',{
+    method:'POST',headers:{apikey:secret,'Content-Type':'application/json'},
+    body:JSON.stringify({refresh_token:refreshToken})
+   });
+   if(!response.ok){
+    const expired=response.status===400||response.status===401||response.status===403;
+    return reply({error:expired?'Sessão encerrada. Entre novamente.':'Não foi possível renovar a sessão. Tente novamente.'},expired?401:503);
+   }
+   const renewed=await response.json();
+   return reply({access_token:renewed.access_token,refresh_token:renewed.refresh_token,expires_in:renewed.expires_in});
+  }
   const token=req.headers.get('x-videira-session')||'';
   if(!token||token===secret)return reply({error:'Entre novamente'},401);
   const checked=await fetch(base+'/auth/v1/user',{headers:{apikey:secret,Authorization:'Bearer '+token}});

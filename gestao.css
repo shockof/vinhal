@@ -51,3 +51,15 @@ svg.meeting-card-icon{width:28px;height:28px;flex-shrink:0}
   height: 100%;
   object-fit: cover;
 }
+
+.remember-session {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+}
+.remember-session input {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin: 0;
+  accent-color: var(--purple);
+}

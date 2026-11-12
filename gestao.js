@@ -10,15 +10,105 @@ const label=(items,id,field='name')=>items.find(x=>x.id===id)?.[field]||'—';
 const field=(name,title,value='',type='text',extra='')=>`<label>${title}<input name="${name}" type="${type}" value="${esc(value)}" ${extra}></label>`;
 const select=(name,title,items,value='',key='name',optional=false)=>`<label>${title}<select name="${name}" ${optional?'':'required'}>${optional?'<option value="">'+esc(typeof optional==='string'?optional:'A definir')+'</option>':'<option value="">Selecione</option>'}${items.map(x=>`<option value="${esc(x.id)}" ${x.id===value?'selected':''}>${esc(x[key])}</option>`).join('')}</select></label>`;
 const status=(message,error=false)=>{const el=$('#status')||$('#message');if(el){el.textContent=message;el.classList.toggle('error',error)}};
-async function call(action,data){
- const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),30000);
+const sessionKey='videira:gestao:session:v1';
+let sessionStore=null;
+let refreshPending=null;
+
+function readSession(store){
  try{
-  const response=await fetch(cfg.gateway,{method:'POST',headers:{'Content-Type':'application/json',apikey:cfg.publicKey,Authorization:'Bearer '+cfg.publicKey,'X-Videira-Session':session?.access_token||''},body:JSON.stringify(action==='login'?{action,...data}:{action,data}),signal:controller.signal});
-  const result=await response.json();
-  if(!response.ok){if(response.status===401&&action!=='login'){session=null;db=null;location.reload()}const failure=Error(result.error||'Não foi possível concluir esta operação.');if(action==='create_account'&&response.status>=500)failure.uncertain=true;throw failure}
-  return result;
- }catch(err){if(err.name==='AbortError'){const failure=Error('O servidor demorou para responder. Confira a conexão e tente novamente.');if(action==='create_account')failure.uncertain=true;throw failure}if(action==='create_account'&&err instanceof TypeError)err.uncertain=true;throw err}finally{clearTimeout(timer)}
+  const saved=JSON.parse(store.getItem(sessionKey));
+  return saved?.access_token&&saved?.refresh_token?saved:null;
+ }catch{return null}
 }
+
+function storeSession(value){
+ session=value;
+ try{sessionStore?.setItem(sessionKey,JSON.stringify(value))}catch{}
+}
+
+function clearSession(){
+ session=null;
+ db=null;
+ ownProfile=null;
+ for(const store of [sessionStorage,localStorage]){
+  try{store.removeItem(sessionKey)}catch{}
+ }
+}
+
+async function request(action,data,token){
+ const controller=new AbortController();
+ const timer=setTimeout(()=>controller.abort(),30000);
+ try{
+  const response=await fetch(cfg.gateway,{
+   method:'POST',
+   headers:{'Content-Type':'application/json',apikey:cfg.publicKey,
+    Authorization:'Bearer '+cfg.publicKey,'X-Videira-Session':token||''},
+   body:JSON.stringify(action==='login'?{action,...data}:{action,data}),
+   signal:controller.signal
+  });
+  const result=await response.json();
+  if(!response.ok){
+   const failure=Error(result.error||'Não foi possível concluir esta operação.');
+   failure.status=response.status;
+   if(action==='create_account'&&response.status>=500)failure.uncertain=true;
+   throw failure;
+  }
+  return result;
+ }catch(error){
+  if(error.name==='AbortError'){
+   const failure=Error('O servidor demorou para responder. Confira a conexão e tente novamente.');
+   if(action==='create_account')failure.uncertain=true;
+   throw failure;
+  }
+  if(action==='create_account'&&error instanceof TypeError)error.uncertain=true;
+  throw error;
+ }finally{clearTimeout(timer)}
+}
+
+function saveTokens(tokens){
+ storeSession({...tokens,local_id:session?.local_id||crypto.randomUUID(),expires_at:Date.now()+Number(tokens.expires_in||3600)*1000});
+}
+
+async function refreshSession(previousToken){
+ if(refreshPending)return refreshPending;
+ const localId=session?.local_id;
+ const refresh=async()=>{
+  if(sessionStore===localStorage){
+   const latest=readSession(localStorage);
+   if(!latest||latest.local_id!==localId)throw Object.assign(Error('Sessão encerrada. Entre novamente.'),{status:401});
+   session=latest;
+  }
+  if(session?.access_token!==previousToken&&session?.expires_at>Date.now()+30000)return;
+  const tokens=await request('refresh',{refresh_token:session?.refresh_token});
+  if(sessionStore===localStorage&&readSession(localStorage)?.local_id!==localId)
+   throw Object.assign(Error('Sessão encerrada. Entre novamente.'),{status:401});
+  saveTokens(tokens);
+ };
+ refreshPending=(sessionStore===localStorage&&navigator.locks
+  ?navigator.locks.request(sessionKey,refresh):refresh()).finally(()=>{refreshPending=null});
+ return refreshPending;
+}
+
+async function call(action,data){
+ if(action==='login')return request(action,data);
+ try{
+  if(session?.expires_at<=Date.now()+30000)await refreshSession(session.access_token);
+  const token=session?.access_token;
+  try{return await request(action,data,token)}catch(error){
+   if(error.status!==401||!session?.refresh_token)throw error;
+   await refreshSession(token);
+   return await request(action,data,session.access_token);
+  }
+ }catch(error){
+  if(error.status===401){
+   const current=readSession(sessionStore);
+   if(!current||current.local_id===session?.local_id)clearSession();
+   if($('#logout'))location.reload();
+  }
+  throw error;
+ }
+}
+
 async function reload(){db=await call('load');if(!db?.profile?.active)throw Error('Conta sem acesso ativo.');try{ownProfile=await call('profile_get')}catch{ownProfile=null}}
 function table(headers,rows){return rows.length?`<div class="table-scroll"><table><thead><tr>${headers.map(x=>`<th>${esc(x)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr>${row.map(x=>`<td>${x}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`:'<div class="empty">Nenhum cadastro neste escopo.</div>'}
 function metric(n,title){return `<article class="card"><strong>${n}</strong><span>${title}</span></article>`}
@@ -145,10 +235,10 @@ async function loadAttendancePhotos(list){
 function bind(){const bindViews=()=>document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{view=b.dataset.view;edit=null;render()});bindViews();
  if(view==='overview'){const filters=()=>({from:window.VideiraDashboard.startDate($('#dashboardPeriod').value),church:$('#dashboardChurch')?.value||''}),bindDashboard=()=>window.VideiraDashboard.bind($('#dashboardVisuals'),db,filters()),update=()=>{$('#dashboardVisuals').innerHTML=window.VideiraDashboard.visuals(db,filters());bindDashboard();bindViews()};bindDashboard();$('#dashboardPeriod').onchange=update;if($('#dashboardChurch'))$('#dashboardChurch').onchange=update}
 
- $('#logout').onclick=async()=>{try{await call('logout')}catch{}finally{session=null;db=null;location.reload()}};document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{edit=b.dataset.edit;render();$('#workspace').scrollIntoView({behavior:'smooth'})});if($('#cancelEdit'))$('#cancelEdit').onclick=()=>{edit=null;render()};
+ $('#logout').onclick=async()=>{try{await call('logout')}catch{}finally{clearSession();location.reload()}};document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{edit=b.dataset.edit;render();$('#workspace').scrollIntoView({behavior:'smooth'})});if($('#cancelEdit'))$('#cancelEdit').onclick=()=>{edit=null;render()};
  if(view==='birthdays')loadBirthdays($('#birthdaysPanel'));
  if(view==='site')window.VideiraSiteEditor.mount($('#siteEditor'),{call,profile:db.profile,config:cfg,getSession:()=>session});
- if(view==='profile')window.VideiraProfile.mount($('#myProfile'),{call,onSaved:async()=>{await reload();render();status('Perfil atualizado no Supabase.')},onPasswordChanged:()=>{session=null;db=null;ownProfile=null;location.href='gestao.html?senha=alterada'}});
+ if(view==='profile')window.VideiraProfile.mount($('#myProfile'),{call,onSaved:async()=>{await reload();render();status('Perfil atualizado no Supabase.')},onPasswordChanged:()=>{clearSession();location.href='gestao.html?senha=alterada'}});
  const bindAccountEditors=()=>document.querySelectorAll('[data-account-edit]').forEach(button=>button.onclick=()=>window.VideiraAccountEditor.open({id:button.dataset.accountEdit,call,churches:db.churches,networks:db.networks,roles,selfId:db.profile.id,onSaved:async()=>{await reload();if($('#linkedAccounts'))updateAccountFilters();status('Conta atualizada no Supabase.')},onReset:()=>status('Senha da conta redefinida.')}));
  const updateAccountFilters=()=>{$('#linkedAccounts').innerHTML=linkedAccountTable();$('#accountCount').textContent=linkedAccountCount();bindAccountEditors()};
  bindAccountEditors();
@@ -190,5 +280,54 @@ function bind(){const bindViews=()=>document.querySelectorAll('[data-view]').for
 }
 async function save(action,data){busy=true;document.querySelectorAll('form button').forEach(b=>b.disabled=true);status('Salvando no Supabase…');try{const result=await call(action,data);await reload();edit=null;render();status(action==='meeting'?`Encontro salvo. ${result.present} presentes; ${result.converted} visitante(s) convertido(s) em membro.`:'Cadastro salvo no Supabase.')}catch(e){status(e.message,true);document.querySelectorAll('form button').forEach(b=>b.disabled=false)}finally{busy=false}}
 if(new URLSearchParams(location.search).get('senha')==='alterada'){$('#message').textContent='Senha alterada. Entre novamente.';$('#message').style.color='#28644c'}
-$('#loginReal').onsubmit=async e=>{e.preventDefault();const form=e.target;if(busy)return;busy=true;form.querySelector('button').disabled=true;status('Conectando…');try{const data=Object.fromEntries(new FormData(form));session=await call('login',data);form.elements.password.value='';await reload();render()}catch(err){session=null;db=null;status(err.message,true);form.elements.password.value='';form.querySelector('button').disabled=false}finally{busy=false}};
+const loginForm=$('#loginReal');
+const loginButton=loginForm.querySelector('button');
+loginForm.onsubmit=async event=>{
+ event.preventDefault();
+ if(busy)return;
+ busy=true;
+ loginButton.disabled=true;
+ status('Conectando…');
+ const {username,password}=Object.fromEntries(new FormData(loginForm));
+ const remember=loginForm.elements.remember.checked;
+ try{
+  const tokens=await call('login',{username,password});
+  clearSession();
+  sessionStore=remember?localStorage:sessionStorage;
+  saveTokens(tokens);
+  loginForm.elements.password.value='';
+  await reload();
+  render();
+ }catch(error){
+  clearSession();
+  status(error.message,true);
+  loginForm.elements.password.value='';
+  loginButton.disabled=false;
+ }finally{busy=false}
+};
+
+async function restoreSession(){
+ if(new URLSearchParams(location.search).get('senha')==='alterada'){clearSession();return}
+ session=readSession(sessionStorage)||readSession(localStorage);
+ if(!session)return;
+ sessionStore=readSession(sessionStorage)?sessionStorage:localStorage;
+ busy=true;
+ loginButton.disabled=true;
+ status('Restaurando sessão…');
+ try{await reload();render()}catch(error){
+  if(error.status===401)clearSession();
+  status(error.message,true);
+  loginButton.disabled=false;
+ }finally{busy=false}
+}
+
+window.addEventListener('storage',event=>{
+ if(event.key!==sessionKey||sessionStore!==localStorage)return;
+ const saved=readSession(localStorage);
+ if(!saved||saved.local_id!==session?.local_id)location.reload();
+});
+window.addEventListener('pageshow',event=>{
+ if(event.persisted&&sessionStore&&!readSession(sessionStore))location.reload();
+});
+restoreSession();
 })();
