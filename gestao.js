@@ -12,7 +12,8 @@ function readManagementRoute(){
  edit=null;
 }
 readManagementRoute();
-let memberSearch='';
+let memberSearch='',accountSearch='';
+const normalizeSearch=value=>String(value??'').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().trim();
 const names={overview:'Visão geral',profile:'Meu perfil',church:'Igrejas',network:'Redes',cell:'Células',person:'Membros e visitantes',meeting:'Presenças',reports:'Relatórios Excel',site:'Editar site',accounts:'Contas e liderança'};
 const memberTransferRoles=new Set(['master','supervisor','pastor','obreiro','predio']);
 const list={church:'churches',network:'networks',cell:'cells',person:'people'};
@@ -153,10 +154,37 @@ function report(){return `<article class="panel"><h2>Relatório do seu escopo</h
 function reportRows(){const church=$('[name=filterChurch]').value,net=$('[name=filterNetwork]').value,from=$('[name=from]').value,to=$('[name=to]').value;if(from&&to&&from>to)throw Error('A data inicial deve ser anterior à data final.');return db.churches.filter(c=>!church||c.id===church).map(c=>{const cells=db.cells.filter(x=>x.church_id===c.id&&(!net||x.network_id===net)),ids=new Set(cells.map(x=>x.id)),people=db.people.filter(x=>ids.has(x.cell_id)),meetings=new Set(db.meetings.filter(m=>ids.has(m.cell_id)&&(!from||m.meeting_date>=from)&&(!to||m.meeting_date<=to)).map(m=>m.id)),att=db.attendance.filter(a=>meetings.has(a.meeting_id));return[c.name,c.municipality,cells.length,people.length,people.filter(x=>x.category==='Membro').length,people.filter(x=>x.category==='Visitante').length,att.filter(a=>a.present).length,att.length]})}
 const accountRoleOrder={master:0,supervisor:1,predio:2,pastor:3,obreiro:3,discipulador:4,lider:5};
 const accountNameOrder=new Intl.Collator('pt-BR',{sensitivity:'base',numeric:true});
-function linkedProfiles(){return db.profiles.filter(p=>(!accountRoleFilter||p.role===accountRoleFilter)&&(!accountChurchFilter||(accountChurchFilter==='__global__'?['master','supervisor'].includes(p.role):p.church_id===accountChurchFilter))).sort((a,b)=>(accountRoleOrder[a.role]??99)-(accountRoleOrder[b.role]??99)||accountNameOrder.compare(a.display_name,b.display_name)||accountNameOrder.compare(a.username,b.username))}
-function linkedAccountTable(){const profiles=linkedProfiles(),master=db.profile.role==='master',headers=['Nome','Usuário','Função','Igreja / rede','Estado'];if(master)headers.push('Ações');return profiles.length?table(headers,profiles.map(p=>{const row=[esc(p.display_name),esc(p.username),roles[p.role],['master','supervisor'].includes(p.role)?'Todas as igrejas e redes':esc(label(db.churches,p.church_id))+' / '+(p.role==='predio'||p.role==='obreiro'&&!p.network_id?'Todas as redes':esc(label(db.networks,p.network_id))),p.active?'Ativo':'Desativado'];if(master)row.push(`<button type="button" class="secondary" data-account-edit="${p.id}">Editar conta</button>`);return row})):'<div class="empty">'+(accountRoleFilter||accountChurchFilter?'Nenhuma conta com estes filtros.':'Nenhum cadastro neste escopo.')+'</div>'}
+function accountColumns(profile){
+ const churchAndNetwork=['master','supervisor'].includes(profile.role)?'Todas as igrejas e redes':
+  label(db.churches,profile.church_id)+' / '+(profile.role==='predio'||profile.role==='obreiro'&&!profile.network_id
+   ?'Todas as redes':label(db.networks,profile.network_id));
+ return [profile.display_name,profile.username,roles[profile.role],churchAndNetwork,profile.active?'Ativo':'Desativado'];
+}
+function linkedProfiles(){
+ const terms=normalizeSearch(accountSearch).split(/\s+/).filter(Boolean);
+ return db.profiles.filter(profile=>{
+  const matchesRole=!accountRoleFilter||profile.role===accountRoleFilter;
+  const matchesChurch=!accountChurchFilter||(accountChurchFilter==='__global__'
+   ?['master','supervisor'].includes(profile.role):profile.church_id===accountChurchFilter);
+  const text=normalizeSearch(accountColumns(profile).join(' '));
+  return matchesRole&&matchesChurch&&terms.every(term=>text.includes(term));
+ }).sort((a,b)=>(accountRoleOrder[a.role]??99)-(accountRoleOrder[b.role]??99)||
+  accountNameOrder.compare(a.display_name,b.display_name)||accountNameOrder.compare(a.username,b.username));
+}
+function linkedAccountTable(){
+ const profiles=linkedProfiles(),master=db.profile.role==='master';
+ const headers=['Nome','Usuário','Função','Igreja / rede','Estado'];
+ if(master)headers.push('Ações');
+ if(!profiles.length)return '<div class="empty">'+(accountSearch.trim()||accountRoleFilter||accountChurchFilter
+  ?'Nenhuma conta encontrada para essa busca e filtros.':'Nenhum cadastro neste escopo.')+'</div>';
+ return table(headers,profiles.map(profile=>{
+  const row=accountColumns(profile).map(esc);
+  if(master)row.push(`<button type="button" class="secondary" data-account-edit="${esc(profile.id)}">Editar conta</button>`);
+  return row;
+ }));
+}
 function linkedAccountCount(){const n=linkedProfiles().length;return n+' de '+db.profiles.length+' '+(db.profiles.length===1?'conta':'contas')}
-function accounts(){const master=db.profile.role==='master';return `${master?`<article class="panel"><h2>Cadastrar acesso da liderança</h2><p>Crie o acesso e depois vincule o líder ou discipulador à célula correspondente na aba Células.</p>${`<form id="accountForm" class="gridform">${field('display_name','Nome completo','','text','required maxlength="180" autocomplete="name"')}${field('username','Nome de usuário','','text','required minlength="3" maxlength="50" pattern="[a-z0-9][a-z0-9._-]{2,49}" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Ex.: maria.silva"')}${field('birth_date','Data de nascimento (opcional)','','date','autocomplete="bday"')}${field('email','E-mail (opcional)','','email','maxlength="254" autocomplete="off"')}<label>Função<select name="role" required><option value="lider">Líder de célula</option><option value="master">Master</option><option value="supervisor">Pastor (a) Supervisor (a)</option><option value="discipulador">Discipulador (a)</option><option value="predio">Pastor (a) de prédio</option><option value="pastor">Pastor (a) de rede</option><option value="obreiro">Obreiro (a)</option></select></label>${select('church_id','Igreja',db.churches)}<label>Rede<select name="network_id" required><option value="">Selecione a igreja primeiro</option></select></label>${field('password','Senha inicial','','password','required minlength="12" maxlength="128" autocomplete="new-password"')}${field('confirm_password','Confirme a senha inicial','','password','required minlength="12" maxlength="128" autocomplete="new-password"')}<div class="notice wide">A senha inicial precisa ter de 12 a 128 caracteres. Entregue o usuário e a senha à pessoa por um meio privado. O e-mail é opcional: o acesso funciona com usuário e senha. Este cadastro não envia e-mail automaticamente. O e-mail não será exibido na lista de liderança nem no site público.</div><div class="notice wide" id="accountScope"></div><div class="wide actions"><button>Criar cadastro e acesso</button></div></form>`}</article>`:''}<article class="panel"><div class="account-list-toolbar"><div><h2>Contas vinculadas</h2><small id="accountCount" aria-live="polite">${linkedAccountCount()}</small></div><div class="account-list-filters"><label>Filtrar por função<select id="accountRoleFilter"><option value="">Todas as funções</option>${['master','supervisor','predio','pastor','obreiro','discipulador','lider'].map(role=>`<option value="${role}" ${accountRoleFilter===role?'selected':''}>${roles[role]}</option>`).join('')}</select></label><label>Filtrar por igreja<select id="accountChurchFilter"><option value="">Todas as igrejas</option><option value="__global__" ${accountChurchFilter==='__global__'?'selected':''}>Acesso a todas (Master/Supervisor)</option>${db.churches.slice().sort((a,b)=>accountNameOrder.compare(a.name,b.name)).map(c=>`<option value="${c.id}" ${accountChurchFilter===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></label></div></div><p class="account-order-note">Master · Pastor Supervisor · Pastor de prédio · Pastores de rede / Obreiros · Discipuladores · Líderes</p><div id="linkedAccounts">${linkedAccountTable()}</div></article>`}
+function accounts(){const master=db.profile.role==='master';return `${master?`<article class="panel"><h2>Cadastrar acesso da liderança</h2><p>Crie o acesso e depois vincule o líder ou discipulador à célula correspondente na aba Células.</p>${`<form id="accountForm" class="gridform">${field('display_name','Nome completo','','text','required maxlength="180" autocomplete="name"')}${field('username','Nome de usuário','','text','required minlength="3" maxlength="50" pattern="[a-z0-9][a-z0-9._-]{2,49}" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Ex.: maria.silva"')}${field('birth_date','Data de nascimento (opcional)','','date','autocomplete="bday"')}${field('email','E-mail (opcional)','','email','maxlength="254" autocomplete="off"')}<label>Função<select name="role" required><option value="lider">Líder de célula</option><option value="master">Master</option><option value="supervisor">Pastor (a) Supervisor (a)</option><option value="discipulador">Discipulador (a)</option><option value="predio">Pastor (a) de prédio</option><option value="pastor">Pastor (a) de rede</option><option value="obreiro">Obreiro (a)</option></select></label>${select('church_id','Igreja',db.churches)}<label>Rede<select name="network_id" required><option value="">Selecione a igreja primeiro</option></select></label>${field('password','Senha inicial','','password','required minlength="12" maxlength="128" autocomplete="new-password"')}${field('confirm_password','Confirme a senha inicial','','password','required minlength="12" maxlength="128" autocomplete="new-password"')}<div class="notice wide">A senha inicial precisa ter de 12 a 128 caracteres. Entregue o usuário e a senha à pessoa por um meio privado. O e-mail é opcional: o acesso funciona com usuário e senha. Este cadastro não envia e-mail automaticamente. O e-mail não será exibido na lista de liderança nem no site público.</div><div class="notice wide" id="accountScope"></div><div class="wide actions"><button>Criar cadastro e acesso</button></div></form>`}</article>`:''}<article class="panel"><div class="account-list-toolbar"><div><h2>Contas vinculadas</h2><small id="accountCount" aria-live="polite">${linkedAccountCount()}</small></div><div class="account-list-filters"><label>Filtrar por função<select id="accountRoleFilter"><option value="">Todas as funções</option>${['master','supervisor','predio','pastor','obreiro','discipulador','lider'].map(role=>`<option value="${role}" ${accountRoleFilter===role?'selected':''}>${roles[role]}</option>`).join('')}</select></label><label>Filtrar por igreja<select id="accountChurchFilter"><option value="">Todas as igrejas</option><option value="__global__" ${accountChurchFilter==='__global__'?'selected':''}>Acesso a todas (Master/Supervisor)</option>${db.churches.slice().sort((a,b)=>accountNameOrder.compare(a.name,b.name)).map(c=>`<option value="${c.id}" ${accountChurchFilter===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></label></div></div><p class="account-order-note">Master · Pastor Supervisor · Pastor de prédio · Pastores de rede / Obreiros · Discipuladores · Líderes</p><label class="member-search">Pesquisar contas<input id="accountSearch" type="search" value="${esc(accountSearch)}" placeholder="Nome, usuário, função, igreja, rede ou estado…" autocomplete="off"></label><div id="linkedAccounts">${linkedAccountTable()}</div></article>`}
 
 async function loadBirthdays(panel) {
  try {
@@ -302,7 +330,7 @@ function bind(){const bindViews=()=>document.querySelectorAll('[data-view]').for
  if(view==='person'){
   const search=$('#memberSearch');
   const empty=$('#memberSearchEmpty');
-  const normalize=value=>String(value??'').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().trim();
+  const normalize=normalizeSearch;
   const people=new Map(db.people.map(person=>[person.id,person]));
   const cells=new Map(db.cells.map(cell=>[cell.id,cell]));
   const entries=[...document.querySelectorAll('#workspace tbody tr')].map(row=>{
@@ -339,6 +367,7 @@ function bind(){const bindViews=()=>document.querySelectorAll('[data-view]').for
  const bindAccountEditors=()=>document.querySelectorAll('[data-account-edit]').forEach(button=>button.onclick=()=>window.VideiraAccountEditor.open({id:button.dataset.accountEdit,call,churches:db.churches,networks:db.networks,roles,selfId:db.profile.id,onSaved:async()=>{await reload();if($('#linkedAccounts'))updateAccountFilters();status('Conta atualizada no Supabase.')},onReset:()=>status('Senha da conta redefinida.')}));
  const updateAccountFilters=()=>{$('#linkedAccounts').innerHTML=linkedAccountTable();$('#accountCount').textContent=linkedAccountCount();bindAccountEditors()};
  bindAccountEditors();
+ if($('#accountSearch'))$('#accountSearch').oninput=e=>{accountSearch=e.target.value;updateAccountFilters()};
  if($('#accountRoleFilter'))$('#accountRoleFilter').onchange=e=>{accountRoleFilter=e.target.value;updateAccountFilters()};
  if($('#accountChurchFilter'))$('#accountChurchFilter').onchange=e=>{accountChurchFilter=e.target.value;updateAccountFilters()};
  if($('#accountForm')){
