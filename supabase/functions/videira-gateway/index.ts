@@ -170,6 +170,26 @@ Deno.serve(async (req: Request) => {
   const result=await fetch(base+'/rest/v1/rpc/videira_portal',{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({p_action:body.action,p_data:body.data||{}})});
   const data=await result.json();
   if(!result.ok)return reply({error:data.code==='42501'?'Você não tem permissão para esta operação.':data.code==='23503'?'Confira os vínculos entre igreja, rede e célula.':data.code==='23505'?'Este registro já existe.':String(data.message||'Não foi possível salvar').slice(0,200)},400);
+  if(body.action==='birthdays'&&Array.isArray(data.entries)){
+   const entries=data.entries;
+   for(let offset=0;offset<entries.length;offset+=8){
+    await Promise.all(entries.slice(offset,offset+8).map(async (entry:any)=>{
+     const path=entry.avatar_path;
+     delete entry.avatar_path;
+     if(typeof path!=='string'||!/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.jpg$/.test(path))return;
+     try{
+      const signed=await fetch(base+'/storage/v1/object/sign/videira-avatars/'+path,{
+       method:'POST',headers:{apikey:secret,Authorization:'Bearer '+secret,'Content-Type':'application/json'},
+       body:JSON.stringify({expiresIn:300}),signal:AbortSignal.timeout(4000)
+      });
+      if(!signed.ok)return;
+      const {signedURL}=await signed.json();
+      if(typeof signedURL==='string'&&signedURL.startsWith('/object/sign/'))
+       entry.photo_url=base+'/storage/v1'+signedURL;
+     }catch{/* Keep initials if the photo is unavailable. */}
+    }));
+   }
+  }
   return reply(data);
  }catch{return reply({error:'Não foi possível concluir. Tente novamente.'},500)}
 });

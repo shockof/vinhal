@@ -63,3 +63,26 @@ svg.meeting-card-icon{width:28px;height:28px;flex-shrink:0}
   margin: 0;
   accent-color: var(--purple);
 }
+
+.birthday-panel { margin-bottom: 24px; }
+.birthday-grid {
+ display: grid;
+ grid-template-columns: repeat(auto-fit,minmax(min(100%,245px),1fr));
+ gap: 12px;
+ list-style: none;
+ margin: 16px 0 0;
+ padding: 0;
+}
+.birthday-card {
+ display: flex;
+ align-items: center;
+ gap: 12px;
+ padding: 12px;
+ border: 1px solid var(--line);
+ border-radius: 14px;
+ background: #fbf8ff;
+}
+.birthday-card div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.birthday-card div span { display: block; color: var(--muted); font-size: .85rem; }
+.birthday-avatar { flex-basis: 46px; width: 46px; height: 46px; }
+.birthday-date { color: var(--purple); font-weight: 700; font-size: .85rem; }

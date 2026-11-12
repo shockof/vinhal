@@ -3,7 +3,7 @@
 const cfg=window.VIDEIRA_CONFIG,$=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const roles={master:'Master',supervisor:'Pastor (a) Supervisor (a)',predio:'Pastor (a) de prédio',pastor:'Pastor (a) de rede',obreiro:'Obreiro (a)',discipulador:'Discipulador (a)',lider:'Líder de célula'};
 let session=null,db=null,view='overview',edit=null,busy=false,accountRoleFilter='',accountChurchFilter='',ownProfile=null;
-const names={overview:'Visão geral',profile:'Meu perfil',birthdays:'Aniversariantes',church:'Igrejas',network:'Redes',cell:'Células',person:'Membros e visitantes',meeting:'Presenças',reports:'Relatórios Excel',site:'Editar site',accounts:'Contas e liderança'};
+const names={overview:'Visão geral',profile:'Meu perfil',church:'Igrejas',network:'Redes',cell:'Células',person:'Membros e visitantes',meeting:'Presenças',reports:'Relatórios Excel',site:'Editar site',accounts:'Contas e liderança'};
 const memberTransferRoles=new Set(['master','supervisor','pastor','obreiro','predio']);
 const list={church:'churches',network:'networks',cell:'cells',person:'people'};
 const label=(items,id,field='name')=>items.find(x=>x.id===id)?.[field]||'—';
@@ -149,21 +149,26 @@ async function loadBirthdays(panel) {
   if(!panel.isConnected)return;
   const monthName=new Intl.DateTimeFormat('pt-BR',{month:'long',timeZone:'UTC'})
    .format(new Date(Date.UTC(2000,month-1,1)));
-  const rows=entries.map(person=>[
-   esc(String(person.day).padStart(2,'0')+'/'+String(month).padStart(2,'0')),
-   esc(person.name),
-   esc(roles[person.kind]||person.kind),
-   esc(person.group_name||'—')
-  ]);
+  const cards=entries.map(person=>{
+   const date=String(person.day).padStart(2,'0')+'/'+String(month).padStart(2,'0');
+   return `<li class="birthday-card">
+    <span class="attendance-avatar birthday-avatar" aria-hidden="true"${person.member_photo_id?` data-person-photo="${esc(person.member_photo_id)}"`:''}${person.photo_url?` data-photo-url="${esc(person.photo_url)}"`:''}>
+     ${esc(personInitials(person.name))}
+    </span>
+    <div><strong>${esc(person.name)}</strong><span>${esc(person.group_name||roles[person.kind]||person.kind)}</span></div>
+    <span class="birthday-date">${date}</span>
+   </li>`;
+  });
   panel.innerHTML=`<h2>Aniversariantes de ${esc(monthName)}</h2>`+
-   (rows.length?table(['Dia e mês','Nome','Cadastro','Célula ou igreja'],rows):
+   (cards.length?`<ul class="birthday-grid">${cards.join('')}</ul>`:
     '<p>Nenhum aniversário cadastrado neste mês no seu escopo.</p>');
+  loadPersonPhotos(panel);
  } catch(error) {
-  if(panel.isConnected)panel.textContent=error.message||'Não foi possível carregar os aniversariantes.';
+  if(panel.isConnected)panel.querySelector('[role=status]').textContent=error.message||'Não foi possível carregar os aniversariantes.';
  }
 }
 
-function render(){const tabs=['overview','profile','birthdays',...(['master','supervisor'].includes(db.profile.role)?['church','network','cell']:db.profile.role==='predio'?['network','cell']:[]),'person','meeting','reports','accounts',...(db.profile.role==='master'?['site']:[])];$('#app').innerHTML=`<div class="shell"><aside><img src="assets/logo.png" alt="Videira"><nav aria-label="Gestão">${tabs.map(v=>`<button data-view="${v}" class="${view===v?'active':''}">${names[v]}</button>`).join('')}</nav><div class="identity"><div>${ownProfile?.photo_url?`<img class="identity-avatar" src="${esc(ownProfile.photo_url)}" alt="Sua foto">`:''}${esc(db.profile.display_name)}<small>${roles[db.profile.role]} · ${esc(db.profile.username)}</small></div><button class="secondary" id="logout">Sair</button></div></aside><main class="main ${view==='overview'?'dashboard-main':''}"><div class="top"><span class="badge">Conectado ao Supabase · Dados reais</span><a href="index.html">Ver site ↗</a></div>${view==='overview'?'':`<div class="heading"><small>IGREJA VIDEIRA / GESTÃO</small><h1>${view==='overview'?window.VideiraDashboard.title(db.profile.role):names[view]}</h1><p>Somente os registros permitidos ao seu perfil.</p></div>`}<div id="status" role="status" aria-live="polite"></div><div id="workspace">${view==='overview'?overview():view==='site'?'<div id="siteEditor"></div>':view==='profile'?'<div id="myProfile"></div>':view==='birthdays'?'<article class="panel" id="birthdaysPanel" aria-live="polite">Carregando aniversariantes…</article>':list[view]?entityForm()+entityList():view==='meeting'?meeting():view==='reports'?report():accounts()}</div><small>Gravação no servidor. Membros, telefones e presenças não são publicados no site.</small></main></div>`;bind();}
+function render(){const tabs=['overview','profile',...(['master','supervisor'].includes(db.profile.role)?['church','network','cell']:db.profile.role==='predio'?['network','cell']:[]),'person','meeting','reports','accounts',...(db.profile.role==='master'?['site']:[])];$('#app').innerHTML=`<div class="shell"><aside><img src="assets/logo.png" alt="Videira"><nav aria-label="Gestão">${tabs.map(v=>`<button data-view="${v}" class="${view===v?'active':''}">${names[v]}</button>`).join('')}</nav><div class="identity"><div>${ownProfile?.photo_url?`<img class="identity-avatar" src="${esc(ownProfile.photo_url)}" alt="Sua foto">`:''}${esc(db.profile.display_name)}<small>${roles[db.profile.role]} · ${esc(db.profile.username)}</small></div><button class="secondary" id="logout">Sair</button></div></aside><main class="main ${view==='overview'?'dashboard-main':''}"><div class="top"><span class="badge">Conectado ao Supabase · Dados reais</span><a href="index.html">Ver site ↗</a></div>${view==='overview'?'':`<div class="heading"><small>IGREJA VIDEIRA / GESTÃO</small><h1>${view==='overview'?window.VideiraDashboard.title(db.profile.role):names[view]}</h1><p>Somente os registros permitidos ao seu perfil.</p></div>`}<div id="status" role="status" aria-live="polite"></div><div id="workspace">${view==='overview'?overview():view==='site'?'<div id="siteEditor"></div>':view==='profile'?'<div id="myProfile"></div>':list[view]?entityForm()+entityList():view==='meeting'?meeting():view==='reports'?report():accounts()}</div><small>Gravação no servidor. Membros, telefones e presenças não são publicados no site.</small></main></div>`;bind();}
 function bindMemberPhoto(form,id){
  const file=form.querySelector('#memberPhotoFile');
  const preview=form.querySelector('#memberPhotoPreview');
@@ -210,20 +215,24 @@ function personInitials(name){
   (parts.length>1?Array.from(parts.at(-1))[0].toUpperCase():'');
 }
 
-async function loadAttendancePhotos(list){
- const avatars=[...list.querySelectorAll('[data-person-photo]')];
+async function loadPersonPhotos(list){
+ const avatars=[...list.querySelectorAll('[data-person-photo],[data-photo-url]')];
  let next=0;
  async function load(){
   while(next<avatars.length){
    const avatar=avatars[next++];
    if(!avatar.isConnected||list.closest('[hidden]'))return;
    try {
-    const {photo_base64}=await call('person_photo',{id:avatar.dataset.personPhoto});
-    if(!photo_base64||!avatar.isConnected)continue;
+    let url=avatar.dataset.photoUrl;
+    if(!url){
+     const {photo_base64}=await call('person_photo',{id:avatar.dataset.personPhoto});
+     if(!photo_base64||!avatar.isConnected)continue;
+     url='data:image/jpeg;base64,'+photo_base64;
+    }
     const image=document.createElement('img');
     image.alt='';
     image.onload=()=>{if(avatar.isConnected)avatar.replaceChildren(image)};
-    image.src='data:image/jpeg;base64,'+photo_base64;
+    image.src=url;
    } catch {
     // Keep the initials if the photo cannot be loaded.
    }
@@ -233,10 +242,14 @@ async function loadAttendancePhotos(list){
 }
 
 function bind(){const bindViews=()=>document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{view=b.dataset.view;edit=null;render()});bindViews();
- if(view==='overview'){const filters=()=>({from:window.VideiraDashboard.startDate($('#dashboardPeriod').value),church:$('#dashboardChurch')?.value||''}),bindDashboard=()=>window.VideiraDashboard.bind($('#dashboardVisuals'),db,filters()),update=()=>{$('#dashboardVisuals').innerHTML=window.VideiraDashboard.visuals(db,filters());bindDashboard();bindViews()};bindDashboard();$('#dashboardPeriod').onchange=update;if($('#dashboardChurch'))$('#dashboardChurch').onchange=update}
+ if(view==='overview'){const filters=()=>({from:window.VideiraDashboard.startDate($('#dashboardPeriod').value),church:$('#dashboardChurch')?.value||''}),bindDashboard=()=>window.VideiraDashboard.bind($('#dashboardVisuals'),db,filters()),update=()=>{
+  const birthdays=$('#birthdaysPanel');
+  $('#dashboardVisuals').innerHTML=window.VideiraDashboard.visuals(db,filters(),true);
+  $('#birthdaysPanel').replaceWith(birthdays);
+  bindDashboard();bindViews();
+ };bindDashboard();loadBirthdays($('#birthdaysPanel'));$('#dashboardPeriod').onchange=update;if($('#dashboardChurch'))$('#dashboardChurch').onchange=update}
 
  $('#logout').onclick=async()=>{try{await call('logout')}catch{}finally{clearSession();location.reload()}};document.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{edit=b.dataset.edit;render();$('#workspace').scrollIntoView({behavior:'smooth'})});if($('#cancelEdit'))$('#cancelEdit').onclick=()=>{edit=null;render()};
- if(view==='birthdays')loadBirthdays($('#birthdaysPanel'));
  if(view==='site')window.VideiraSiteEditor.mount($('#siteEditor'),{call,profile:db.profile,config:cfg,getSession:()=>session});
  if(view==='profile')window.VideiraProfile.mount($('#myProfile'),{call,onSaved:async()=>{await reload();render();status('Perfil atualizado no Supabase.')},onPasswordChanged:()=>{clearSession();location.href='gestao.html?senha=alterada'}});
  const bindAccountEditors=()=>document.querySelectorAll('[data-account-edit]').forEach(button=>button.onclick=()=>window.VideiraAccountEditor.open({id:button.dataset.accountEdit,call,churches:db.churches,networks:db.networks,roles,selfId:db.profile.id,onSaved:async()=>{await reload();if($('#linkedAccounts'))updateAccountFilters();status('Conta atualizada no Supabase.')},onReset:()=>status('Senha da conta redefinida.')}));
@@ -270,7 +283,7 @@ function bind(){const bindViews=()=>document.querySelectorAll('[data-view]').for
  }
  if($('#meetingForm')){const form=$('#meetingForm'),entry=$('#meetingEntry'),cards=[...document.querySelectorAll('[data-meeting-cell]')];
   const close=()=>{entry.hidden=true;form.reset();cards.forEach(b=>b.setAttribute('aria-pressed','false'))};
-  cards.forEach(button=>button.onclick=()=>{const cell=meetingCells().find(c=>c.id===button.dataset.meetingCell);if(!cell||busy)return;form.reset();form.elements.cell_id.value=cell.id;const suggested=window.VideiraWeekly.suggest(cell.meeting_schedule||'',db.meetings.filter(m=>m.cell_id===cell.id));form.elements.date.value=suggested.date;$('#changeMeetingDate').open=false;const showDate=()=>{$('#meetingDateDisplay').textContent=form.elements.date.value.split('-').reverse().join('/')||'Selecione a data'};showDate();form.elements.date.onchange=showDate;form.elements.date.min=suggested.min;form.elements.date.max=suggested.max;form.elements.date.setAttribute('aria-describedby','meetingDateHelp');$('#meetingDateHelp').textContent=suggested.message;$('#meetingCellTitle').textContent=cell.name;$('#meetingCellSchedule').textContent=cell.meeting_schedule||'Dia e horário ainda não informados';const people=db.people.filter(p=>p.cell_id===cell.id);$('#attendance').innerHTML=people.map(p=>`<label class="check"><input type="checkbox" name="present" value="${esc(p.id)}"><span class="attendance-avatar" data-person-photo="${esc(p.id)}" aria-hidden="true">${esc(personInitials(p.full_name))}</span><span>${esc(p.full_name)} <small>· ${esc(p.category)}</small></span></label>`).join('')||'<p>Cadastre as pessoas desta célula antes de fazer a chamada.</p>';$('#saveMeeting').disabled=!people.length||Boolean(suggested.min&&suggested.date<suggested.min);$('#markAll').disabled=!people.length;cards.forEach(b=>b.setAttribute('aria-pressed',String(b===button)));entry.hidden=false;loadAttendancePhotos($('#attendance'));$('#meetingCellTitle').setAttribute('tabindex','-1');$('#meetingCellTitle').focus();entry.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'})});
+  cards.forEach(button=>button.onclick=()=>{const cell=meetingCells().find(c=>c.id===button.dataset.meetingCell);if(!cell||busy)return;form.reset();form.elements.cell_id.value=cell.id;const suggested=window.VideiraWeekly.suggest(cell.meeting_schedule||'',db.meetings.filter(m=>m.cell_id===cell.id));form.elements.date.value=suggested.date;$('#changeMeetingDate').open=false;const showDate=()=>{$('#meetingDateDisplay').textContent=form.elements.date.value.split('-').reverse().join('/')||'Selecione a data'};showDate();form.elements.date.onchange=showDate;form.elements.date.min=suggested.min;form.elements.date.max=suggested.max;form.elements.date.setAttribute('aria-describedby','meetingDateHelp');$('#meetingDateHelp').textContent=suggested.message;$('#meetingCellTitle').textContent=cell.name;$('#meetingCellSchedule').textContent=cell.meeting_schedule||'Dia e horário ainda não informados';const people=db.people.filter(p=>p.cell_id===cell.id);$('#attendance').innerHTML=people.map(p=>`<label class="check"><input type="checkbox" name="present" value="${esc(p.id)}"><span class="attendance-avatar" data-person-photo="${esc(p.id)}" aria-hidden="true">${esc(personInitials(p.full_name))}</span><span>${esc(p.full_name)} <small>· ${esc(p.category)}</small></span></label>`).join('')||'<p>Cadastre as pessoas desta célula antes de fazer a chamada.</p>';$('#saveMeeting').disabled=!people.length||Boolean(suggested.min&&suggested.date<suggested.min);$('#markAll').disabled=!people.length;cards.forEach(b=>b.setAttribute('aria-pressed',String(b===button)));entry.hidden=false;loadPersonPhotos($('#attendance'));$('#meetingCellTitle').setAttribute('tabindex','-1');$('#meetingCellTitle').focus();entry.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'})});
   $('#closeMeeting').onclick=()=>{if(busy)return;const selected=cards.find(b=>b.getAttribute('aria-pressed')==='true');close();selected?.focus()};
   $('#markAll').onclick=()=>form.querySelectorAll('[name=present]').forEach(x=>x.checked=true);
   form.onsubmit=e=>{e.preventDefault();if(busy)return;const id=form.elements.cell_id.value;if(!meetingCells().some(c=>c.id===id))return status('Selecione uma célula disponível para sua chamada.',true);const people=db.people.filter(p=>p.cell_id===id);if(!people.length)return status('Cadastre as pessoas desta célula antes de registrar o encontro.',true);if(!form.elements.date.value||form.elements.date.value<form.elements.date.min||form.elements.date.value>window.VideiraWeekly.today())return status('Confira a data: a chamada não pode ser futura, repetida ou anterior à última chamada.',true);const checked=new Set([...form.querySelectorAll('[name=present]:checked')].map(x=>x.value));const data={cell_id:id,date:form.elements.date.value,attendance:people.map(p=>({person_id:p.id,present:checked.has(p.id)}))};save('meeting',data)};
