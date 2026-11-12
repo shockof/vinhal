@@ -17,5 +17,5 @@ window.VideiraProfile=(()=>{
   const passwords=root.querySelector('#myPasswordForm'),passwordFeedback=root.querySelector('#myPasswordFeedback');let changing=false;
   passwords.onsubmit=async e=>{e.preventDefault();if(changing)return;const d=Object.fromEntries(new FormData(passwords));if(d.new_password!==d.confirm_password)return passwordFeedback.textContent='As novas senhas não coincidem.';if(d.current_password===d.new_password)return passwordFeedback.textContent='Escolha uma senha diferente da atual.';changing=true;passwords.querySelector('button').disabled=true;passwordFeedback.textContent='Alterando sua senha…';try{await call('change_password',{current_password:d.current_password,new_password:d.new_password});passwords.reset();onPasswordChanged()}catch(error){passwordFeedback.textContent=error.message;passwords.reset();passwords.querySelector('button').disabled=false}finally{d.current_password=d.new_password=d.confirm_password='';changing=false}};
  }
- return {mount};
+ return {mount,preparePhoto:photo};
 })();

@@ -151,7 +151,7 @@ Deno.serve(async (req: Request) => {
   if(body.action==='logout'){
    await fetch(base+'/auth/v1/logout?scope=local',{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+token}});return reply({ok:true});
   }
-  if(!['load','church','network','cell','person','meeting','meeting_archive','birthdays'].includes(body.action))return reply({error:'Operação inválida'},400);
+  if(!['load','church','network','cell','person','meeting','meeting_archive','birthdays','person_photo'].includes(body.action))return reply({error:'Operação inválida'},400);
   const result=await fetch(base+'/rest/v1/rpc/videira_portal',{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({p_action:body.action,p_data:body.data||{}})});
   const data=await result.json();
   if(!result.ok)return reply({error:data.code==='42501'?'Você não tem permissão para esta operação.':data.code==='23503'?'Confira os vínculos entre igreja, rede e célula.':data.code==='23505'?'Este registro já existe.':String(data.message||'Não foi possível salvar').slice(0,200)},400);
