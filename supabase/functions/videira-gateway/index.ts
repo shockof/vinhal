@@ -72,7 +72,7 @@ Deno.serve(async (req: Request) => {
     try{return reply(await resolveMapsLink(String(d.url||'')))}catch(error){const message=error instanceof Error?error.message:'';const known=['Use um link HTTPS do Google Maps.','Link do Google Maps inválido.','Use um link de localização do Google Maps.','O link teve redirecionamentos demais. Copie o link completo do Maps.','Não foi possível abrir este link curto. Copie o link completo do navegador.'];return reply({error:known.includes(message)?message:'Não foi possível importar o link. Copie o endereço completo do Google Maps e tente novamente.'},400)}
    }
    const operation=body.action==='account_save'?'save':body.action==='account_reset_password'?'password_check':'get';
-   const clean=operation==='save'?{id:d.id,display_name:d.display_name,username:d.username,role:d.role,church_id:d.church_id,network_id:d.network_id,active:d.active,phone:d.phone,contact_email:d.contact_email}:{id:d.id};
+   const clean=operation==='save'?{id:d.id,display_name:d.display_name,username:d.username,role:d.role,church_id:d.church_id,network_id:d.network_id,active:d.active,phone:d.phone,contact_email:d.contact_email,birth_date:d.birth_date}:{id:d.id};
    const response=await fetch(base+'/rest/v1/rpc/videira_admin_account',{method:'POST',headers:userHeaders,body:JSON.stringify({p_action:operation,p_data:clean})});const target=await response.json();
    if(!response.ok)return reply({error:String(target.message||'Conta indisponível').slice(0,220)},response.status===403?403:400);
    if(body.action!=='account_reset_password')return reply(target);
@@ -100,6 +100,7 @@ Deno.serve(async (req: Request) => {
    if(body.action==='profile_save'){
     const data:Record<string,unknown>={display_name:String(d.display_name||'').trim(),phone:String(d.phone||'').trim(),contact_email:String(d.contact_email||'').trim()};
     if(!data.display_name||String(data.display_name).length>180||String(data.phone).length>40||String(data.contact_email).length>254||data.contact_email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(data.contact_email)))return reply({error:'Confira o nome, telefone e e-mail de contato.'},400);
+    if(Object.hasOwn(d,'birth_date'))data.birth_date=d.birth_date;
     if(d.remove_photo===true)data.photo_path=null;
     if(d.photo_base64){
      const encoded=String(d.photo_base64);if(encoded.length>800000||!/^[A-Za-z0-9+/]*={0,2}$/.test(encoded))return reply({error:'Foto muito grande ou inválida.'},400);
@@ -128,7 +129,7 @@ Deno.serve(async (req: Request) => {
    const email=contactEmail||crypto.randomUUID()+'@accounts.videira.invalid';
    if(contactEmail&&(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)||contactEmail.length>254))return reply({error:'Informe um e-mail válido para a conta.'},400);
    if(password.length<12||password.length>128)return reply({error:'A senha inicial deve ter entre 12 e 128 caracteres.'},400);
-   const profile={username:String(d.username||'').trim().toLowerCase(),display_name:String(d.display_name||'').trim(),role:d.role,church_id:d.church_id,network_id:d.network_id||null};
+   const profile={username:String(d.username||'').trim().toLowerCase(),display_name:String(d.display_name||'').trim(),role:d.role,church_id:d.church_id,network_id:d.network_id||null,birth_date:d.birth_date};
    const adminHeaders={apikey:secret,Authorization:'Bearer '+secret,'Content-Type':'application/json'};
    const args={p_actor:actor.id,p_auth_user:null,p_data:profile,p_check_only:true};
    const preflight=await fetch(base+'/rest/v1/rpc/videira_account_provision',{method:'POST',headers:adminHeaders,body:JSON.stringify(args)});
@@ -150,7 +151,7 @@ Deno.serve(async (req: Request) => {
   if(body.action==='logout'){
    await fetch(base+'/auth/v1/logout?scope=local',{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+token}});return reply({ok:true});
   }
-  if(!['load','church','network','cell','person','meeting','meeting_archive'].includes(body.action))return reply({error:'Operação inválida'},400);
+  if(!['load','church','network','cell','person','meeting','meeting_archive','birthdays'].includes(body.action))return reply({error:'Operação inválida'},400);
   const result=await fetch(base+'/rest/v1/rpc/videira_portal',{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({p_action:body.action,p_data:body.data||{}})});
   const data=await result.json();
   if(!result.ok)return reply({error:data.code==='42501'?'Você não tem permissão para esta operação.':data.code==='23503'?'Confira os vínculos entre igreja, rede e célula.':data.code==='23505'?'Este registro já existe.':String(data.message||'Não foi possível salvar').slice(0,200)},400);
