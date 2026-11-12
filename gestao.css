@@ -86,3 +86,37 @@ svg.meeting-card-icon{width:28px;height:28px;flex-shrink:0}
 .birthday-card div span { display: block; color: var(--muted); font-size: .85rem; }
 .birthday-avatar { flex-basis: 46px; width: 46px; height: 46px; }
 .birthday-date { color: var(--purple); font-weight: 700; font-size: .85rem; }
+
+.photo-crop-dialog {
+ width: min(440px,calc(100vw - 24px));
+ max-height: calc(100dvh - 24px);
+ overflow: auto;
+ border: 1px solid var(--line);
+ border-radius: 20px;
+ padding: 20px;
+ color: var(--ink);
+}
+.photo-crop-dialog::backdrop { background: #1c1226b3; }
+.photo-crop-dialog h2 { margin: 0; }
+.photo-crop-dialog p { margin: 6px 0 12px; }
+.photo-crop-dialog canvas {
+ display: block;
+ width: min(250px,100%,40dvh);
+ height: auto;
+ margin: 12px auto 18px;
+ border-radius: 50%;
+ outline: 2px solid var(--line);
+ cursor: grab;
+ touch-action: none;
+}
+.photo-crop-dialog canvas:active { cursor: grabbing; }
+.photo-crop-dialog input[type=range] {
+ width: 100%;
+ padding: 0;
+ accent-color: var(--purple);
+}
+.photo-crop-position { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.photo-crop-error:empty { display: none; }
+.photo-crop-error { color: #9f2442; }
+
+#cropMyPhoto[hidden], #cropMemberPhoto[hidden] { display: none; }

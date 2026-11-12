@@ -123,6 +123,7 @@ function entityForm(){const item=edit?db[list[view]].find(x=>x.id===edit):{};if(
    <div>
     <label>Foto do membro<input id="memberPhotoFile" type="file" accept="image/jpeg,image/png,image/webp"></label>
     <small>JPG, PNG ou WebP · até 8 MB</small>
+    <div class="actions"><button type="button" class="secondary" id="cropMemberPhoto" hidden>Ajustar enquadramento</button></div>
     <p id="memberPhotoFeedback" role="status"></p>
    </div>
   </div>`:'')+field('full_name','Nome completo',item.full_name,'text','required maxlength="180"')+(!edit||memberTransferRoles.has(db.profile.role)
@@ -174,7 +175,8 @@ function bindMemberPhoto(form,id){
  const preview=form.querySelector('#memberPhotoPreview');
  const feedback=form.querySelector('#memberPhotoFeedback');
  const photo={processing:false,image:null};
- let selection=0;
+ const adjust=form.querySelector('#cropMemberPhoto');
+ let selection=0,original=null,position=null;
  const show=(value,alt)=>{
   const img=document.createElement('img');
   img.src='data:image/jpeg;base64,'+value;
@@ -182,30 +184,37 @@ function bindMemberPhoto(form,id){
   preview.replaceChildren(img);
  };
  call('person_photo',{id}).then(({photo_base64})=>{
-  if(form.isConnected&&selection===0&&photo_base64)show(photo_base64,'Foto atual do membro');
+  if(!form.isConnected||!photo_base64)return;
+  if(!original)original='data:image/jpeg;base64,'+photo_base64;
+  if(!photo.image){
+   show(photo_base64,'Foto atual do membro');
+   adjust.hidden=false;
+  }
  }).catch(()=>{
   if(form.isConnected&&selection===0)feedback.textContent='Não foi possível carregar a foto atual.';
  });
- file.onchange=async()=>{
-  const selected=file.files[0];
-  if(!selected)return;
+ const editPhoto=async(source,trigger)=>{
+  if(photo.processing||busy)return;
   const version=++selection;
   photo.processing=true;
-  feedback.textContent='Preparando a foto…';
-  try {
-   const image=await window.VideiraProfile.preparePhoto(selected);
-   if(version!==selection||!form.isConnected)return;
-   photo.image=image;
-   show(image,'Prévia da foto do membro');
+  feedback.textContent='';
+  try{
+   const image=await window.VideiraProfile.cropPhoto(source,trigger,source===original?position:null);
+   if(!image||version!==selection||!form.isConnected)return;
+   original=source;
+   position=image.position;
+   photo.image=image.value;
+   adjust.hidden=false;
+   show(image.value,'Prévia da foto do membro');
    feedback.textContent='Salve o cadastro para confirmar a foto.';
-  } catch(error) {
-   if(version!==selection)return;
-   feedback.textContent=error.message;
-   file.value='';
-  } finally {
-   if(version===selection)photo.processing=false;
+  }catch(error){
+   if(version===selection)feedback.textContent=error.message;
+  }finally{
+   if(version===selection){photo.processing=false;file.value=''}
   }
  };
+ file.onchange=()=>{if(file.files[0])editPhoto(file.files[0],file)};
+ adjust.onclick=()=>editPhoto(original,adjust);
  return photo;
 }
 
