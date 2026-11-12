@@ -5,3 +5,15 @@
 .church-logo{object-fit:cover}#previewbar{position:fixed;top:auto!important;bottom:0;left:0;right:0;box-shadow:0 -5px 20px #0002}#toast{bottom:75px}
 
 #navlinks a.nav-active{color:var(--purple);font-weight:750}#navlinks a{transition:color .2s ease}@media(prefers-reduced-motion:reduce){#navlinks a{transition:none}}
+
+#loginBtn.login-account { display:inline-flex; align-items:center; gap:8px; min-width:0; max-width:220px; padding:5px 11px 5px 5px; text-align:left; }
+.login-avatar { width:32px; height:32px; flex:0 0 32px; border-radius:50%; display:grid; place-items:center; overflow:hidden; background:#ede5f7; color:#522d80; font-size:11px; }
+.login-avatar img { display:block; width:100%; height:100%; object-fit:cover; }
+.login-account-info { display:grid; min-width:0; line-height:1.2; }
+.login-account-info strong, .login-account-info small { display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.login-account-info small { margin-top:2px; font-size:.73rem; font-weight:500; opacity:.8; }
+@media(max-width:600px){
+ #loginBtn.login-account { max-width:min(165px,43vw); gap:5px; padding-right:8px; }
+ .login-avatar { width:26px; height:26px; flex-basis:26px; }
+ .login-account-info small { font-size:.66rem; }
+}
