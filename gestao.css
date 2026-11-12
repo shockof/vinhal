@@ -135,3 +135,43 @@ a.dash-metric:focus-visible { outline: 3px solid var(--purple); outline-offset: 
 .metric-people { padding: 5px 12px; overflow-wrap: anywhere; }
 .metric-people h3 { margin: 6px 0; }
 .metric-people ul { padding-inline-start: 20px; }
+
+.directory-heading { position: relative; margin-bottom: 24px; }
+.directory-heading h1 { margin-bottom: 8px; }
+.directory-back { color: var(--purple); font-weight: 650; }
+.metric-directory, .directory-cell-detail {
+ background: #fff; border: 1px solid var(--line); border-radius: 16px; overflow: hidden;
+}
+.directory-filters {
+ display: grid; grid-template-columns: minmax(170px,1.4fr) repeat(3,minmax(0,1fr));
+ gap: 12px; padding: 18px;
+}
+.directory-filters label { min-width: 0; }
+.directory-filters input, .directory-filters select { min-width: 0; width: 100%; }
+.directory-results { overflow-x: auto; }
+.directory-table { width: 100%; border-collapse: collapse; }
+.directory-table th { background: #f0e9fa; color: #482779; }
+.directory-table td, .directory-table th { padding: 12px 15px; text-align: left; }
+.directory-table td:first-child { font-weight: 700; }
+.directory-table td, .directory-table th { overflow-wrap: anywhere; }
+.directory-network { display: inline-block; border-radius: 20px; padding: 2px 9px; background: #ede2fa; color: #512c84; }
+.directory-action button { padding: 3px 12px; font-size: 1.2rem; }
+.directory-count { padding: 10px 18px; margin: 0; color: var(--muted); border-top: 1px solid var(--line); }
+.directory-cell-detail { padding: 18px; margin-top: 16px; }
+@media(max-width:850px){
+ .directory-filters { grid-template-columns: repeat(2,minmax(0,1fr)); }
+ .directory-table th, .directory-table td { padding: 9px 8px; }
+}
+@media(max-width:560px){
+ .directory-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+ .directory-table tr { display: block; padding: 8px 12px; border-top: 1px solid var(--line); }
+ .directory-table td { display: flex; justify-content: space-between; gap: 8px; border: 0; }
+ .directory-table td[data-label]::before { content: attr(data-label); color: var(--muted); }
+ .directory-table td:first-child::before { display: none; }
+ .directory-table .directory-action { justify-content: end; }
+}
+
+@media(min-width:1000px){
+ .directory-heading { padding-right: 190px; }
+ .directory-back { position: absolute; right: 0; bottom: 8px; }
+}

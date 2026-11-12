@@ -23,7 +23,7 @@ function cards(s,clickable=false,filter={}){
   const content=`${icon(iconName)}<span class="dash-metric-copy"><strong>${value}</strong><span>${metricTitles[key]}</span></span>`;
   const query=new URLSearchParams({metric:key});
   for(const name of ['from','to','church'])if(filter[name])query.set(name,filter[name]);
-  return clickable?`<a class="dash-metric ${color}" data-dash-metric="${key}" href="gestao.html?${esc(query)}" target="_blank" rel="opener" aria-label="${metricTitles[key]}, ${value}, abre em nova aba">${content}</a>`:
+  return clickable?`<a class="dash-metric ${color}" data-dash-metric="${key}" href="gestao.html?${esc(query)}" aria-label="${metricTitles[key]}, ${value}">${content}</a>`:
    `<article class="dash-metric ${color}">${content}</article>`;
  }).join('')}</div>`;
 }
@@ -61,52 +61,75 @@ function cellGroupName(db,key,id){
  return record?.name||fallback[key];
 }
 
-function metricGroups(cells,keys,db,renderRows,depth=0){
- if(!keys.length)return renderRows(cells);
- const [key,...rest]=keys;
- const groups=new Map();
- for(const cell of cells){
-  const id=cell[key]||'';
-  if(!groups.has(id))groups.set(id,[]);
-  groups.get(id).push(cell);
- }
- return [...groups].map(([id,items])=>({name:cellGroupName(db,key,id),items}))
-  .sort((a,b)=>compareNames(a.name,b.name))
-  .map(({name,items})=>`<details class="metric-group" ${depth===0?'open':''}>
-   <summary>${esc(name)}</summary>
-   <div class="metric-group-content">${metricGroups(items,rest,db,renderRows,depth+1)}</div>
-  </details>`).join('');
-}
-
-function metricListing(kind,db,period){
- const role=db.profile.role;
- const keys=kind==='visitors'?['church_id','network_id','discipler_id','id']:
-  allChurchRoles.has(role)?['network_id','discipler_id']:
-  role==='pastor'?['discipler_id']:
-  ['obreiro','predio'].includes(role)?['network_id']:[];
- const category=kind==='members'?'Membro':'Visitante';
- const s=summarize(db,period);
- const peopleByCell=new Map();
- if(kind!=='cells'){
-  for(const person of s.people){
-   if(person.category!==category)continue;
-   if(!peopleByCell.has(person.cell_id))peopleByCell.set(person.cell_id,[]);
-   peopleByCell.get(person.cell_id).push(person);
+function mountDirectory(root,db,kind,filter){
+ const isCells=kind==='cells';
+ const select=(key,label)=>`<label>${label}<select name="${key}"></select></label>`;
+ root.innerHTML=`<section class="metric-directory">
+  <div class="directory-filters">
+   <label>Busca<input type="search" placeholder="${isCells?'Buscar célula ou líder':'Buscar nome ou célula'}"></label>
+   ${select('church_id','Igreja')}
+   ${select('network_id','Rede')}
+   ${select('discipler_id','Discipulador')}
+  </div>
+  <div class="directory-results"></div>
+  <p class="directory-count" role="status"></p>
+ </section>`;
+ const body=root.querySelector('.directory-results');
+ const count=root.querySelector('.directory-count');
+ const search=root.querySelector('input[type=search]');
+ const fields=[...root.querySelectorAll('select')];
+ const allLabels={church_id:'Todas as igrejas',network_id:'Todas as redes',discipler_id:'Todos os discipuladores'};
+ const normalize=value=>String(value).normalize('NFD').replace(/\p{M}/gu,'').toLowerCase();
+ const source=new Map(db.cells.map(cell=>[cell.id,cell]));
+ const rows=isCells?db.cells.map(cell=>({name:cell.name,cell})):
+  db.people.filter(person=>person.category===(kind==='members'?'Membro':'Visitante')&&source.has(person.cell_id))
+   .map(person=>({name:person.full_name,cell:source.get(person.cell_id)}));
+ rows.sort((a,b)=>compareNames(a.name,b.name)||compareNames(a.cell.name,b.cell.name));
+ const label=(key,id)=>key==='network_id'?db.networks.find(n=>n.id===id)?.name||'Rede':cellGroupName(db,key,id);
+ const update=()=>{
+  let cells=db.cells;
+  for(const field of fields){
+   const key=field.name;
+   const selected=field.options.length?field.value:key==='church_id'?filter.church:'';
+   const ids=[...new Set(cells.map(cell=>cell[key]||'__unassigned__'))];
+   const name=id=>label(key,id==='__unassigned__'?'':id);
+   ids.sort((a,b)=>compareNames(name(a),name(b)));
+   field.innerHTML=`<option value="">${allLabels[key]}</option>`+ids.map(id=>`<option value="${esc(id)}">${esc(name(id))}</option>`).join('');
+   field.value=ids.includes(selected)?selected:'';
+   if(field.value)cells=cells.filter(cell=>(cell[key]||'__unassigned__')===field.value);
   }
- }
- const cells=s.groups.filter(cell=>kind==='cells'||peopleByCell.has(cell.id))
-  .sort((a,b)=>compareNames(a.name,b.name));
- if(!cells.length)return '<p class="dash-empty">Nenhum cadastro neste escopo.</p>';
- const renderRows=items=>{
-  if(kind==='cells')return cellRows({...s,groups:items},db);
-  return items.map(cell=>{
-   const people=peopleByCell.get(cell.id).slice().sort((a,b)=>compareNames(a.full_name,b.full_name));
-   return `<div class="metric-people">${kind==='members'?`<h3>${esc(cell.name)}</h3>`:''}
-    <ul>${people.map(person=>`<li>${esc(person.full_name)}</li>`).join('')}</ul>
-   </div>`;
-  }).join('');
+  const ids=new Set(cells.map(cell=>cell.id));
+  const query=normalize(search.value.trim());
+  const filtered=rows.filter(({name,cell})=>ids.has(cell.id)&&
+   [name,cell.name,leadershipName(db,cell.leader_id)].some(value=>normalize(value).includes(query)));
+  const noun=isCells?'célula':kind==='members'?'membro':'visitante';
+  count.textContent=`${filtered.length} ${noun}${filtered.length===1?'':'s'}`;
+  if(!filtered.length){
+   body.innerHTML='<p class="dash-empty">Nenhum resultado para os filtros selecionados.</p>';
+   return;
+  }
+  const headers=[isCells?'Célula':'Nome',...(isCells?[]:['Célula']),'Igreja','Rede','Discipulador',...(isCells?['Líder','Detalhes']:[])];
+  body.innerHTML=`<table class="directory-table"><thead><tr>${headers.map(text=>`<th scope="col">${text}</th>`).join('')}</tr></thead>
+   <tbody>${filtered.map(({name,cell})=>{
+    const values=[name,...(isCells?[]:[cell.name]),label('church_id',cell.church_id),label('network_id',cell.network_id),
+     label('discipler_id',cell.discipler_id),...(isCells?[leadershipName(db,cell.leader_id)]:[])];
+    return `<tr>${values.map((value,index)=>`<td data-label="${headers[index]}">${headers[index]==='Rede'?`<span class="directory-network">${esc(value)}</span>`:esc(value)}</td>`).join('')}
+     ${isCells?`<td class="directory-action"><button class="secondary" type="button" data-directory-cell="${esc(cell.id)}" aria-label="Ver detalhes de ${esc(cell.name)}">›</button></td>`:''}</tr>`;
+   }).join('')}</tbody></table>`;
+  body.querySelectorAll('[data-directory-cell]').forEach(button=>button.onclick=()=>{
+   const cell=source.get(button.dataset.directoryCell);
+   const detail=root.querySelector('.directory-cell-detail');
+   const summary=summarize(db,{from:filter.from,to:filter.to,cell:cell.id});
+   detail.hidden=false;
+   detail.innerHTML=`<h2 tabindex="-1">${esc(cell.name)}</h2><p>${esc(cell.meeting_schedule||'Encontro a definir')}</p>
+    ${cards(summary)}<div class="dash-grid"><article class="dash-panel"><h3>Frequência mensal</h3>${trend(summary)}</article><article class="dash-panel"><h3>Participação no período</h3>${donut(summary)}</article></div>`;
+   detail.querySelector('h2').focus();
+  });
  };
- return metricGroups(cells,keys,db,renderRows);
+ for(const field of fields)field.onchange=()=>{root.querySelector('.directory-cell-detail').hidden=true;update()};
+ search.oninput=()=>{root.querySelector('.directory-cell-detail').hidden=true;update()};
+ root.insertAdjacentHTML('beforeend','<section class="directory-cell-detail" hidden></section>');
+ update();
 }
 
 function frequencyDetails(dialog,db,initial){
@@ -166,11 +189,7 @@ function mountMetric(root,db,kind,filter){
  const scoped=metricScope(db);
  root.innerHTML='<div class="metric-details-body"></div>';
  if(kind==='frequency')frequencyDetails(root,scoped,filter);
- else{
-  const body=root.querySelector('.metric-details-body');
-  body.innerHTML=metricListing(kind,scoped,filter);
-  bind(body,scoped,filter);
- }
+ else mountDirectory(root.querySelector('.metric-details-body'),scoped,kind,filter);
 }
 
 function visuals(db,filter={},showBirthdays=false){const s=summarize(db,filter),global=['master','supervisor','predio'].includes(db.profile.role);return `${cards(showBirthdays&&db.profile.role==='discipulador'?summarize(metricScope(db),filter):s,showBirthdays&&metricRoles.has(db.profile.role),filter)}${showBirthdays?'<section class="dash-panel birthday-panel" id="birthdaysPanel"><h2>Aniversariantes do mês</h2><p role="status">Carregando aniversariantes…</p></section>':''}<div class="dash-grid"><article class="dash-panel"><div class="dash-panel-title"><h2>${global?'Desempenho das redes':db.profile.role==='discipulador'?'Células por líder':db.profile.role==='lider'?'Minhas células':'Células por discipulador'}</h2><span>${global?db.networks.filter(n=>s.cells.some(c=>c.network_id===n.id)).length+' redes':s.cells.length+' células'}</span></div>${global?networkBars(s,db):groupedCells(s,db)}</article><article class="dash-panel"><h2>Evolução da frequência</h2>${trend(s)}</article></div><div class="dash-grid dash-bottom"><article class="dash-panel"><h2>${global?'Células por discipulador':'Células do seu escopo'}</h2>${global?groupedCells(s,db):`<p class="dash-explainer">Acompanhe cada célula e abra os detalhes para conferir seus indicadores. Os números de membros e visitantes representam o cadastro atual.</p><div class="actions"><button data-view="reports">Ver relatório completo →</button><button class="secondary" data-view="meeting">Registrar presença</button></div>`}</article><article class="dash-panel"><h2>Resumo da participação</h2>${donut(s)}</article></div>`}
