@@ -33,7 +33,7 @@
 #registration-form { display: grid; gap: 1rem; }
 #registration-form h3 { margin: 0; }
 #registration-form label { display: grid; gap: .35rem; font-weight: 600; }
-#registration-form input {
+#registration-form input, #registration-form select {
   width: 100%;
   min-height: 46px;
   padding: .65rem .8rem;
@@ -45,4 +45,20 @@
 #registration-status { font-weight: 650; color: var(--purple); }
 @media (max-width: 760px) {
   .registration-layout { grid-template-columns: minmax(0, 1fr); }
+}
+
+.registration-sector {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform .22s ease, filter .22s ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .registration-sector:hover {
+    transform: translateY(-3px) scale(1.025);
+    filter: drop-shadow(0 5px 5px #56338f55);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .registration-sector { transition: none; }
+  .registration-sector:hover { transform: none; }
 }

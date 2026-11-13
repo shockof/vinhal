@@ -52,25 +52,31 @@ function drawRegistrationSeats(confirmed) {
   for (const side of [-1, 1]) {
     for (let row = 0; row < 7; row++) {
       for (let col = 0; col < 5; col++) {
-        points.push([720 + side * (350 + row * 29), 731 + col * 26, side * 90]);
+        points.push([720 + side * (350 + row * 29), 731 + col * 26, side * 90, "Lateral"]);
       }
     }
     for (let row = 0; row < 8; row++) {
       for (let col = 0; col < 6; col++) {
-        points.push([720 + side * (39 + col * 26), 640 - row * 30, 0]);
+        points.push([720 + side * (39 + col * 26), 640 - row * 30, 0, "Central"]);
       }
     }
     diagonal.forEach((count, row) => {
       for (let col = 0; col < count; col++) {
         const x = 211 + row * 12 + col * 26 * Math.cos(tilt);
         const y = 640 - row * 30 + col * 26 * Math.sin(tilt);
-        points.push([720 + side * x, y, side * 20]);
+        points.push([720 + side * x, y, side * 20, "Diagonal"]);
       }
     });
   }
   points.sort((a, b) => b[1] - a[1] || a[0] - b[0]);
-  const chairs = points.map(([x, y, angle], i) =>
-    `<use href="#registration-chair" class="${i < confirmed ? 'confirmed' : 'available'}" transform="translate(${x} ${y}) rotate(${angle})"/>`
+  const sectors = new Map();
+  points.forEach(([x, y, angle, section], i) => {
+    const label = section + (x < 720 ? ' · Esquerda' : ' · Direita');
+    if (!sectors.has(label)) sectors.set(label, []);
+    sectors.get(label).push(`<use href="#registration-chair" class="${i < confirmed ? 'confirmed' : 'available'}" transform="translate(${x} ${y}) rotate(${angle})"/>`);
+  });
+  const chairs = [...sectors].map(([label, seats]) =>
+    `<g class="registration-sector"><title>${label}</title>${seats.join('')}</g>`
   );
   document.getElementById('registration-seats').innerHTML = `<svg viewBox="160 407 1120 445" role="img" aria-label="Mapa do auditório com 300 cadeiras">
     <defs><g id="registration-chair"><rect x="-11" y="-9" width="22" height="17" rx="4"/><path d="M-9 5h18"/></g></defs>
@@ -83,7 +89,7 @@ function drawRegistrationSeats(confirmed) {
 
 async function registrationRequest(event, fields = {}) {
   const config = window.VIDEIRA_CONFIG;
-  const response = await fetch(config.url + '/rest/v1/rpc/videira_event_registration', {
+  const response = await fetch(config.url + '/rest/v1/rpc/videira_event_registration_v2', {
     method: 'POST',
     headers: {apikey: config.publicKey, Authorization: 'Bearer ' + config.publicKey, 'Content-Type': 'application/json'},
     body: JSON.stringify({p_event_id: event.id, ...fields})
@@ -106,6 +112,13 @@ function renderRegistrations(event, isPreview) {
   panel.hidden = !enabled;
   button.disabled = true;
   form.reset();
+  const cpf = form.elements.cpf;
+  cpf.oninput = () => {
+    cpf.value = cpf.value.replace(/\D/g, '').slice(0, 11)
+      .replace(/^(\d{3})(\d)/, '$1.$2')
+      .replace(/^(\d{3}\.\d{3})(\d)/, '$1.$2')
+      .replace(/^(\d{3}\.\d{3}\.\d{3})(\d)/, '$1-$2');
+  };
   status.textContent = '';
   if (!enabled) return;
   document.getElementById('registration-title').textContent = event.title;
@@ -142,7 +155,7 @@ function renderRegistrations(event, isPreview) {
     button.disabled = true;
     status.textContent = 'Enviando inscrição…';
     try {
-      const result = await registrationRequest(event, {p_name: fields.get('name'), p_email: fields.get('email')});
+      const result = await registrationRequest(event, {p_name: fields.get('name'), p_email: fields.get('email'), p_cpf: fields.get('cpf').replace(/\D/g, ''), p_role: fields.get('role'), p_payment: fields.get('payment')});
       if (displayedRegistration !== view) return;
       status.textContent = '';
       show(result);
@@ -150,7 +163,7 @@ function renderRegistrations(event, isPreview) {
         form.reset();
         status.textContent = 'Inscrição recebida.';
       } else if (result.status === 'invalid') {
-        status.textContent = 'Confira o nome e o e-mail informados.';
+        status.textContent = 'Confira o CPF e os demais dados da inscrição.';
       }
     } catch (error) {
       fail(error);
