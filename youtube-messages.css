@@ -27,8 +27,26 @@
 .youtube-files, .youtube-related { margin: 1.25rem 0; }
 .youtube-files h4, .youtube-related h4 { margin: 0 0 .6rem; }
 #youtube-current-files { display: flex; flex-wrap: wrap; gap: .5rem; }
-#youtube-thumbnails { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%, 200px),1fr)); gap: .85rem; }
-#youtube-thumbnails button { color: inherit; font: inherit; text-align: left; background: white; border: 1px solid #e6dcef; border-radius: 12px; padding: 0; overflow: hidden; cursor: pointer; }
-#youtube-thumbnails img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+#youtube-thumbnails {
+  display: flex;
+  gap: .85rem;
+  overflow-x: auto;
+  padding: 4px 4px 12px;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: 4px;
+}
+#youtube-thumbnails button {
+  flex: 0 0 clamp(210px, 28%, 290px);
+  max-width: 85%;
+  scroll-snap-align: start;
+  align-content: start;
+}
+@media (pointer: fine) {
+  #youtube-thumbnails button { cursor: grab; }
+  #youtube-thumbnails.is-dragging { scroll-snap-type: none; user-select: none; }
+  #youtube-thumbnails.is-dragging button { cursor: grabbing; }
+}
+#youtube-thumbnails button { color: inherit; font: inherit; text-align: left; background: white; border: 1px solid #e6dcef; border-radius: 12px; padding: 0; overflow: hidden; }
+#youtube-thumbnails img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; pointer-events: none; }
 #youtube-thumbnails span { display: block; padding: .65rem; font-weight: 650; }
 #youtube-more { margin-top: .75rem; }

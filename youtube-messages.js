@@ -13,6 +13,39 @@
   let files = [];
   let limit = 12;
 
+  let drag = null;
+  let dragged = false;
+  thumbnails.addEventListener('pointerdown', event => {
+    dragged = false;
+    if (event.pointerType !== 'mouse' || event.button !== 0 ||
+        thumbnails.scrollWidth <= thumbnails.clientWidth) return;
+    drag = {id: event.pointerId, x: event.clientX, left: thumbnails.scrollLeft};
+  });
+  window.addEventListener('pointermove', event => {
+    if (drag?.id !== event.pointerId) return;
+    const distance = event.clientX - drag.x;
+    if (!dragged && Math.abs(distance) < 6) return;
+    if (!dragged) {
+      dragged = true;
+      thumbnails.classList.add('is-dragging');
+      thumbnails.setPointerCapture(event.pointerId);
+    }
+    thumbnails.scrollLeft = drag.left - distance;
+  });
+  function finishDrag(event) {
+    if (drag?.id !== event.pointerId) return;
+    drag = null;
+    thumbnails.classList.remove('is-dragging');
+  }
+  window.addEventListener('pointerup', finishDrag);
+  window.addEventListener('pointercancel', finishDrag);
+  thumbnails.addEventListener('click', event => {
+    if (!dragged || event.detail === 0) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    dragged = false;
+  }, true);
+
   function player(video, autoplay) {
     const frame = document.createElement('iframe');
     frame.src = 'https://www.youtube-nocookie.com/embed/' + video.id + '?playsinline=1' + (autoplay ? '&autoplay=1' : '');
@@ -43,6 +76,7 @@
 
   function renderThumbnails() {
     const others = catalog.filter(video => video.id !== selected.id);
+    const left = thumbnails.scrollLeft;
     thumbnails.replaceChildren();
     for (const video of others.slice(0, limit)) {
       const button = document.createElement('button');
@@ -61,6 +95,7 @@
       };
       thumbnails.append(button);
     }
+    thumbnails.scrollLeft = left;
     more.hidden = others.length <= limit;
   }
 
