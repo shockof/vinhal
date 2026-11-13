@@ -109,6 +109,11 @@
   }
 
   function openPlaylist() {
+    if (!get('page-inicio').classList.contains('active') && featuredPlayer.firstElementChild) {
+      featuredPlayer.replaceChildren();
+      featuredPlayer.hidden = true;
+      feature.hidden = false;
+    }
     if (location.hash === '#arquivos') {
       if (!host.firstElementChild) select(selected);
     } else {
@@ -117,18 +122,27 @@
   }
 
   more.onclick = () => { limit += 12; renderThumbnails(); };
-  feature.addEventListener('click', event => {
-    event.stopImmediatePropagation();
-    page('arquivos');
-    select(catalog[0], true);
-    host.scrollIntoView({block: 'start'});
-  }, true);
+  const featuredPlayer = get('youtube-featured-player');
+  feature.onclick = () => {
+    featuredPlayer.replaceChildren(player(catalog[0], true));
+    feature.hidden = true;
+    featuredPlayer.hidden = false;
+  };
+
   document.addEventListener('click', event => {
     if (event.target.closest('a[href="#arquivos"]') && !host.firstElementChild) select(selected);
     requestAnimationFrame(openPlaylist);
   });
   window.addEventListener('hashchange', openPlaylist);
-  window.VideiraYouTube = {setFiles(value) { files = value; renderFiles(); }};
+  function renderFeatured() {
+    const latest = catalog[0];
+    feature.querySelector('img').src = imageUrl(latest.id);
+    get('youtube-featured-title').textContent = latest.title;
+    const description = get('youtube-featured-description');
+    description.textContent = latest.description || '';
+    description.hidden = !description.textContent;
+  }
+  window.VideiraYouTube = {setFiles(value) { files = value; renderFiles(); renderFeatured(); }};
   window.VideiraYouTube.setFiles(cmsNormalize(preview && state.draft ? state.draft : state.published).wordFiles);
   openPlaylist();
 
@@ -148,12 +162,8 @@
 
   loadCatalog().then(items => {
     catalog = items;
+    renderFeatured();
     const latest = catalog[0];
-    feature.querySelector('img').src = imageUrl(latest.id);
-    get('youtube-featured-title').textContent = latest.title;
-    const description = get('youtube-featured-description');
-    description.textContent = latest.description || '';
-    description.hidden = !description.textContent;
     const current = catalog.find(video => video.id === selected.id);
     if (host.firstElementChild && current) {
       selected = current;
