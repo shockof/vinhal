@@ -1,10 +1,26 @@
 'use strict';
 // Production access and the sample dashboard remain separate.
 document.querySelector('#loginBtn').onclick=()=>{location.href='gestao.html?v=20261112-profile-return'};
-const demoButton=document.createElement('button');demoButton.type='button';demoButton.className='dash-button';demoButton.textContent='Explorar demonstração';demoButton.onclick=()=>openLogin();document.querySelector('footer .toolbar').append(demoButton);
+
 
 (()=>{
  const button=document.querySelector('#loginBtn');
+ const reset=document.querySelector('#reset');
+ const demoButton=document.createElement('button');
+ demoButton.type='button';
+ demoButton.className='dash-button';
+ demoButton.textContent='Explorar demonstração';
+ const restoreDemo=reset.onclick;
+ let masterSession=null;
+ const canUseDemo=()=>masterSession!==null&&current()?.tokens.local_id===masterSession;
+ reset.onclick=event=>{if(canUseDemo())restoreDemo?.call(reset,event)};
+ demoButton.onclick=()=>{if(canUseDemo())openLogin()};
+ function setDemoAccess(sessionId=null){
+  masterSession=sessionId;
+  reset.classList.toggle('hidden',!canUseDemo());
+  if(canUseDemo())reset.after(demoButton);
+  else demoButton.remove();
+ }
  const config=window.VIDEIRA_CONFIG;
  const key='videira:gestao:session:v1';
  const roles={
@@ -83,6 +99,7 @@ const demoButton=document.createElement('button');demoButton.type='button';demoB
  }
  async function sync(){
   const version=++revision;
+  setDemoAccess();
   const session=current();
   if(!session){showLogin();return}
   try{
@@ -94,7 +111,10 @@ const demoButton=document.createElement('button');demoButton.type='button';demoB
    if(version!==revision||current()?.tokens.local_id!==session.tokens.local_id)return;
    if(!response.ok){showLogin();return}
    const profile=await response.json();
-   if(version===revision&&typeof profile.display_name==='string')showProfile(profile);
+   if(version===revision&&current()?.tokens.local_id===session.tokens.local_id&&typeof profile.display_name==='string'){
+    showProfile(profile);
+    if(profile.role==='master'&&session.tokens.local_id)setDemoAccess(session.tokens.local_id);
+   }
   }catch{
    if(version===revision)showLogin();
   }
