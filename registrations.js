@@ -135,6 +135,7 @@ async function registrationRequest(event, fields = {}) {
   const config = window.VIDEIRA_CONFIG;
   const response = await fetch(config.url + '/rest/v1/rpc/videira_event_registration_v2', {
     method: 'POST',
+    signal: AbortSignal.timeout(12000),
     headers: {apikey: config.publicKey, Authorization: 'Bearer ' + config.publicKey, 'Content-Type': 'application/json'},
     body: JSON.stringify({p_event_id: event.id, ...fields})
   });
@@ -149,7 +150,7 @@ function renderRegistrations(event, isPreview) {
   const status = document.getElementById('registration-status');
   const button = form.querySelector('button');
   const enabled = event?.enabled === true && Boolean(event.id && event.title);
-  clearInterval(registrationRefreshTimer);
+  clearTimeout(registrationRefreshTimer);
   const view = {submitting: false, refreshing: false, submission: 0, confirmed: 0};
   displayedRegistration = view;
   waiting.hidden = enabled;
@@ -174,7 +175,7 @@ function renderRegistrations(event, isPreview) {
 
   const show = result => {
     if (!result.active) {
-      clearInterval(registrationRefreshTimer);
+      clearTimeout(registrationRefreshTimer);
       waiting.hidden = false;
       panel.hidden = true;
       return;
@@ -216,17 +217,20 @@ function renderRegistrations(event, isPreview) {
       view.submitting = false;
     }
   };
+  let retryDelay = 15000;
   const refresh = async () => {
     if (view.submitting || view.refreshing) return;
     view.refreshing = true;
     const submission = view.submission;
     try {
       const result = await registrationRequest(event);
+      retryDelay = 15000;
       if (displayedRegistration === view && !view.submitting && view.submission === submission) {
         if (status.textContent === view.refreshError) status.textContent = '';
         show(result);
       }
     } catch (error) {
+      retryDelay = Math.min(retryDelay * 2, 120000);
       if (button.disabled && !view.submitting) {
         view.refreshError = error.message;
         fail(error);
@@ -235,8 +239,16 @@ function renderRegistrations(event, isPreview) {
       view.refreshing = false;
     }
   };
-  refresh();
-  registrationRefreshTimer = setInterval(() => {
-    if (!document.hidden && document.getElementById('page-inscricoes').classList.contains('active')) refresh();
-  }, 15000);
+  const scheduleRefresh = () => {
+    registrationRefreshTimer = setTimeout(async () => {
+      if (displayedRegistration !== view || panel.hidden) return;
+      if (!document.hidden && document.getElementById('page-inscricoes').classList.contains('active')) {
+        await refresh();
+      }
+      if (displayedRegistration === view && !panel.hidden) scheduleRefresh();
+    }, retryDelay + Math.random() * 3000);
+  };
+  refresh().finally(() => {
+    if (displayedRegistration === view && !panel.hidden) scheduleRefresh();
+  });
 }
