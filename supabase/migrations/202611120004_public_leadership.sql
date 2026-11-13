@@ -3,6 +3,7 @@ create table videira_private.leadership_photos (
   user_id uuid primary key references videira.profiles on delete cascade,
   photo text not null check (length(photo) between 4 and 800000)
 );
+alter table videira_private.leadership_photos enable row level security;
 revoke all on videira_private.leadership_photos from public, anon, authenticated;
 
 create function public.videira_leadership_photo(p_id uuid, p_photo text default null)
