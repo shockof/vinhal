@@ -8,12 +8,11 @@
     predio: 'Pastor (a) de prédio',
     pastor: 'Pastor (a) de rede',
     obreiro: 'Obreiro (a)',
-    discipulador: 'Discipulador (a)',
-    lider: 'Líder de célula'
+    discipulador: 'Discipulador (a)'
   };
   const sections = [
     ['pastoralProfiles', ['supervisor', 'predio', 'pastor', 'obreiro']],
-    ['leaderProfiles', ['discipulador', 'lider']]
+    ['leaderProfiles', ['discipulador']]
   ];
 
   async function rpc(action, params = {}) {
