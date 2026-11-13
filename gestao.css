@@ -239,12 +239,15 @@ a.dash-metric:focus-visible { outline: 3px solid var(--purple); outline-offset: 
  block-size: var(--field-height);
  min-block-size: var(--field-height);
  padding: 0 12px;
+ line-height: calc(var(--field-height) - 2px);
 }
 .report-filters input[type=date]::-webkit-date-and-time-value {
  min-width: 0;
  margin: 0;
+ line-height: inherit;
  text-align: left;
 }
+.report-filters input[type=date]::-webkit-datetime-edit { padding: 0; }
 @media (max-width: 560px) {
  .report-filters { grid-template-columns: minmax(0, 1fr); }
 }
