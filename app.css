@@ -17,3 +17,14 @@
  .login-avatar { width:26px; height:26px; flex-basis:26px; }
  .login-account-info small { font-size:.66rem; }
 }
+
+/* Keep the saved profile framing in the public leadership cards. */
+:is(#pastoralProfiles, #leaderProfiles) .person > :is(.profile-photo, .profile-initials) {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+:is(#pastoralProfiles, #leaderProfiles) .person > .profile-photo {
+  display: block;
+  object-fit: contain;
+}
