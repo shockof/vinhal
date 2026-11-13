@@ -20,28 +20,34 @@ jobs:
           python3 - <<'PY'
           import json, os, urllib.parse, urllib.request
           from pathlib import Path
-          params = urllib.parse.urlencode({
+          params = {
               'part': 'snippet,status', 'playlistId': 'UUeK9EVzNsmiD2PLTMIe_t_w',
-              'maxResults': 20, 'key': os.environ['YOUTUBE_API_KEY'],
-          })
+              'maxResults': 50, 'key': os.environ['YOUTUBE_API_KEY'],
+          }
+          catalog = {}
           try:
-              with urllib.request.urlopen('https://www.googleapis.com/youtube/v3/playlistItems?' + params, timeout=20) as response:
-                  items = json.load(response)['items']
+              while True:
+                  url = 'https://www.googleapis.com/youtube/v3/playlistItems?' + urllib.parse.urlencode(params)
+                  with urllib.request.urlopen(url, timeout=20) as response:
+                      page = json.load(response)
+                  for item in page['items']:
+                      if item.get('status', {}).get('privacyStatus') == 'public':
+                          video = item['snippet']
+                          id = video['resourceId']['videoId']
+                          catalog[id] = {'id': id, 'title': video['title'], 'description': video['description']}
+                  token = page.get('nextPageToken')
+                  if not token:
+                      break
+                  params['pageToken'] = token
           except Exception:
               raise SystemExit('A consulta ao YouTube falhou. Confira a API e a credencial.')
-          for item in items:
-              if item.get('status', {}).get('privacyStatus') == 'public':
-                  video = item['snippet']
-                  Path('youtube-featured.json').write_text(json.dumps({
-                      'id': video['resourceId']['videoId'], 'title': video['title'],
-                      'description': video['description'],
-                  }, ensure_ascii=False, indent=2) + '\n')
-                  break
+          if catalog:
+              Path('youtube-catalog.json').write_text(json.dumps(list(catalog.values()), ensure_ascii=False, indent=2) + '\n')
           PY
       - name: Publicar atualização
         if: env.YOUTUBE_API_KEY != ''
         run: |
-          git add -f --ignore-errors youtube-featured.json
+          git add youtube-catalog.json
           if git diff --cached --quiet; then exit 0; fi
           git -c user.name=github-actions -c user.email=41898282+github-actions[bot]@users.noreply.github.com commit -m "Update featured YouTube message"
           git push
