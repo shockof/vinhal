@@ -73,11 +73,36 @@ function drawRegistrationSeats(confirmed) {
   points.forEach(([x, y, angle, section], i) => {
     const label = section + (x < 720 ? ' · Esquerda' : ' · Direita');
     if (!sectors.has(label)) sectors.set(label, []);
-    sectors.get(label).push(`<use href="#registration-chair" class="${i < confirmed ? 'confirmed' : 'available'}" transform="translate(${x} ${y}) rotate(${angle})"/>`);
+    sectors.get(label).push({x, y, angle, occupied: i < confirmed});
   });
-  const chairs = [...sectors].map(([label, seats]) =>
-    `<g class="registration-sector"><title>${label}</title>${seats.join('')}</g>`
-  );
+  const chairs = [...sectors].map(([label, seats]) => {
+    const {x, y, angle} = seats[0];
+    const radians = angle * Math.PI / 180;
+    const cos = Math.cos(radians);
+    const sin = Math.sin(radians);
+    const local = seats.map(seat => ({
+      x: (seat.x - x) * cos + (seat.y - y) * sin,
+      y: -(seat.x - x) * sin + (seat.y - y) * cos,
+      occupied: seat.occupied
+    }));
+    const left = Math.min(...local.map(seat => seat.x)) - 14;
+    const top = Math.min(...local.map(seat => seat.y)) - 12;
+    const width = Math.max(...local.map(seat => seat.x)) + 14 - left;
+    const height = Math.max(...local.map(seat => seat.y)) + 12 - top;
+    const bounds = `x="${left}" y="${top}" width="${width}" height="${height}" rx="8"`;
+    const seatsMarkup = local.map(seat =>
+      `<use href="#registration-chair" class="${seat.occupied ? 'confirmed' : 'available'}" transform="translate(${seat.x} ${seat.y})"/>`
+    ).join('');
+    return `<g class="registration-sector" transform="translate(${x} ${y}) rotate(${angle})">
+      <title>${label}</title>
+      <rect class="registration-sector-hit" ${bounds}/>
+      <g class="registration-sector-platform">
+        <rect class="registration-sector-edge" ${bounds} transform="translate(0 6)"/>
+        <rect class="registration-sector-surface" ${bounds}/>
+        ${seatsMarkup}
+      </g>
+    </g>`;
+  });
   document.getElementById('registration-seats').innerHTML = `<svg viewBox="160 407 1120 445" role="img" aria-label="Mapa do auditório com 300 cadeiras">
     <defs><g id="registration-chair"><rect x="-11" y="-9" width="22" height="17" rx="4"/><path d="M-9 5h18"/></g></defs>
     ${chairs.join('')}

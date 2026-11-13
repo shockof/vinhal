@@ -48,21 +48,35 @@
 }
 
 #registration-seats svg { overflow: visible; }
-.registration-sector {
-  transform-box: fill-box;
-  transform-origin: center;
-  transition: transform .28s cubic-bezier(.2,.8,.25,1), filter .28s ease, opacity .22s ease;
+.registration-sector-hit { fill: transparent; pointer-events: all; }
+.registration-sector-platform {
+  pointer-events: none;
+  transition: transform .32s cubic-bezier(.2,.8,.25,1), filter .32s ease;
+}
+.registration-sector-surface {
+  fill: #f5effc;
+  stroke: #d6c3ed;
+  stroke-width: 2;
+  transition: fill .25s ease, stroke .25s ease;
+}
+.registration-sector-edge {
+  fill: var(--purple);
+  opacity: .12;
+  transition: opacity .25s ease;
 }
 @media (hover: hover) and (pointer: fine) {
-  #registration-seats svg:has(.registration-sector:hover) .registration-sector:not(:hover) {
-    opacity: .38;
+  .registration-sector:hover .registration-sector-platform {
+    transform: translateY(-14px);
+    filter: drop-shadow(0 10px 7px #34204d66);
   }
-  .registration-sector:hover {
-    transform: translateY(-12px) scale(1.06);
-    filter: drop-shadow(0 9px 7px #45256f99) saturate(1.45);
+  .registration-sector:hover .registration-sector-surface {
+    fill: #e8d8fc;
+    stroke: var(--purple);
+    stroke-width: 3;
   }
+  .registration-sector:hover .registration-sector-edge { opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .registration-sector { transition: none; }
-  .registration-sector:hover { transform: none; }
+  .registration-sector-platform, .registration-sector-surface, .registration-sector-edge { transition: none; }
+  .registration-sector:hover .registration-sector-platform { transform: none; }
 }
