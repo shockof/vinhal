@@ -11,7 +11,16 @@
 .youtube-dialog { width: min(900px, calc(100% - 28px)); }
 .youtube-dialog button { margin-bottom: .75rem; }
 #youtube-featured-description { white-space: pre-line; overflow-wrap: anywhere; }
-#youtube-playlist { scroll-margin-top: 110px; }
+#youtube-playlist {
+  width: min(100%, 800px);
+  width: min(100%, 800px, max(560px, 110svh));
+  margin-inline: auto;
+  scroll-margin-top: 110px;
+}
+#youtube-playlist iframe {
+  height: auto;
+  min-height: 0;
+}
 #youtube-current-title { margin: 1rem 0 .5rem; font-size: clamp(1.2rem, 3vw, 1.65rem); }
 .youtube-description { white-space: pre-line; overflow-wrap: anywhere; }
 .youtube-description:empty { display: none; }
