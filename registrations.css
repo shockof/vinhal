@@ -1,0 +1,48 @@
+.registrations [hidden] { display: none; }
+.registrations h1 { color: var(--purple); margin: 0 0 1rem; }
+.registration-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
+  align-items: start;
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+.registration-map, #registration-form {
+  margin: 0;
+  padding: clamp(0.875rem, 3vw, 1.5rem);
+  border: 1px solid #e6dcef;
+  border-radius: var(--site-radius, 22px);
+  background: #fff;
+}
+.registration-map figcaption { font-weight: 700; color: var(--purple); }
+#registration-seats svg { width: 100%; display: block; margin: 1rem 0; font: 700 23px system-ui; }
+.registration-aisle { fill: #685d77; font-size: 14px; font-weight: 400; }
+.registration-map .available { fill: var(--purple); stroke: var(--purple); }
+.registration-map .confirmed { fill: #e4daef; stroke: #b9a7ce; }
+.registration-legend { display: flex; flex-wrap: wrap; gap: .5rem 1rem; font-size: .875rem; }
+.registration-legend span::before {
+  content: '';
+  display: inline-block;
+  width: .7rem;
+  height: .7rem;
+  margin-right: .35rem;
+  border-radius: .2rem;
+  background: var(--purple);
+}
+.registration-legend span + span::before { background: #e4daef; }
+#registration-form { display: grid; gap: 1rem; }
+#registration-form h3 { margin: 0; }
+#registration-form label { display: grid; gap: .35rem; font-weight: 600; }
+#registration-form input {
+  width: 100%;
+  min-height: 46px;
+  padding: .65rem .8rem;
+  font: inherit;
+  border: 1px solid #d9cde6;
+  border-radius: 10px;
+}
+#registration-form button:disabled { opacity: .6; cursor: default; }
+#registration-status { font-weight: 650; color: var(--purple); }
+@media (max-width: 760px) {
+  .registration-layout { grid-template-columns: minmax(0, 1fr); }
+}
