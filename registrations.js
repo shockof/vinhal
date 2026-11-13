@@ -90,15 +90,34 @@ function drawRegistrationSeats(confirmed) {
     const width = Math.max(...local.map(seat => seat.x)) + 14 - left;
     const height = Math.max(...local.map(seat => seat.y)) + 12 - top;
     const bounds = `x="${left}" y="${top}" width="${width}" height="${height}" rx="8"`;
+    const outline = className => {
+      if (!label.startsWith('Diagonal')) return `<rect class="${className}" ${bounds}/>`;
+      // Trim the unused corner before the aisle, in the map's coordinate space.
+      const limit = 708;
+      const corners = [[left, top], [left + width, top],
+        [left + width, top + height], [left, top + height]];
+      const worldY = ([px, py]) => y + px * sin + py * cos;
+      const clipped = corners.flatMap((start, i) => {
+        const end = corners[(i + 1) % corners.length];
+        const from = worldY(start), to = worldY(end);
+        const vertices = from <= limit ? [start] : [];
+        if ((from <= limit) !== (to <= limit)) {
+          const fraction = (limit - from) / (to - from);
+          vertices.push(start.map((value, axis) => value + fraction * (end[axis] - value)));
+        }
+        return vertices;
+      });
+      return `<polygon class="${className}" points="${clipped.map(point => point.join(',')).join(' ')}" stroke-linejoin="round"/>`;
+    };
     const seatsMarkup = local.map(seat =>
       `<use href="#registration-chair" class="${seat.occupied ? 'confirmed' : 'available'}" transform="translate(${seat.x} ${seat.y})"/>`
     ).join('');
     return `<g class="registration-sector" transform="translate(${x} ${y}) rotate(${angle})">
       <title>${label}</title>
-      <rect class="registration-sector-hit" ${bounds}/>
+      ${outline('registration-sector-hit')}
       <g class="registration-sector-platform">
-        <rect class="registration-sector-edge" ${bounds} transform="translate(0 6)"/>
-        <rect class="registration-sector-surface" ${bounds}/>
+        <g transform="translate(0 6)">${outline('registration-sector-edge')}</g>
+        ${outline('registration-sector-surface')}
         ${seatsMarkup}
       </g>
     </g>`;
