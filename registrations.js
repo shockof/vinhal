@@ -1,6 +1,7 @@
 'use strict';
 
 let displayedRegistration;
+let registrationRefreshTimer;
 
 function registrationEditor() {
   const event = cmsWorking.registrations || {};
@@ -98,7 +99,8 @@ function renderRegistrations(event, isPreview) {
   const status = document.getElementById('registration-status');
   const button = form.querySelector('button');
   const enabled = event?.enabled === true && Boolean(event.id && event.title);
-  const view = {};
+  clearInterval(registrationRefreshTimer);
+  const view = {submitting: false, refreshing: false, submission: 0, confirmed: 0};
   displayedRegistration = view;
   waiting.hidden = enabled;
   panel.hidden = !enabled;
@@ -115,12 +117,16 @@ function renderRegistrations(event, isPreview) {
 
   const show = result => {
     if (!result.active) {
+      clearInterval(registrationRefreshTimer);
       waiting.hidden = false;
       panel.hidden = true;
       return;
     }
     count.textContent = `${result.confirmed} de 300 inscrições confirmadas`;
-    drawRegistrationSeats(result.confirmed);
+    if (view.confirmed !== result.confirmed) {
+      drawRegistrationSeats(result.confirmed);
+      view.confirmed = result.confirmed;
+    }
     button.disabled = result.confirmed >= 300;
     if (button.disabled) status.textContent = 'Inscrições lotadas.';
   };
@@ -131,6 +137,8 @@ function renderRegistrations(event, isPreview) {
     e.preventDefault();
     if (button.disabled || displayedRegistration !== view) return;
     const fields = new FormData(form);
+    view.submission++;
+    view.submitting = true;
     button.disabled = true;
     status.textContent = 'Enviando inscrição…';
     try {
@@ -147,9 +155,31 @@ function renderRegistrations(event, isPreview) {
     } catch (error) {
       fail(error);
       if (displayedRegistration === view) button.disabled = false;
+    } finally {
+      view.submitting = false;
     }
   };
-  registrationRequest(event).then(result => {
-    if (displayedRegistration === view) show(result);
-  }).catch(fail);
+  const refresh = async () => {
+    if (view.submitting || view.refreshing) return;
+    view.refreshing = true;
+    const submission = view.submission;
+    try {
+      const result = await registrationRequest(event);
+      if (displayedRegistration === view && !view.submitting && view.submission === submission) {
+        if (status.textContent === view.refreshError) status.textContent = '';
+        show(result);
+      }
+    } catch (error) {
+      if (button.disabled && !view.submitting) {
+        view.refreshError = error.message;
+        fail(error);
+      }
+    } finally {
+      view.refreshing = false;
+    }
+  };
+  refresh();
+  registrationRefreshTimer = setInterval(() => {
+    if (!document.hidden && document.getElementById('page-inscricoes').classList.contains('active')) refresh();
+  }, 15000);
 }
