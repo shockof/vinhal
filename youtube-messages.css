@@ -1,0 +1,13 @@
+.youtube-messages { margin-bottom: 2rem; }
+.youtube-messages iframe, .youtube-dialog iframe {
+  display: block;
+  width: 100%;
+  min-height: 200px;
+  aspect-ratio: 16 / 9;
+  border: 0;
+  border-radius: 12px;
+  background: #181223;
+}
+.youtube-dialog { width: min(900px, calc(100% - 28px)); }
+.youtube-dialog button { margin-bottom: .75rem; }
+#youtube-featured-description { white-space: pre-line; overflow-wrap: anywhere; }

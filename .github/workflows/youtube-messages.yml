@@ -1,0 +1,47 @@
+name: Atualizar mensagem em destaque
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: youtube-featured
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        if: env.YOUTUBE_API_KEY != ''
+      - name: Consultar o canal oficial
+        if: env.YOUTUBE_API_KEY != ''
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.parse, urllib.request
+          from pathlib import Path
+          params = urllib.parse.urlencode({
+              'part': 'snippet,status', 'playlistId': 'UUeK9EVzNsmiD2PLTMIe_t_w',
+              'maxResults': 20, 'key': os.environ['YOUTUBE_API_KEY'],
+          })
+          try:
+              with urllib.request.urlopen('https://www.googleapis.com/youtube/v3/playlistItems?' + params, timeout=20) as response:
+                  items = json.load(response)['items']
+          except Exception:
+              raise SystemExit('A consulta ao YouTube falhou. Confira a API e a credencial.')
+          for item in items:
+              if item.get('status', {}).get('privacyStatus') == 'public':
+                  video = item['snippet']
+                  Path('youtube-featured.json').write_text(json.dumps({
+                      'id': video['resourceId']['videoId'], 'title': video['title'],
+                      'description': video['description'],
+                  }, ensure_ascii=False, indent=2) + '\n')
+                  break
+          PY
+      - name: Publicar atualização
+        if: env.YOUTUBE_API_KEY != ''
+        run: |
+          git add -f --ignore-errors youtube-featured.json
+          if git diff --cached --quiet; then exit 0; fi
+          git -c user.name=github-actions -c user.email=41898282+github-actions[bot]@users.noreply.github.com commit -m "Update featured YouTube message"
+          git push
