@@ -41,9 +41,69 @@
 }
 
 
-:is(#visit-pilar, #visit-satuba, #visit-antonio-lins, #visit-rio-largo, #visit-sao-luis-do-quitunde) { margin-top: 24px; }
 :is(#visit-pilar, #visit-satuba, #visit-antonio-lins, #visit-rio-largo, #visit-sao-luis-do-quitunde) .location-photo img[src="assets/logo.png"] {
   object-fit: contain;
   padding: clamp(24px, 7vw, 84px);
   background: #fff;
+}
+
+.visit-carousel {
+  position: relative;
+}
+
+.visit-carousel-track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 100%);
+  gap: 16px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.visit-carousel-track::-webkit-scrollbar {
+  display: none;
+}
+
+.visit-carousel-track > .location-panel {
+  min-width: 0;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+.visit-carousel-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--purple);
+  box-shadow: 0 4px 14px #24133a26;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.visit-carousel-arrow:first-of-type {
+  left: -12px;
+}
+
+.visit-carousel-arrow:last-of-type {
+  right: -12px;
+}
+
+.visit-carousel-arrow[aria-disabled="true"] {
+  opacity: .6;
+  cursor: default;
+}
+
+.visit-carousel-arrow:focus-visible {
+  outline: 2px solid var(--purple);
+  outline-offset: 2px;
 }
