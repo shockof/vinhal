@@ -40,3 +40,10 @@
   mask: url("assets/instagram.svg") center / contain no-repeat;
 }
 
+
+#visit-pilar { margin-top: 24px; }
+#visit-pilar .location-photo img[src="assets/logo.png"] {
+  object-fit: contain;
+  padding: clamp(24px, 7vw, 84px);
+  background: #fff;
+}
