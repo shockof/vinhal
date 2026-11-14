@@ -288,11 +288,13 @@ async function loadBirthdays(panel) {
     </div>
    </li>`;
   });
-  panel.innerHTML=`<h2>Aniversariantes de ${esc(monthName)}</h2>`+
-   (cards.length?`<div class="birthday-controls" hidden>
-      <button type="button" class="secondary" aria-label="Aniversariantes anteriores" aria-controls="birthdayTrack">‹</button>
-      <button type="button" class="secondary" aria-label="Próximos aniversariantes" aria-controls="birthdayTrack">›</button>
-     </div><ul id="birthdayTrack" class="birthday-grid" tabindex="0" aria-label="Aniversariantes do mês">${cards.join('')}</ul>`:
+  panel.innerHTML=`<div class="birthday-header">
+   <h2>Aniversariantes de ${esc(monthName)}</h2>
+   ${cards.length?`<div class="birthday-controls" hidden>
+      <button type="button" class="secondary" aria-label="Aniversariantes anteriores" aria-controls="birthdayTrack"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 6-6 6 6 6"/></svg></button>
+      <button type="button" class="secondary" aria-label="Próximos aniversariantes" aria-controls="birthdayTrack"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/></svg></button>
+     </div>`:''}
+  </div>`+(cards.length?`<ul id="birthdayTrack" class="birthday-grid" tabindex="0" aria-label="Aniversariantes do mês">${cards.join('')}</ul>`:
     '<p>Nenhum aniversário cadastrado neste mês no seu escopo.</p>');
   if(cards.length)bindBirthdayCarousel(panel);
   loadPersonPhotos(panel);

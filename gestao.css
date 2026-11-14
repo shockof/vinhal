@@ -345,8 +345,10 @@ svg.meeting-card-icon{width:28px;height:28px;flex-shrink:0}
 }
 
 
-.birthday-controls:not([hidden]) { display: flex; justify-content: flex-end; gap: 8px; }
-.birthday-controls button { min-width: 44px; min-height: 44px; padding: 0; font-size: 1.4rem; }
+.birthday-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.birthday-header h2 { margin: 0; overflow-wrap: anywhere; }
+.birthday-controls:not([hidden]) { display: flex; flex-shrink: 0; gap: 8px; }
+.birthday-controls button { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; }
 .birthday-controls button[aria-disabled="true"] { opacity: .45; cursor: default; }
 @media (max-width: 700px) {
  .birthday-grid { grid-auto-columns: calc((100% - 16px) / 2); }
