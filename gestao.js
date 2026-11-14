@@ -143,7 +143,47 @@ function entityForm(){const item=edit?db[list[view]].find(x=>x.id===edit):{};if(
   :`<label>Célula<input value="${esc(label(db.cells,item.cell_id))}" readonly></label>`)+field('phone','Telefone (opcional)',item.phone,'tel','maxlength="40"')+field('birth_date','Data de nascimento (opcional)',item.birth_date,'date','autocomplete="bday"')+`<label>Categoria<select name="category"><option value="Visitante">Visitante</option><option value="Membro" ${item.category==='Membro'?'selected':''}>Membro</option></select></label><label>Batismo<select name="baptized">${['Não informado','Sim','Não'].map(v=>`<option ${item.baptized===v?'selected':''}>${v}</option>`).join('')}</select></label><label>Estado civil<select name="marital_status">${['Não informado','Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)'].map(v=>`<option ${item.marital_status===v?'selected':''}>${v}</option>`).join('')}</select></label>`;
  return `<article class="panel"><h2>${edit?'Editar cadastro':'Novo cadastro'}</h2><form id="entityForm" class="gridform">${fields}<div class="wide actions"><button>Salvar no Supabase</button>${edit?'<button type="button" class="secondary" id="cancelEdit">Cancelar edição</button>':''}</div></form>${view==='person'?'<p><small>Três encontros consecutivos com presença convertem o visitante em membro. Faltas interrompem a sequência.</small></p>':''}</article>`;
 }
-function entityList(){const headers=view==='church'?['Igreja','Município','']:view==='network'?['Rede','Igreja','Tipo','']:view==='cell'?['Célula','Rede','Encontro','Situação','']:['Nome','Categoria','Célula',''];return `<article class="panel">${view==='person'?`<label class="member-search">Pesquisar cadastros<input id="memberSearch" type="search" value="${esc(memberSearch)}" placeholder="Nome, célula, nascimento, telefone…" autocomplete="off"></label><p id="memberSearchEmpty" role="status" hidden>Nenhum cadastro encontrado para essa busca.</p>`:''}${table(headers,db[list[view]].map(x=>[...(view==='church'?[esc(x.name),esc(x.municipality)]:view==='network'?[esc(x.name),esc(label(db.churches,x.church_id)),x.kind==='kids'?'Kids':'Regular']:view==='cell'?[esc(x.name),esc(label(db.networks,x.network_id)),esc(x.meeting_schedule),x.is_paused?'Não está acontecendo':'Está acontecendo']:[esc(x.full_name),esc(x.category),esc(label(db.cells,x.cell_id))]),`<button class="secondary" data-edit="${x.id}">Editar</button>`]))}</article>`}
+let cellSearch = '', cellStatus = '';
+
+function cellFilters() {
+ return `<div class="gridform">
+  <label>Pesquisar células<input id="cellSearch" type="search" value="${esc(cellSearch)}" placeholder="Célula, discipulador, líder, rede ou endereço…" autocomplete="off"></label>
+  <label>Situação<select id="cellStatus">
+   <option value="">Todas as situações</option>
+   <option value="active" ${cellStatus==='active'?'selected':''}>Está acontecendo</option>
+   <option value="paused" ${cellStatus==='paused'?'selected':''}>Não está acontecendo</option>
+  </select></label>
+ </div><p id="cellSearchEmpty" role="status" hidden>Nenhuma célula encontrada para esses filtros.</p>`;
+}
+
+function bindCellFilters() {
+ const search = $('#cellSearch'), situation = $('#cellStatus'), empty = $('#cellSearchEmpty');
+ const cells = new Map(db.cells.map(cell => [cell.id, cell]));
+ const leadership = new Map([...(db.cell_leadership || []), ...db.profiles].map(profile => [profile.id, profile.display_name]));
+ const entries = [...document.querySelectorAll('#workspace tbody tr')].map(row => {
+  const cell = cells.get(row.querySelector('[data-edit]').dataset.edit);
+  const address = cell.address_details || {};
+  const parts = [cell.name, leadership.get(cell.discipler_id), leadership.get(cell.leader_id),
+   label(db.networks, cell.network_id), cell.private_address, address.street, address.house_number,
+   address.complement, address.neighborhood, address.city, address.state, address.postal_code];
+  return { row, text: normalizeSearch(parts.join(' ')).replace(/[^\p{L}\p{N}]+/gu, ' '), paused: Boolean(cell.is_paused) };
+ });
+ const update = () => {
+  cellSearch = search.value;
+  cellStatus = situation.value;
+  const terms = normalizeSearch(cellSearch).split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  for (const { row, text, paused } of entries) {
+   row.hidden = (cellStatus !== '' && paused !== (cellStatus === 'paused'))
+    || !terms.every(term => text.includes(term));
+  }
+  empty.hidden = !entries.length || entries.some(({ row }) => !row.hidden);
+ };
+ search.oninput = update;
+ situation.onchange = update;
+ update();
+}
+
+function entityList(){const headers=view==='church'?['Igreja','Município','']:view==='network'?['Rede','Igreja','Tipo','']:view==='cell'?['Célula','Rede','Encontro','Situação','']:['Nome','Categoria','Célula',''];return `<article class="panel">${view==='person'?`<label class="member-search">Pesquisar cadastros<input id="memberSearch" type="search" value="${esc(memberSearch)}" placeholder="Nome, célula, nascimento, telefone…" autocomplete="off"></label><p id="memberSearchEmpty" role="status" hidden>Nenhum cadastro encontrado para essa busca.</p>`:view==='cell'?cellFilters():''}${table(headers,db[list[view]].map(x=>[...(view==='church'?[esc(x.name),esc(x.municipality)]:view==='network'?[esc(x.name),esc(label(db.churches,x.church_id)),x.kind==='kids'?'Kids':'Regular']:view==='cell'?[esc(x.name),esc(label(db.networks,x.network_id)),esc(x.meeting_schedule),x.is_paused?'Não está acontecendo':'Está acontecendo']:[esc(x.full_name),esc(x.category),esc(label(db.cells,x.cell_id))]),`<button class="secondary" data-edit="${x.id}">Editar</button>`]))}</article>`}
 function meetingCells(){return ['master','supervisor','predio'].includes(db.profile.role)?db.cells.filter(c=>c.leader_id===db.profile.id):db.cells}
 function meeting(){const cells=meetingCells();return `<section class="meeting-picker"><h2>Escolha a célula para fazer a chamada</h2><p>Cada cartão mostra o dia e horário semanal cadastrados.</p>${['master','supervisor','predio'].includes(db.profile.role)?'<div class="notice">Aqui aparecem as células vinculadas a você como líder.</div>':''}<div class="meeting-cell-grid">${cells.map(c=>`<button type="button" class="meeting-cell-card${c.is_paused?' meeting-cell-paused':''}" data-meeting-cell="${esc(c.id)}" aria-pressed="false" aria-controls="meetingEntry"><svg class="meeting-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 2v6m10-6v6M3 11h18m-13 4h3m2 0h3"/></svg><strong>${esc(c.name)}</strong><span class="meeting-card-schedule">${c.is_paused?'Não está acontecendo':esc(c.meeting_schedule||'Dia e horário ainda não informados')}</span><small>${db.people.filter(p=>p.cell_id===c.id).length} pessoa(s) cadastrada(s)</small><span class="meeting-card-action">Fazer chamada →</span></button>`).join('')||'<div class="empty">Nenhuma célula disponível para sua chamada. Confira o vínculo do líder no cadastro da célula.</div>'}</div></section><article class="panel meeting-entry" id="meetingEntry" hidden><div class="meeting-entry-heading"><div><small>CHAMADA DA CÉLULA</small><h2 id="meetingCellTitle"></h2><p id="meetingCellSchedule"></p></div><button type="button" class="secondary" id="closeMeeting">Voltar às células</button></div><p>Confira os participantes e salve a chamada após o encontro. A data não pode ser futura, repetir ou preceder o último encontro registrado.</p><form id="meetingForm"><input type="hidden" name="cell_id"><div class="meeting-today"><span>Data do encontro: <strong id="meetingDateDisplay"></strong></span><details id="changeMeetingDate"><summary>Alterar data</summary>${field('date','Data do encontro','','date','required')}</details></div><p id="meetingDateHelp" class="notice" role="status"></p><div id="attendance" style="margin-top:20px"></div><div id="cellTrainee" class="notice" hidden>
  <label>Líder em treinamento (opcional)<select id="cellTraineeSelect"></select></label>
@@ -329,6 +369,7 @@ function bind(){const bindViews=()=>document.querySelectorAll('[data-view]').for
   bindDashboard();bindViews();
  };bindDashboard();loadBirthdays($('#birthdaysPanel'));$('#dashboardPeriod').onchange=update;if($('#dashboardChurch'))$('#dashboardChurch').onchange=update}
 
+ if(view==='cell')bindCellFilters();
  if(view==='person'){
   const search=$('#memberSearch');
   const empty=$('#memberSearchEmpty');
