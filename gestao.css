@@ -251,3 +251,33 @@ a.dash-metric:focus-visible { outline: 3px solid var(--purple); outline-offset: 
 @media (max-width: 560px) {
  .report-filters { grid-template-columns: minmax(0, 1fr); }
 }
+
+.directory-person {
+  display: inline-flex;
+  align-items: center;
+  gap: .6rem;
+}
+
+.directory-person .directory-photo-button {
+  padding: 0;
+  border: 0;
+  cursor: zoom-in;
+}
+
+.directory-photo-dialog {
+  max-width: min(92vw, 640px);
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  color: var(--ink);
+}
+
+.directory-photo-dialog::backdrop { background: #1c1226b3; }
+.directory-photo-dialog h2 { margin: 0; overflow-wrap: anywhere; }
+.directory-photo-dialog > img {
+  display: block;
+  width: min(75vw, 540px);
+  max-height: 70vh;
+  object-fit: contain;
+  margin: 1rem auto 0;
+}
