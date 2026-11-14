@@ -15,6 +15,55 @@
     ['leaderProfiles', ['discipulador']]
   ];
 
+  function setupCarousel(id) {
+    const track = document.getElementById(id);
+    const title = track.closest('section').querySelector('h2');
+    const frame = document.createElement('div');
+    frame.className = 'leadership-carousel';
+    track.before(frame);
+    frame.append(track);
+    track.classList.add('leadership-track');
+    track.tabIndex = 0;
+    track.setAttribute('role', 'region');
+    track.setAttribute('aria-label', title.textContent.trim());
+
+    function arrow(direction, label, symbol) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'leadership-arrow ' + (direction < 0 ? 'previous' : 'next');
+      button.setAttribute('aria-label', label + ' — ' + title.textContent.trim());
+      button.setAttribute('aria-controls', id);
+      button.textContent = symbol;
+      button.hidden = true;
+      button.onclick = () => {
+        const cards = [...track.querySelectorAll('.person')];
+        const start = cards[0].offsetLeft;
+        const positions = cards.map(card => card.offsetLeft - start);
+        const left = direction > 0
+          ? positions.find(position => position > track.scrollLeft + 2)
+          : positions.reverse().find(position => position < track.scrollLeft - 2);
+        track.scrollTo({left: left ?? 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'});
+      };
+      frame.append(button);
+      return button;
+    }
+
+    const previous = arrow(-1, 'Anterior', '‹');
+    const next = arrow(1, 'Próximo', '›');
+    function update() {
+      const limit = track.scrollWidth - track.clientWidth;
+      const available = track.clientWidth > 0 && limit > 2;
+      previous.hidden = next.hidden = !available;
+      previous.disabled = track.scrollLeft < 2;
+      next.disabled = track.scrollLeft >= limit - 2;
+    }
+    track.addEventListener('scroll', update, {passive: true});
+    new ResizeObserver(update).observe(track);
+    return update;
+  }
+
+  const updateCarousels = new Map(sections.map(([id]) => [id, setupCarousel(id)]));
+
   async function rpc(action, params = {}) {
     const response = await fetch(config.url + '/rest/v1/rpc/' + action, {
       method: 'POST',
@@ -82,6 +131,7 @@
         cards.append(empty);
       }
       container.replaceChildren(cards);
+      updateCarousels.get(id)();
     }
     if (location.hash.startsWith('#perfil-')) {
       document.getElementById(location.hash.slice(1))?.scrollIntoView({behavior: 'instant'});

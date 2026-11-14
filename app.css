@@ -18,21 +18,43 @@
  .login-account-info small { font-size:.66rem; }
 }
 
-:is(#pastoralProfiles, #leaderProfiles) {
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 156px), 194px));
+.leadership-carousel {
+  position: relative;
+}
+.leadership-track:is(#pastoralProfiles, #leaderProfiles) {
+  display: flex;
   gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+  scrollbar-color: var(--purple) transparent;
+  padding-bottom: 8px;
 }
-
-:is(#pastoralProfiles, #leaderProfiles) .person-copy {
-  padding: 12px;
+.leadership-track > .person {
+  flex: 0 0 clamp(170px, 54vw, 224px);
+  max-width: 100%;
+  scroll-snap-align: start;
 }
-
-@media (max-width: 480px) {
-  :is(#pastoralProfiles, #leaderProfiles) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-  }
+.leadership-track .person-copy {
+  padding: 14px;
 }
+.leadership-arrow {
+  position: absolute;
+  top: 42%;
+  z-index: 1;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: white;
+  color: var(--purple);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+.leadership-arrow.previous { left: -14px; }
+.leadership-arrow.next { right: -14px; }
+.leadership-arrow:disabled { opacity: .45; cursor: default; }
 
 /* Keep the saved profile framing in the public leadership cards. */
 :is(#pastoralProfiles, #leaderProfiles) .person > :is(.profile-photo, .profile-initials) {
