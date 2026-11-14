@@ -68,7 +68,7 @@
     }
   }
   refresh();
-  window.addEventListener('hashchange', () => {
+  window.addEventListener('videira:navigation', () => {
     if (/^#(lideranca|equipe|perfil-)/.test(location.hash)) refresh();
   });
 })();

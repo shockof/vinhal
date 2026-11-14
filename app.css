@@ -110,3 +110,50 @@
 .visit-carousel .contact-row a[hidden] {
   display: none;
 }
+
+/* Compact interaction feedback with the same easing as page navigation. */
+#public :is(.btn, .quick-card, .contact-row a, .visit-carousel-arrow),
+#navlinks a {
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(.22, 1, .36, 1);
+}
+
+#public :is(.btn, .quick-card, .contact-row a, .visit-carousel-arrow):active {
+  transform: scale(.98);
+}
+
+#public .visit-carousel-arrow:active {
+  transform: translateY(-50%) scale(.98);
+}
+
+#public .message::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 78% 0%, #7549b735, transparent 65%);
+}
+
+#public .message {
+  position: relative;
+  isolation: isolate;
+}
+
+#public .message > .container {
+  position: relative;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #public :is(.btn, .quick-card, .contact-row a, .visit-carousel-arrow),
+  #navlinks a {
+    transition: none;
+  }
+
+  #public :is(.btn, .quick-card, .contact-row a):active {
+    transform: none;
+  }
+
+  #public .visit-carousel-arrow:active {
+    transform: translateY(-50%);
+  }
+}

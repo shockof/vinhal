@@ -19,7 +19,63 @@ function initials(name){return String(name).split(' ').slice(0,2).map(x=>x[0]).j
 function safeImage(src){return /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(src)||src==='assets/logo.png'||src.startsWith('https://images.unsplash.com/')?src:''}
 function avatar(p){return p.photo&&safeImage(p.photo)?`<img class="profile-photo" src="${esc(p.photo)}" alt="Foto fictícia de ${esc(p.name)}">`:`<div class="profile-initials" aria-label="Avatar de exemplo">${esc(initials(p.name))}</div>`}
 async function imageFile(input){const f=input?.files?.[0];if(!f)return '';if(!['image/png','image/jpeg','image/webp'].includes(f.type))throw Error('Use uma imagem PNG, JPEG ou WebP.');if(f.size>500000)throw Error('Use imagens de até 500 KB para esta demonstração local.');return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(Error('Não foi possível ler a imagem.'));r.readAsDataURL(f)})}
-function page(name,anchor){sitePage=['inicio','sobre','celulas','arquivos','kids','inscricoes'].includes(name)?name:'inicio';$('#public').classList.remove('hidden');$('#dashboard').classList.add('hidden');$$('.page-section').forEach(x=>x.classList.toggle('active',x.dataset.section===sitePage));const activeNav=anchor&&(anchor==='lideranca'||anchor==='equipe'||anchor.startsWith('perfil-'))?'lideranca':sitePage;$$('#navlinks a').forEach(a=>{const active=a.getAttribute('href')==='#'+activeNav;a.classList.toggle('nav-active',active);if(active)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current')});$('#navlinks').classList.remove('open');$('#menuToggle').setAttribute('aria-expanded','false');history.replaceState(null,'','#'+(anchor||sitePage));if(anchor)document.getElementById(anchor==='lideranca'?'equipe':anchor)?.scrollIntoView();else scrollTo(0,0)}
+const publicPages = ['inicio', 'sobre', 'celulas', 'arquivos', 'kids', 'inscricoes'];
+const publicAnchors = ['lideranca', 'equipe', 'enderecos', 'mensagem'];
+const reduceSiteMotion = matchMedia('(prefers-reduced-motion: reduce)');
+let pageAnimation;
+
+function page(name, anchor, { animate = false, push = false } = {}) {
+  const nextPage = publicPages.includes(name) ? name : 'inicio';
+  const returningToTop = !anchor && window.scrollY > 240 && location.hash !== '#' + nextPage;
+  const changedPage = sitePage !== nextPage || $('#public').classList.contains('hidden');
+  sitePage = nextPage;
+  $('#public').classList.remove('hidden');
+  $('#dashboard').classList.add('hidden');
+  const destination = document.getElementById('page-' + sitePage);
+  $$('.page-section').forEach(section => section.classList.toggle('active', section === destination));
+
+  const leadership = anchor && (['lideranca', 'equipe'].includes(anchor) || anchor.startsWith('perfil-'));
+  const activeHash = '#' + (leadership ? 'lideranca' : sitePage);
+  $$('#navlinks a').forEach(link => {
+    const active = link.getAttribute('href') === activeHash;
+    link.classList.toggle('nav-active', active);
+    if (active) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  });
+  $('#navlinks').classList.remove('open');
+  $('#menuToggle').setAttribute('aria-expanded', 'false');
+
+  const url = '#' + (anchor || sitePage);
+  if (location.hash !== url) {
+    if (push) history.pushState(null, '', url);
+    else history.replaceState(null, '', url);
+  }
+
+  pageAnimation?.cancel();
+  const target = anchor && document.getElementById(anchor === 'lideranca' ? 'equipe' : anchor);
+  if (target) {
+    target.scrollIntoView({ block: 'start', behavior: animate && !changedPage && !reduceSiteMotion.matches ? 'smooth' : 'instant' });
+  } else {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }
+
+  if (animate && (changedPage || returningToTop) && !reduceSiteMotion.matches && destination.animate) {
+    pageAnimation = destination.animate([{ opacity: 0.65 }, { opacity: 1 }], {
+      duration: 220,
+      easing: 'cubic-bezier(.22, 1, .36, 1)',
+    });
+  }
+  window.dispatchEvent(new Event('videira:navigation'));
+}
+
+function navigatePublic(hash, options) {
+  const isAnchor = publicAnchors.includes(hash) || hash.startsWith('perfil-');
+  page(isAnchor ? 'inicio' : hash, isAnchor ? hash : null, options);
+}
+
+function isPublicDestination(hash) {
+  return publicPages.includes(hash) || publicAnchors.includes(hash) || hash.startsWith('perfil-');
+}
 function applyContent(d){for(const [key,v] of Object.entries({purple:d.color,'purple-2':d.buttonColor,teal:d.accent,paper:d.background}))document.documentElement.style.setProperty('--'+key,v);$$('.church-logo').forEach(i=>i.src=safeImage(d.logo)||'assets/logo.png');$('#page-inicio h1').textContent=d.title;$('#page-inicio .hero p').textContent=d.intro;$('#page-inicio .hero-image').src=safeImage(d.banner)||DEFAULT_CONTENT.banner;$('.vision-art img').src=safeImage(d.visionImage)||DEFAULT_CONTENT.visionImage;$('.vision-copy h2').textContent=d.visionTitle;$('.vision-copy p').textContent=d.visionText;$('#sermonDirectory').innerHTML=`<article class="quick-card"><span class="tag">Reflexão demonstrativa · João 15</span><h3>${esc(d.sermon)}</h3><details><summary>Ler mensagem</summary><p>${esc(d.reflection)}</p></details><p class="help">Vídeos e áudios oficiais ainda não fornecidos.</p></article><article class="quick-card"><div class="iconbox">♫</div><h3>Louvor e celebração</h3><p>Espaço reservado para playlists oficiais.</p><span class="tag">Conteúdo pendente</span></article><article class="quick-card"><div class="iconbox">▤</div><h3>Materiais para células</h3><details><summary>Ver roteiro de exemplo</summary><p>Acolhimento · Oração · Leitura de João 15 · Partilha · Cuidado durante a semana.</p></details></article>`}
 function publicProfiles(){const active=state.users.filter(u=>u.active&&u.role!=='master');for(const [id,rs] of [['pastoralProfiles',['supervisor','pastor','obreiro']],['leaderProfiles',['discipulador']]]){$('#'+id).innerHTML=active.filter(u=>rs.includes(u.role)).map(u=>{const c=cell(u.cell)||state.cells.find(c=>c.leader===u.id||c.discipler===u.id);return `<article class="person" id="perfil-${esc(u.id)}">${avatar(u)}<div class="person-copy"><h3>${esc(u.name)}</h3><p>${ROLES[u.role]}<br>${esc(church(u.church)?.name||'Todas as igrejas')} ${esc(network(u.network)?.name||'')}</p>${c?`<p>Célula ${esc(c.name)}<br>${esc(c.address)}</p><a class="text-link" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=Igreja%20Videira">Buscar no Maps ↗</a><button class="share-link" data-share="${esc(u.id)}">Copiar link do perfil</button>`:''}</div></article>`}).join('')||'<p>Nenhum perfil ativo nesta categoria.</p>'}$$('[data-share]').forEach(b=>b.onclick=async()=>{const url=location.href.split('#')[0]+'#perfil-'+b.dataset.share;try{await navigator.clipboard.writeText(url);toast('Link copiado')}catch{toast(url)}});$('#demoUsers').innerHTML=state.users.filter(u=>u.active).map(u=>`<option value="${esc(u.username)}">${ROLES[u.role]}</option>`).join('')}
 function publicCells(){const c=$('#publicChurch').value,n=$('#publicNetwork').value;$('#cellDirectory').innerHTML=state.cells.filter(x=>(!c||x.church===c)&&(!n||x.network===n)).map(x=>`<article class="quick-card"><span class="tag">${esc(network(x.network)?.name)}</span><h3>Célula ${esc(x.name)}</h3><p>${esc(church(x.church)?.name)} · ${esc(church(x.church)?.city)}<br>${esc(x.time)}<br>${esc(x.address)}</p><p>Líder: ${esc(find(state.users,x.leader)?.name||'A definir')}</p><a class="text-link" href="https://www.google.com/maps/search/?api=1&query=Igreja%20Videira" target="_blank" rel="noopener">Buscar Igreja Videira no Maps ↗</a><p class="help">Busca genérica · endereço fictício.</p></article>`).join('')||'<p>Nenhuma célula neste filtro.</p>'}
@@ -67,10 +123,25 @@ if(tab==='structure'){$('#churchForm').onsubmit=e=>{e.preventDefault();const d=O
 if(tab==='appearance'){$('#appearanceForm').onsubmit=async e=>{e.preventDefault();const f=e.target,d=Object.fromEntries(new FormData(f));try{const previous=state.draft||state.published;for(const [field,name] of [['logoUpload','logo'],['bannerUpload','banner'],['visionUpload','visionImage']]){d[name]=(await imageFile(f.elements[field]))||previous[name];delete d[field]}state.draft=d;audit('Salvou rascunho do site');persist('Rascunho salvo; site público ainda não mudou');render()}catch(err){toast(err.message)}};$('#restoreBrand').onclick=()=>{state.draft={...(state.draft||state.published),color:DEFAULT_CONTENT.color,accent:DEFAULT_CONTENT.accent,background:DEFAULT_CONTENT.background,buttonColor:DEFAULT_CONTENT.buttonColor,logo:DEFAULT_CONTENT.logo,banner:DEFAULT_CONTENT.banner,visionImage:DEFAULT_CONTENT.visionImage};persist('Identidade original aplicada ao rascunho');render()};$('#previewDraft').onclick=()=>{if(!state.draft)return toast('Salve um rascunho primeiro');preview=true;publicRefresh();$('#previewbar').classList.remove('hidden');page('inicio')};$('#publishDraft').onclick=()=>{if(!state.draft)return toast('Nenhum rascunho salvo');state.published={...state.draft};state.draft=null;audit('Publicou conteúdo neste navegador');persist('Publicado somente neste navegador');publicRefresh();render()};$('#discardDraft').onclick=()=>{state.draft=null;persist('Rascunho descartado');render()}}
 }
 $('#menuToggle').onclick=()=>{const open=$('#navlinks').classList.toggle('open');$('#menuToggle').setAttribute('aria-expanded',String(open))};
-document.addEventListener('click',e=>{const a=e.target.closest('[data-page]');if(a){e.preventDefault();page(a.dataset.page,a.hash==='#enderecos'?'enderecos':null)}if(e.target.closest('.member-link')){e.preventDefault();openLogin()}});
+document.addEventListener('click', event => {
+  if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  if (event.target.closest('.member-link')) {
+    event.preventDefault();
+    openLogin();
+    return;
+  }
+  const link = event.target.closest('a[href^="#"]');
+  if (!link || link.target || !isPublicDestination(link.hash.slice(1))) return;
+  event.preventDefault();
+  navigatePublic(link.hash.slice(1), { animate: true, push: true });
+});
 function openLogin(){$('#loginerror').textContent='';$('#login').showModal();$('#username').focus()}
 $('#loginBtn').onclick=()=>current?admin():openLogin();$('#close').onclick=()=>$('#login').close();$('#loginform').onsubmit=e=>{e.preventDefault();const name=$('#username').value.trim().toLowerCase(),u=state.users.find(x=>x.username.toLowerCase()===name&&x.active);if(!u){$('#loginerror').textContent='Usuário inexistente ou desativado. Use um dos usuários de demonstração.';return}current=u;editId=null;tab='overview';$('#login').close();admin()};
 $('#viewSite').onclick=()=>{publicRefresh();page('inicio')};$('#logout').onclick=()=>{current=null;preview=false;$('#previewbar').classList.add('hidden');publicRefresh();page('inicio');toast('Você saiu da demonstração')};$('#endpreview').onclick=admin;
-$('#reset').onclick=()=>{state=seed();current=null;preview=false;editId=null;$('#previewbar').classList.add('hidden');persist('Demonstração restaurada');publicRefresh();page('inicio')};$('#publicChurch').onchange=publicCells;$('#publicNetwork').onchange=publicCells;$('#videoBtn').onclick=()=>page('arquivos');$('#givingBtn').onclick=()=>toast((preview&&state.draft?state.draft:state.published).giving);
-window.addEventListener('hashchange',()=>route());function route(){const h=location.hash.slice(1);if(h.startsWith('perfil-')||['lideranca','equipe'].includes(h))page('inicio',h);else if(h==='enderecos')page('inicio','enderecos');else page(h||'inicio')}
+$('#reset').onclick=()=>{state=seed();current=null;preview=false;editId=null;$('#previewbar').classList.add('hidden');persist('Demonstração restaurada');publicRefresh();page('inicio')};$('#publicChurch').onchange=publicCells;$('#publicNetwork').onchange=publicCells;$('#videoBtn').onclick=()=>page('arquivos', null, { animate: true, push: true });$('#givingBtn').onclick=()=>toast((preview&&state.draft?state.draft:state.published).giving);
+history.scrollRestoration = 'manual';
+window.addEventListener('hashchange', route);
+function route() {
+  navigatePublic(location.hash.slice(1));
+}
 publicRefresh();route();

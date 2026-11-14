@@ -129,11 +129,7 @@
     featuredPlayer.hidden = false;
   };
 
-  document.addEventListener('click', event => {
-    if (event.target.closest('a[href="#arquivos"]') && !host.firstElementChild) select(selected);
-    requestAnimationFrame(openPlaylist);
-  });
-  window.addEventListener('hashchange', openPlaylist);
+  window.addEventListener('videira:navigation', openPlaylist);
   function renderFeatured() {
     const latest = catalog[0];
     feature.querySelector('img').src = imageUrl(latest.id);
