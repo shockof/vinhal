@@ -229,6 +229,32 @@ function linkedAccountCount(){const n=linkedProfiles().length;return n+' de '+db
 const requestLeadershipPhoto = (id, photo) => call('leadership_photo', {id, photo});
 function accounts(){const master=db.profile.role==='master';return `${master?`<article class="panel"><h2>Cadastrar acesso da liderança</h2><p>Crie o acesso e depois vincule o líder ou discipulador à célula correspondente na aba Células.</p>${`<form id="accountForm" class="gridform">${window.VideiraLeadershipPhoto.field()}${field('display_name','Nome completo','','text','required maxlength="180" autocomplete="name"')}${field('username','Nome de usuário','','text','required minlength="3" maxlength="50" pattern="[a-z0-9][a-z0-9._-]{2,49}" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Ex.: maria.silva"')}${field('birth_date','Data de nascimento (opcional)','','date','autocomplete="bday"')}${field('email','E-mail (opcional)','','email','maxlength="254" autocomplete="off"')}<label>Função<select name="role" required><option value="lider">Líder de célula</option><option value="master">Master</option><option value="supervisor">Pastor (a) Supervisor (a)</option><option value="discipulador">Discipulador (a)</option><option value="predio">Pastor (a) de prédio</option><option value="pastor">Pastor (a) de rede</option><option value="obreiro">Obreiro (a)</option></select></label>${select('church_id','Igreja',db.churches)}<label>Rede<select name="network_id" required><option value="">Selecione a igreja primeiro</option></select></label>${field('password','Senha inicial','','password','required minlength="12" maxlength="128" autocomplete="new-password"')}${field('confirm_password','Confirme a senha inicial','','password','required minlength="12" maxlength="128" autocomplete="new-password"')}<div class="notice wide">A senha inicial precisa ter de 12 a 128 caracteres. Entregue o usuário e a senha à pessoa por um meio privado. O e-mail é opcional: o acesso funciona com usuário e senha. Este cadastro não envia e-mail automaticamente. O e-mail não será exibido na lista de liderança nem no site público.</div><div class="notice wide" id="accountScope"></div><div class="wide actions"><button>Criar cadastro e acesso</button></div></form>`}</article>`:''}<article class="panel"><div class="account-list-toolbar"><div><h2>Contas vinculadas</h2><small id="accountCount" aria-live="polite">${linkedAccountCount()}</small></div><div class="account-list-filters"><label>Pesquisar contas<input id="accountSearch" type="search" value="${esc(accountSearch)}" placeholder="Nome, usuário, função, igreja, rede ou estado…" autocomplete="off"></label><label>Filtrar por função<select id="accountRoleFilter"><option value="">Todas as funções</option>${['master','supervisor','predio','pastor','obreiro','discipulador','lider'].map(role=>`<option value="${role}" ${accountRoleFilter===role?'selected':''}>${roles[role]}</option>`).join('')}</select></label><label>Filtrar por igreja<select id="accountChurchFilter"><option value="">Todas as igrejas</option><option value="__global__" ${accountChurchFilter==='__global__'?'selected':''}>Acesso a todas (Master/Supervisor)</option>${db.churches.slice().sort((a,b)=>accountNameOrder.compare(a.name,b.name)).map(c=>`<option value="${c.id}" ${accountChurchFilter===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></label></div></div><p class="account-order-note">Master · Pastor Supervisor · Pastor de prédio · Pastores de rede / Obreiros · Discipuladores · Líderes</p><div id="linkedAccounts">${linkedAccountTable()}</div></article>`}
 
+function bindBirthdayCarousel(panel) {
+ const track = panel.querySelector('.birthday-grid');
+ const controls = panel.querySelector('.birthday-controls');
+ const [previous, next] = controls.querySelectorAll('button');
+ const motion = matchMedia('(prefers-reduced-motion: reduce)');
+ const update = () => {
+  const limit = track.scrollWidth - track.clientWidth;
+  controls.hidden = limit < 2;
+  previous.setAttribute('aria-disabled', String(track.scrollLeft < 2));
+  next.setAttribute('aria-disabled', String(track.scrollLeft >= limit - 2));
+ };
+ for (const [button, direction] of [[previous, -1], [next, 1]]) {
+  button.onclick = () => {
+   if (button.getAttribute('aria-disabled') === 'true') return;
+   const gap = parseFloat(getComputedStyle(track).columnGap);
+   track.scrollBy({
+    left: direction * (track.firstElementChild.getBoundingClientRect().width + gap),
+    behavior: motion.matches ? 'instant' : 'smooth'
+   });
+  };
+ }
+ track.addEventListener('scroll', update, {passive: true});
+ if (window.ResizeObserver) new ResizeObserver(update).observe(track);
+ update();
+}
+
 async function loadBirthdays(panel) {
  try {
   const {month,entries}=await call('birthdays');
@@ -263,8 +289,12 @@ async function loadBirthdays(panel) {
    </li>`;
   });
   panel.innerHTML=`<h2>Aniversariantes de ${esc(monthName)}</h2>`+
-   (cards.length?`<ul class="birthday-grid">${cards.join('')}</ul>`:
+   (cards.length?`<div class="birthday-controls" hidden>
+      <button type="button" class="secondary" aria-label="Aniversariantes anteriores" aria-controls="birthdayTrack">‹</button>
+      <button type="button" class="secondary" aria-label="Próximos aniversariantes" aria-controls="birthdayTrack">›</button>
+     </div><ul id="birthdayTrack" class="birthday-grid" tabindex="0" aria-label="Aniversariantes do mês">${cards.join('')}</ul>`:
     '<p>Nenhum aniversário cadastrado neste mês no seu escopo.</p>');
+  if(cards.length)bindBirthdayCarousel(panel);
   loadPersonPhotos(panel);
  } catch(error) {
   if(panel.isConnected)panel.querySelector('[role=status]').textContent=error.message||'Não foi possível carregar os aniversariantes.';

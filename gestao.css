@@ -67,13 +67,18 @@ svg.meeting-card-icon{width:28px;height:28px;flex-shrink:0}
 .birthday-panel { margin-bottom: 24px; }
 .birthday-grid {
  display: grid;
- grid-template-columns: repeat(auto-fill,minmax(min(100%,190px),1fr));
+ grid-auto-flow: column;
+ grid-auto-columns: calc((100% - 48px) / 4);
+ overflow-x: auto;
+ scroll-snap-type: x mandatory;
  gap: 16px;
  list-style: none;
  margin: 16px 0 0;
- padding: 0;
+ padding: 0 0 8px;
 }
 .birthday-card {
+ min-width: 0;
+ scroll-snap-align: start;
  overflow: hidden;
  border: 1px solid var(--line);
  border-radius: 16px;
@@ -337,4 +342,13 @@ svg.meeting-card-icon{width:28px;height:28px;flex-shrink:0}
 
 .identity-photo:has(img) {
   background: #fff;
+}
+
+
+.birthday-controls:not([hidden]) { display: flex; justify-content: flex-end; gap: 8px; }
+.birthday-controls button { min-width: 44px; min-height: 44px; padding: 0; font-size: 1.4rem; }
+.birthday-controls button[aria-disabled="true"] { opacity: .45; cursor: default; }
+@media (max-width: 700px) {
+ .birthday-grid { grid-auto-columns: calc((100% - 16px) / 2); }
+ .birthday-name { flex-wrap: wrap; gap: 2px 8px; }
 }
