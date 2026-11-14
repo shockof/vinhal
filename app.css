@@ -200,3 +200,8 @@
     transform: translateY(-50%);
   }
 }
+
+#page-inicio.leadership-view > :not(#equipe, #lideranca),
+#page-inicio:not(.leadership-view) > :is(#equipe, #lideranca) {
+  display: none;
+}

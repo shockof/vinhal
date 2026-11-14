@@ -19,8 +19,8 @@ function initials(name){return String(name).split(' ').slice(0,2).map(x=>x[0]).j
 function safeImage(src){return /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(src)||src==='assets/logo.png'||src.startsWith('https://images.unsplash.com/')?src:''}
 function avatar(p){return p.photo&&safeImage(p.photo)?`<img class="profile-photo" src="${esc(p.photo)}" alt="Foto fictícia de ${esc(p.name)}">`:`<div class="profile-initials" aria-label="Avatar de exemplo">${esc(initials(p.name))}</div>`}
 async function imageFile(input){const f=input?.files?.[0];if(!f)return '';if(!['image/png','image/jpeg','image/webp'].includes(f.type))throw Error('Use uma imagem PNG, JPEG ou WebP.');if(f.size>500000)throw Error('Use imagens de até 500 KB para esta demonstração local.');return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(Error('Não foi possível ler a imagem.'));r.readAsDataURL(f)})}
-const publicPages = ['inicio', 'sobre', 'celulas', 'arquivos', 'kids', 'inscricoes'];
-const publicAnchors = ['lideranca', 'equipe', 'enderecos', 'mensagem'];
+const publicPages = ['inicio', 'sobre', 'celulas', 'arquivos', 'kids', 'inscricoes', 'lideranca'];
+const publicAnchors = ['equipe', 'enderecos', 'mensagem'];
 const reduceSiteMotion = matchMedia('(prefers-reduced-motion: reduce)');
 let pageAnimation;
 
@@ -31,11 +31,13 @@ function page(name, anchor, { animate = false, push = false } = {}) {
   sitePage = nextPage;
   $('#public').classList.remove('hidden');
   $('#dashboard').classList.add('hidden');
-  const destination = document.getElementById('page-' + sitePage);
+  const leadershipPage = sitePage === 'lideranca';
+  const home = document.getElementById('page-inicio');
+  home.classList.toggle('leadership-view', leadershipPage);
+  const destination = leadershipPage ? home : document.getElementById('page-' + sitePage);
   $$('.page-section').forEach(section => section.classList.toggle('active', section === destination));
 
-  const leadership = anchor && (['lideranca', 'equipe'].includes(anchor) || anchor.startsWith('perfil-'));
-  const activeHash = '#' + (leadership ? 'lideranca' : sitePage);
+  const activeHash = '#' + sitePage;
   $$('#navlinks a').forEach(link => {
     const active = link.getAttribute('href') === activeHash;
     link.classList.toggle('nav-active', active);
@@ -69,7 +71,11 @@ function page(name, anchor, { animate = false, push = false } = {}) {
 }
 
 function navigatePublic(hash, options) {
-  const isAnchor = publicAnchors.includes(hash) || hash.startsWith('perfil-');
+  if (hash === 'equipe' || hash.startsWith('perfil-')) {
+    page('lideranca', hash, options);
+    return;
+  }
+  const isAnchor = publicAnchors.includes(hash);
   page(isAnchor ? 'inicio' : hash, isAnchor ? hash : null, options);
 }
 
