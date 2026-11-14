@@ -235,14 +235,31 @@ async function loadBirthdays(panel) {
   if(!panel.isConnected)return;
   const monthName=new Intl.DateTimeFormat('pt-BR',{month:'long',timeZone:'UTC'})
    .format(new Date(Date.UTC(2000,month-1,1)));
+  const cellsById=new Map(db.cells.map(cell=>[cell.id,cell]));
   const cards=entries.map(person=>{
    const date=String(person.day).padStart(2,'0')+'/'+String(month).padStart(2,'0');
+   const members=db.people.filter(member=>person.member_photo_id
+    ? member.id===person.member_photo_id
+    : member.category===person.kind&&member.full_name===person.name
+     && member.birth_date?.slice(5)===date.split('/').reverse().join('-')
+     && cellsById.get(member.cell_id)?.name===person.group_name);
+   const accounts=db.profiles.filter(profile=>profile.role===person.kind&&profile.display_name===person.name);
+   const account=accounts.length===1?accounts[0]:null;
+   const linkedCells=account?db.cells.filter(cell=>[cell.leader_id,cell.discipler_id].includes(account.id)):[];
+   const networkIds=person.kind==='Membro'
+    ? (members.length===1?[cellsById.get(members[0].cell_id)?.network_id]:[])
+    : linkedCells.length?linkedCells.map(cell=>cell.network_id):[account?.network_id];
+   const networks=[...new Set(networkIds.filter(Boolean).map(id=>label(db.networks,id)).filter(Boolean))];
+   const cellName=person.kind==='Membro'?person.group_name:
+    [...new Set(linkedCells.map(cell=>cell.name))].join(', ');
    return `<li class="birthday-card">
-    <span class="attendance-avatar birthday-avatar" aria-hidden="true"${person.member_photo_id?` data-person-photo="${esc(person.member_photo_id)}"`:''}${person.photo_url?` data-photo-url="${esc(person.photo_url)}"`:''}>
+    <span class="birthday-avatar" aria-hidden="true"${person.member_photo_id?` data-person-photo="${esc(person.member_photo_id)}"`:''}${person.photo_url?` data-photo-url="${esc(person.photo_url)}"`:''}>
      ${esc(personInitials(person.name))}
     </span>
-    <div><strong>${esc(person.name)}</strong><span>${esc(person.group_name||roles[person.kind]||person.kind)}</span></div>
-    <span class="birthday-date">${date}</span>
+    <div class="birthday-copy"><div class="birthday-name"><strong>${esc(person.name)}</strong><span class="birthday-date">${date}</span></div>
+     <span>${esc(cellName||'Célula não informada')}</span>
+     <span>${esc(networks.join(', ')||'Rede não informada')}</span>
+    </div>
    </li>`;
   });
   panel.innerHTML=`<h2>Aniversariantes de ${esc(monthName)}</h2>`+
