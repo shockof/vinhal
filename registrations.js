@@ -133,7 +133,8 @@ function drawRegistrationSeats(confirmed) {
 
 async function registrationRequest(event, fields = {}) {
   const config = window.VIDEIRA_CONFIG;
-  const response = await fetch(config.url + '/rest/v1/rpc/videira_event_registration_v2', {
+  const endpoint = fields.p_whatsapp ? 'videira_event_registration_v3' : 'videira_event_registration_v2';
+  const response = await fetch(config.url + '/rest/v1/rpc/' + endpoint, {
     method: 'POST',
     signal: AbortSignal.timeout(12000),
     headers: {apikey: config.publicKey, Authorization: 'Bearer ' + config.publicKey, 'Content-Type': 'application/json'},
@@ -195,12 +196,21 @@ function renderRegistrations(event, isPreview) {
     e.preventDefault();
     if (button.disabled || displayedRegistration !== view) return;
     const fields = new FormData(form);
+    const phone = fields.get('whatsapp').trim();
+    const digits = phone.replace(/\D/g, '');
+    const national = digits.length >= 12 && digits.startsWith('55') ? digits.slice(2) : digits;
+    if ((phone.startsWith('+') && !digits.startsWith('55')) || !/^[1-9][0-9]{9,10}$/.test(national)) {
+      status.textContent = 'Informe o DDD e o número do WhatsApp do Brasil.';
+      form.elements.whatsapp.focus();
+      return;
+    }
+    const whatsapp = '+55' + national;
     view.submission++;
     view.submitting = true;
     button.disabled = true;
     status.textContent = 'Enviando inscrição…';
     try {
-      const result = await registrationRequest(event, {p_name: fields.get('name'), p_email: fields.get('email'), p_cpf: fields.get('cpf').replace(/\D/g, ''), p_role: fields.get('role'), p_payment: fields.get('payment')});
+      const result = await registrationRequest(event, {p_name: fields.get('name'), p_email: fields.get('email'), p_cpf: fields.get('cpf').replace(/\D/g, ''), p_role: fields.get('role'), p_payment: fields.get('payment'), p_whatsapp: whatsapp});
       if (displayedRegistration !== view) return;
       status.textContent = '';
       show(result);

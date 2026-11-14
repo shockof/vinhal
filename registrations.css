@@ -80,3 +80,15 @@
   .registration-sector-platform, .registration-sector-surface, .registration-sector-edge { transition: none; }
   .registration-sector:hover .registration-sector-platform { transform: none; }
 }
+
+.registration-phone {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: .5rem;
+}
+
+.registration-phone-prefix {
+  padding-inline: .55rem;
+  color: var(--muted);
+}
