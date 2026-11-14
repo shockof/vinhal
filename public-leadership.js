@@ -18,6 +18,7 @@
   async function rpc(action, params = {}) {
     const response = await fetch(config.url + '/rest/v1/rpc/' + action, {
       method: 'POST',
+      signal: AbortSignal.timeout(10000),
       headers: {apikey: config.publicKey, Authorization: 'Bearer ' + config.publicKey, 'Content-Type': 'application/json'},
       body: JSON.stringify(params)
     });
@@ -25,44 +26,83 @@
     return response.json();
   }
 
-  function render(profiles) {
-    for (const [id, roles] of sections) {
-      const container = document.getElementById(id);
-      const entries = profiles.filter(profile => roles.includes(profile.role));
-      container.innerHTML = entries.map(profile => `<article class="person" id="perfil-${esc(profile.id)}">
-        <div class="profile-initials" aria-hidden="true">${esc(profile.name.trim().split(/\s+/).slice(0, 2).map(word => word[0]).join('').toUpperCase())}</div>
-        <div class="person-copy"><h3>${esc(profile.name)}</h3>
-        <p>${esc(labels[profile.role])}${profile.church ? '<br>' + esc(profile.church) : ''}</p></div>
-      </article>`).join('') || '<p>Nenhum perfil disponível nesta seção.</p>';
-      for (const profile of entries.filter(entry => entry.photo)) {
-        const avatar = document.getElementById('perfil-' + profile.id).firstElementChild;
-        rpc('videira_public_leadership_photo', {p_id: profile.id}).then(photo => {
-          if (!photo || !avatar.isConnected) return;
-          const image = document.createElement('img');
-          image.className = 'profile-photo';
-          image.alt = '';
-          image.src = 'data:image/jpeg;base64,' + photo;
-          image.onload = () => avatar.replaceWith(image);
-        }).catch(() => {});
-      }
+  async function loadPhoto(profile) {
+    if (!profile.photo) return null;
+    try {
+      const photo = await rpc('videira_public_leadership_photo', {p_id: profile.id});
+      if (typeof photo !== 'string' || !photo) return null;
+      const image = new Image();
+      image.className = 'profile-photo';
+      image.alt = '';
+      image.src = 'data:image/jpeg;base64,' + photo;
+      await image.decode();
+      return image;
+    } catch {
+      return null;
     }
-    if (location.hash.startsWith('#perfil-')) document.getElementById(location.hash.slice(1))?.scrollIntoView();
   }
 
-  let loaded = false;
+  function render(entries) {
+    for (const [id, roles] of sections) {
+      const container = document.getElementById(id);
+      const cards = document.createDocumentFragment();
+      for (const {profile, image} of entries) {
+        if (!roles.includes(profile.role)) continue;
+        const card = document.createElement('article');
+        card.className = 'person';
+        card.id = 'perfil-' + profile.id;
+        card.innerHTML = `<div class="person-copy"><h3>${esc(profile.name)}</h3>
+          <p>${esc(labels[profile.role])}${profile.church ? '<br>' + esc(profile.church) : ''}</p></div>`;
+        if (image) {
+          card.prepend(image);
+        } else {
+          const initials = document.createElement('div');
+          initials.className = 'profile-initials';
+          initials.setAttribute('aria-hidden', 'true');
+          initials.textContent = profile.name.trim().split(/\s+/).slice(0, 2)
+            .map(word => word.charAt(0)).join('').toUpperCase();
+          card.prepend(initials);
+        }
+        cards.append(card);
+      }
+      if (!cards.childNodes.length) {
+        const empty = document.createElement('p');
+        empty.textContent = 'Nenhum perfil disponível nesta seção.';
+        cards.append(empty);
+      }
+      container.replaceChildren(cards);
+    }
+    if (location.hash.startsWith('#perfil-')) {
+      document.getElementById(location.hash.slice(1))?.scrollIntoView({behavior: 'instant'});
+    }
+  }
+
+  let signature = null;
+  let lastLoaded = 0;
   let loading = false;
   publicProfiles = () => {};
   for (const [id] of sections) document.getElementById(id).textContent = 'Carregando perfis…';
+
   async function refresh() {
-    if (loading) return;
+    if (loading || Date.now() - lastLoaded < 60000) return;
     loading = true;
     try {
       const profiles = await rpc('videira_public_leadership');
       if (!Array.isArray(profiles)) throw Error('Diretório indisponível');
-      render(profiles);
-      loaded = true;
+      const entries = await Promise.all(profiles.map(async profile => ({
+        profile,
+        image: await loadPhoto(profile)
+      })));
+      const nextSignature = JSON.stringify(entries.map(({profile, image}) => [profile, image?.src]));
+      if (nextSignature !== signature) {
+        render(entries);
+        signature = nextSignature;
+      }
+      lastLoaded = Date.now();
     } catch {
-      if (!loaded) for (const [id] of sections) document.getElementById(id).textContent = 'Não foi possível carregar os perfis.';
+      if (signature === null) {
+        for (const [id] of sections) document.getElementById(id).textContent = 'Não foi possível carregar os perfis.';
+      }
     } finally {
       loading = false;
     }
