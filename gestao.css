@@ -75,6 +75,12 @@ svg.meeting-card-icon{width:28px;height:28px;flex-shrink:0}
  list-style: none;
  margin: 16px 0 0;
  padding: 0 0 8px;
+ scrollbar-color: var(--purple) transparent;
+}
+.birthday-grid::-webkit-scrollbar { height: 6px; }
+.birthday-grid::-webkit-scrollbar-thumb {
+ background: var(--purple);
+ border-radius: 999px;
 }
 .birthday-card {
  min-width: 0;
