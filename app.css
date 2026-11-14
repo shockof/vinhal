@@ -52,9 +52,7 @@
 }
 
 .visit-carousel-track {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 100%);
+  display: flex;
   gap: 16px;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
@@ -66,6 +64,7 @@
 }
 
 .visit-carousel-track > .location-panel {
+  flex: 0 0 100%;
   min-width: 0;
   scroll-snap-align: start;
   scroll-snap-stop: always;
