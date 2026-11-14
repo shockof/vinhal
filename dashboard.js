@@ -12,7 +12,7 @@ function summarize(db,{from='',to='',church='',network='',cell=''}={}){
  for(const a of attendance){const m=meetings.find(m=>m.id===a.meeting_id);months.get(m.meeting_date.slice(0,7)).push(a)}
  return {cells,meetings,attendance,people,groups,frequency:pct(attendance),present:attendance.filter(a=>a.present===true).length,absent:attendance.filter(a=>a.present!==true).length,members:people.filter(p=>p.category==='Membro').length,visitors:people.filter(p=>p.category==='Visitante').length,months:[...months].sort(([a],[b])=>a.localeCompare(b)).map(([month,a])=>({month,frequency:pct(a)}))};
 }
-function cards(s,clickable=false,filter={}){
+function cards(s,clickable=false,filter={},inDialog=false){
  const metrics=[
   ['cells',s.cells.length,'cells','violet'],
   ['members',s.members,'people','blue'],
@@ -23,6 +23,7 @@ function cards(s,clickable=false,filter={}){
   const content=`${icon(iconName)}<span class="dash-metric-copy"><strong>${value}</strong><span>${metricTitles[key]}</span></span>`;
   const query=new URLSearchParams({metric:key,v:"20261112-directory-nav"});
   for(const name of ['from','to','church'])if(filter[name])query.set(name,filter[name]);
+  if(inDialog)return `<button type="button" class="dash-metric ${color}" data-cell-metric="${key}" aria-pressed="false">${content}</button>`;
   return clickable?`<a class="dash-metric ${color}" data-dash-metric="${key}" href="gestao.html?${esc(query)}" aria-label="${metricTitles[key]}, ${value}">${content}</a>`:
    `<article class="dash-metric ${color}">${content}</article>`;
  }).join('')}</div>`;
@@ -254,7 +255,42 @@ function visuals(db,filter={},showBirthdays=false){const s=summarize(db,filter),
 function title(role){return ({master:'Visão geral da igreja',supervisor:'Relatórios gerais',predio:'Minha igreja',pastor:'Minha rede',obreiro:'Minha igreja',discipulador:'Minhas células',lider:'Minha célula'})[role]||'Visão geral'}
 function startDate(period){if(period==='all')return '';const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/Maceio'}),[year,month]=today.split('-').map(Number);const date=new Date(Date.UTC(year,month-Number(period),1));return date.toISOString().slice(0,10)}
 function overview(db){return `<section class="dashboard"><div class="dash-toolbar"><div><span class="dash-eyebrow">ACOMPANHAMENTO DE CÉLULAS</span><h1>${icon('cells')}${title(db.profile.role)}</h1><p>Uma visão do cuidado e da participação no seu escopo.</p></div><label>Período da chamada<select id="dashboardPeriod"><option value="1">Último mês</option><option value="3" selected>Últimos 3 meses</option><option value="6">Últimos 6 meses</option><option value="12">Últimos 12 meses</option><option value="all">Todo o histórico</option></select></label></div>${db.profile.role==='supervisor'?`<div class="dash-church-filter"><label>Filtrar por igreja<select id="dashboardChurch"><option value="">Todas as igrejas</option>${db.churches.slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR')).map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></label><p>Os indicadores e gráficos acompanham a igreja selecionada.</p></div>`:''}<div id="dashboardVisuals">${visuals(db,{from:startDate('3')},true)}</div><p class="dash-footnote">Dados reais do seu escopo · Cadastros atuais e chamadas no período escolhido. Nenhum dado de exemplo é incluído.</p></section>`}
-function details(db,id,filter){const c=db.cells.find(c=>c.id===id);if(!c)return;const s=summarize(db,{...filter,cell:id}),d=document.createElement('dialog');d.className='dash-dialog';d.setAttribute('aria-label','Detalhes de '+c.name);d.innerHTML=`<div class="dash-dialog-head"><div><span class="dash-eyebrow">DETALHES DA CÉLULA</span><h2>${esc(c.name)}</h2></div><button class="secondary" data-close aria-label="Fechar detalhes">Fechar ×</button></div><div class="dash-details-meta"><p><span>Líder</span><b>${esc(leadershipName(db,c.leader_id))}</b></p><p><span>Rede</span><b>${esc(db.networks.find(n=>n.id===c.network_id)?.name||'—')}</b></p><p><span>Igreja</span><b>${esc(db.churches.find(n=>n.id===c.church_id)?.name||'—')}</b></p><p><span>Encontro</span><b>${esc(c.meeting_schedule||'Não informado')}</b></p></div>${cards(s)}<div class="dash-grid"><article class="dash-panel"><h2>Frequência mensal</h2>${trend(s)}</article><article class="dash-panel"><h2>Participação no período</h2>${donut(s)}</article></div>`;document.body.append(d);d.querySelector('[data-close]').onclick=()=>d.close();d.addEventListener('close',()=>d.remove(),{once:true});d.showModal()}
+function details(db,id,filter){
+ const c=db.cells.find(c=>c.id===id);
+ if(!c)return;
+ const s=summarize(db,{...filter,cell:id});
+ const dialog=document.createElement('dialog');
+ dialog.className='dash-dialog cell-detail-dialog';
+ dialog.setAttribute('aria-label','Detalhes de '+c.name);
+ const meta=[
+  ['Líder',leadershipName(db,c.leader_id)],
+  ['Rede',db.networks.find(n=>n.id===c.network_id)?.name||'—'],
+  ['Igreja',db.churches.find(n=>n.id===c.church_id)?.name||'—'],
+  ['Encontro',c.meeting_schedule||'Não informado']
+ ];
+ const charts=`<div class="dash-grid"><article class="dash-panel"><h2>Frequência mensal</h2>${trend(s)}</article><article class="dash-panel"><h2>Participação no período</h2>${donut(s)}</article></div>`;
+ dialog.innerHTML=`<div class="dash-dialog-head"><div><span class="dash-eyebrow">DETALHES DA CÉLULA</span><h2>${esc(c.name)}</h2></div><button type="button" class="secondary" data-close>Fechar ×</button></div>
+  ${cards(s,false,{},true)}<div class="cell-detail-content"></div>`;
+ const content=dialog.querySelector('.cell-detail-content');
+ const summary=`<div class="dash-details-meta">${meta.map(([label,value])=>`<p><span>${label}</span><b>${esc(value)}</b></p>`).join('')}</div>${charts}`;
+ const buttons=[...dialog.querySelectorAll('[data-cell-metric]')];
+ function show(key){
+  buttons.forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.cellMetric===key)));
+  if(key==='members'||key==='visitors'){
+   const people=s.people.filter(person=>person.category===(key==='members'?'Membro':'Visitante'))
+    .sort((first,second)=>compareNames(first.full_name,second.full_name));
+   content.innerHTML=`<article class="dash-panel"><h2>${metricTitles[key]}</h2>${people.length?`<ul class="cell-detail-names">${people.map(person=>`<li>${esc(person.full_name)}</li>`).join('')}</ul>`:'<p>Nenhum cadastro para esta célula.</p>'}</article>`;
+  }else{
+   content.innerHTML=key==='frequency'?charts:summary;
+  }
+ }
+ buttons.forEach(button=>button.onclick=()=>show(button.dataset.cellMetric));
+ show('cells');
+ document.body.append(dialog);
+ dialog.querySelector('[data-close]').onclick=()=>dialog.close();
+ dialog.addEventListener('close',()=>dialog.remove(),{once:true});
+ dialog.showModal();
+}
 function bind(root,db,filter={}){
  root.querySelectorAll('[data-dash-cell]').forEach(button=>button.onclick=()=>details(db,button.dataset.dashCell,filter));
 }
