@@ -226,3 +226,8 @@
   line-height: 1.25;
   padding-inline: 1em;
 }
+
+#loginBtn:not(.login-account)::before,
+#loginBtn:not(.login-account)::after {
+  content: none;
+}
