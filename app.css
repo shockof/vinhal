@@ -18,6 +18,22 @@
  .login-account-info small { font-size:.66rem; }
 }
 
+:is(#pastoralProfiles, #leaderProfiles) {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 156px), 194px));
+  gap: 14px;
+}
+
+:is(#pastoralProfiles, #leaderProfiles) .person-copy {
+  padding: 12px;
+}
+
+@media (max-width: 480px) {
+  :is(#pastoralProfiles, #leaderProfiles) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
 /* Keep the saved profile framing in the public leadership cards. */
 :is(#pastoralProfiles, #leaderProfiles) .person > :is(.profile-photo, .profile-initials) {
   width: 100%;

@@ -42,12 +42,21 @@
     }
   }
 
+  function maceioPastor(profile) {
+    const church = String(profile.church || '').normalize('NFD')
+      .replace(/\p{M}/gu, '').trim().toLowerCase();
+    return ['supervisor', 'predio', 'pastor'].includes(profile.role) && church === 'videira maceio';
+  }
+
   function render(entries) {
     for (const [id, roles] of sections) {
       const container = document.getElementById(id);
       const cards = document.createDocumentFragment();
-      for (const {profile, image} of entries) {
-        if (!roles.includes(profile.role)) continue;
+      const visible = entries.filter(({profile}) => roles.includes(profile.role));
+      if (id === 'pastoralProfiles') {
+        visible.sort((a, b) => Number(maceioPastor(b.profile)) - Number(maceioPastor(a.profile)));
+      }
+      for (const {profile, image} of visible) {
         const card = document.createElement('article');
         card.className = 'person';
         card.id = 'perfil-' + profile.id;
