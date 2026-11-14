@@ -44,7 +44,7 @@ document.querySelector('#loginBtn').onclick=()=>{location.href='gestao.html?v=20
  function showLogin(){
   button.classList.remove('login-account');
   button.removeAttribute('aria-label');
-  button.textContent='Login ↗';
+  button.textContent='Login';
  }
  function showProfile(profile){
   const name=profile.display_name.trim();

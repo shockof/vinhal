@@ -218,3 +218,23 @@
     padding: 0;
   }
 }
+
+#loginBtn:not(.login-account) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4em;
+  line-height: 1.25;
+  padding-inline: 1em;
+}
+
+#loginBtn:not(.login-account)::after {
+  content: "";
+  width: .58em;
+  height: .58em;
+  flex: 0 0 .58em;
+  box-sizing: border-box;
+  border-top: 2px solid currentColor;
+  border-right: 2px solid currentColor;
+  background: linear-gradient(135deg, transparent 44%, currentColor 45% 57%, transparent 58%);
+}
