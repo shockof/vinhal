@@ -31,9 +31,14 @@
   padding-bottom: 8px;
 }
 .leadership-track > .person {
-  flex: 0 0 clamp(170px, 54vw, 224px);
+  flex: 0 0 calc((100% - 42px) / 4);
   max-width: 100%;
   scroll-snap-align: start;
+}
+@media (max-width: 700px) {
+  .leadership-track > .person {
+    flex-basis: calc((100% - 14px) / 2);
+  }
 }
 .leadership-track .person-copy {
   padding: 14px;
