@@ -321,3 +321,5 @@ svg.meeting-card-icon{width:28px;height:28px;flex-shrink:0}
 @media (max-width: 600px) {
   .cell-detail-dialog .dash-details-meta { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
+
+.identity-photo { display: grid; margin-bottom: 6px; }
