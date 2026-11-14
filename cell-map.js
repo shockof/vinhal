@@ -25,8 +25,37 @@ function fitCells(){
  cellMapInstance.fitBounds(bounds,{padding:55,maxZoom:14,duration:matchMedia('(prefers-reduced-motion: reduce)').matches?0:600});
 }
 function showCellPoint(id){const marker=cellMapMarkers.get(id);if(!marker)return;const element=$('#cellMap');element.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'center'});cellMapInstance.resize();const height=element.clientHeight;element.style.setProperty('--popup-max-height',Math.max(140,height-100)+'px');const popup=marker.getPopup();if(activeCellPopup!==popup){closeActiveCellPopup();activeCellPopup=popup;marker.togglePopup();}cellMapInstance.flyTo({center:marker.getLngLat(),zoom:16,offset:[0,Math.max(0,Math.round(height/2-32))],duration:matchMedia('(prefers-reduced-motion: reduce)').matches?0:450})}
-function refreshCellMap(){const ci=$('#publicChurch').value,ni=$('#publicNetwork').value,rows=state.cells.filter(c=>(!ci||c.church===ci)&&(!ni||c.network===ni));const located=rows.filter(c=>cellPosition(c));$('#cellMapStatus').textContent=`${located.length} de ${rows.length} células deste filtro no mapa`;const missing=rows.filter(c=>!cellPosition(c));$('#cellMapNotice').textContent=missing.length?'Sem posição no mapa: '+missing.map(c=>c.name).join(', ')+'. A liderança pode completar a localização no cadastro.':'Selecione um marcador para ver o horário, a liderança e como chegar.';
+function cellNetworkRank(cell){
+ const {name='',kind=''}=network(cell.network)||{};
+ const label=(name+' '+kind).toLowerCase();
+ if(kind==='kids'||/\bkids\b/.test(label))return 2;
+ if(/\b(jovens|jovem|youth)\b/.test(label))return 1;
+ if(/\b(adultos|adulto|adult)\b/.test(label))return 0;
+ return 3;
+}
+const cellDirectory=$('#cellDirectory');
+const cellDirectoryControls=$('#cellDirectoryControls');
+const [previousCells,nextCells]=cellDirectoryControls.querySelectorAll('button');
+function updateCellDirectoryControls(){
+ const end=cellDirectory.scrollWidth-cellDirectory.clientWidth;
+ cellDirectoryControls.hidden=end<=1;
+ previousCells.disabled=cellDirectory.scrollLeft<=1;
+ nextCells.disabled=cellDirectory.scrollLeft>=end-1;
+}
+function slideCellDirectory(direction){
+ const [first,second]=cellDirectory.children;
+ if(!second)return;
+ const step=second.offsetLeft-first.offsetLeft;
+ cellDirectory.scrollBy({left:direction*step,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+}
+previousCells.onclick=()=>slideCellDirectory(-1);
+nextCells.onclick=()=>slideCellDirectory(1);
+cellDirectory.addEventListener('scroll',updateCellDirectoryControls,{passive:true});
+new ResizeObserver(updateCellDirectoryControls).observe(cellDirectory);
+function refreshCellMap(){const ci=$('#publicChurch').value,ni=$('#publicNetwork').value,rows=state.cells.filter(c=>(!ci||c.church===ci)&&(!ni||c.network===ni));rows.sort((a,b)=>cellNetworkRank(a)-cellNetworkRank(b)||a.name.localeCompare(b.name,'pt-BR'));const located=rows.filter(c=>cellPosition(c));$('#cellMapStatus').textContent=`${located.length} de ${rows.length} células deste filtro no mapa`;const missing=rows.filter(c=>!cellPosition(c));$('#cellMapNotice').textContent=missing.length?'Sem posição no mapa: '+missing.map(c=>c.name).join(', ')+'. A liderança pode completar a localização no cadastro.':'Selecione um marcador para ver o horário, a liderança e como chegar.';
 $('#cellDirectory').innerHTML=rows.map(c=>{const pos=cellPosition(c),leader=window.publicCellLeaders?.get(c.leader)||find(state.users,c.leader);return `<article class="quick-card"><span class="tag">${esc(network(c.network)?.name)}</span><h3>${esc(publicCellTitle(c))}</h3><p>${esc(church(c.church)?.name)} · ${esc(church(c.church)?.city)}<br>${esc(c.time)}<br>${esc(c.address||'Endereço a confirmar')}</p><div class="cell-leader-photo">${leader?publicCellAvatar(leader):'<div class="profile-initials" aria-hidden="true">?</div>'}<div><span>Líder da célula</span><strong>${esc(leader?.name||'A definir')}</strong></div></div><div class="toolbar">${pos?`<button class="dash-button" data-cell-map="${esc(c.id)}">Ver no mapa</button>`:''}<a class="text-link" href="${esc(cellMapURL(c))}" target="_blank" rel="noopener">Como chegar ↗</a></div><p class="help">${pos?(pos.demo?'Ponto ilustrativo · não é um endereço de reunião.':'Localização cadastrada pela igreja.'):'Sem coordenadas · busca pelo endereço cadastrado.'}</p></article>`}).join('')||'<p>Nenhuma célula neste filtro.</p>';
+cellDirectory.scrollLeft=0;
+updateCellDirectoryControls();
 $$('[data-cell-map]').forEach(b=>b.onclick=()=>showCellPoint(b.dataset.cellMap));
 if(!window.maplibregl){$('#cellMap').innerHTML='<p>O mapa não pôde carregar. Verifique sua conexão. A lista e os links de localização continuam disponíveis.</p>';$('#fitCellMap').disabled=true;return}
 if(!cellMapInstance){try{$('#cellMap').textContent='';cellMapInstance=new maplibregl.Map({container:'cellMap',style:'https://tiles.openfreemap.org/styles/liberty',center:[-35.735,-9.64],zoom:12,maxZoom:20,attributionControl:true});cellMapInstance.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-left');cellMapInstance.addControl(new maplibregl.FullscreenControl(),'top-right');cellMapInstance.scrollZoom.disable();cellMapInstance.on('error',()=>{$('#cellMapNotice').textContent='Alguns detalhes do mapa não puderam carregar. Verifique sua conexão; a lista e os links continuam disponíveis.'});new ResizeObserver(()=>{if($('#cellMap').offsetWidth)cellMapInstance.resize()}).observe($('#cellMap'))}catch(err){$('#cellMap').textContent='Este navegador não conseguiu exibir o mapa vetorial. Use a lista e os links Como chegar.';$('#fitCellMap').disabled=true;return}}
