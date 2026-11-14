@@ -42,10 +42,12 @@
     }
   }
 
-  function maceioPastor(profile) {
+  function pastoralPriority(profile) {
+    if (profile.role === 'supervisor') return 0;
+    if (profile.role === 'obreiro') return 3;
     const church = String(profile.church || '').normalize('NFD')
       .replace(/\p{M}/gu, '').trim().toLowerCase();
-    return ['supervisor', 'predio', 'pastor'].includes(profile.role) && church === 'videira maceio';
+    return profile.role === 'pastor' && church === 'videira maceio' ? 1 : 2;
   }
 
   function render(entries) {
@@ -54,7 +56,7 @@
       const cards = document.createDocumentFragment();
       const visible = entries.filter(({profile}) => roles.includes(profile.role));
       if (id === 'pastoralProfiles') {
-        visible.sort((a, b) => Number(maceioPastor(b.profile)) - Number(maceioPastor(a.profile)));
+        visible.sort((a, b) => pastoralPriority(a.profile) - pastoralPriority(b.profile));
       }
       for (const {profile, image} of visible) {
         const card = document.createElement('article');
