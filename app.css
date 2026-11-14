@@ -41,8 +41,8 @@
 }
 
 
-:is(#visit-pilar, #visit-satuba, #visit-antonio-lins) { margin-top: 24px; }
-:is(#visit-pilar, #visit-satuba, #visit-antonio-lins) .location-photo img[src="assets/logo.png"] {
+:is(#visit-pilar, #visit-satuba, #visit-antonio-lins, #visit-rio-largo) { margin-top: 24px; }
+:is(#visit-pilar, #visit-satuba, #visit-antonio-lins, #visit-rio-largo) .location-photo img[src="assets/logo.png"] {
   object-fit: contain;
   padding: clamp(24px, 7vw, 84px);
   background: #fff;
