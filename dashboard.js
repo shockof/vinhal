@@ -275,6 +275,7 @@ function details(db,id,filter){
  const summary=`<div class="dash-details-meta">${meta.map(([label,value])=>`<p><span>${label}</span><b>${esc(value)}</b></p>`).join('')}</div>${charts}`;
  const buttons=[...dialog.querySelectorAll('[data-cell-metric]')];
  function show(key){
+  content.scrollTop=0;
   buttons.forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.cellMetric===key)));
   if(key==='members'||key==='visitors'){
    const people=s.people.filter(person=>person.category===(key==='members'?'Membro':'Visitante'))

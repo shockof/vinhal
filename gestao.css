@@ -122,9 +122,9 @@ svg.meeting-card-icon{width:28px;height:28px;flex-shrink:0}
 #cropMyPhoto[hidden], #cropMemberPhoto[hidden] { display: none; }
 
 .dash-metric .dash-metric-copy { margin: 0; }
-a.dash-metric { text-align: left; width: 100%; text-decoration: none; color: white; }
-a.dash-metric:hover { filter: brightness(.94); }
-a.dash-metric:focus-visible { outline: 3px solid var(--purple); outline-offset: 3px; }
+:is(a, button).dash-metric { text-align: left; width: 100%; text-decoration: none; color: white; }
+:is(a, button).dash-metric:hover { filter: brightness(.94); }
+:is(a, button).dash-metric:focus-visible { outline: 3px solid var(--purple); outline-offset: 3px; }
 .metric-filters { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,170px),1fr)); gap: 12px; margin: 0 0 20px; }
 .metric-filters label, .metric-fixed { min-width: 0; }
 .metric-fixed { display: grid; align-content: start; gap: 5px; padding: 8px 12px; background: #eee7f8; border-radius: 10px; overflow-wrap: anywhere; }
@@ -282,19 +282,21 @@ a.dash-metric:focus-visible { outline: 3px solid var(--purple); outline-offset: 
   margin: 1rem auto 0;
 }
 
-.cell-detail-dialog { padding: clamp(14px, 2.4vw, 24px); }
-.cell-detail-dialog .dash-dialog-head h2 { margin: 3px 0 10px; }
-.cell-detail-dialog .dash-metrics { gap: 9px; margin-bottom: 10px; }
-.cell-detail-dialog .dash-metric {
-  min-height: 62px;
-  padding: 8px 10px;
-  flex-direction: row;
-  align-items: center;
-  text-align: left;
+.cell-detail-dialog {
+  box-sizing: border-box;
+  width: min(1100px, calc(100vw - 24px));
+  height: min(640px, 92vh);
+  height: min(640px, 92dvh);
+  max-height: none;
+  padding: clamp(14px, 2.4vw, 24px);
 }
-.cell-detail-dialog .dash-metric svg { width: 20px; height: 20px; }
-.cell-detail-dialog .dash-metric strong { font-size: 21px; }
-.cell-detail-dialog .dash-metric span { margin-top: 2px; }
+.cell-detail-dialog[open] {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+.cell-detail-dialog .dash-dialog-head h2 { margin: 3px 0 10px; }
+.cell-detail-dialog .dash-metrics { margin-bottom: 12px; }
+.cell-detail-content { min-height: 0; overflow-y: auto; }
 .cell-detail-dialog .dash-metric[aria-pressed="true"] { box-shadow: inset 0 0 0 2px #fff; }
 .cell-detail-dialog .dash-details-meta { grid-template-columns: repeat(4,minmax(0,1fr)); gap: 4px 12px; margin-bottom: 10px; }
 .cell-detail-dialog .dash-details-meta p { padding: 4px 0; overflow-wrap: anywhere; }
