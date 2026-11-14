@@ -129,16 +129,16 @@ function entityForm(){const item=edit?db[list[view]].find(x=>x.id===edit):{};if(
  if(view==='church')fields=field('name','Nome da igreja',item.name,'text','required maxlength="180"')+field('municipality','Município',item.municipality,'text','required maxlength="180"');
  if(view==='network')fields=field('name','Nome da rede',item.name,'text','required maxlength="180"')+select('church_id','Igreja',db.churches,item.church_id)+`<label>Tipo<select name="kind"><option value="regular">Rede regular</option><option value="kids" ${item.kind==='kids'?'selected':''}>Rede Kids</option></select></label>`;
  if(view==='cell')fields=field('name','Nome da célula',item.name,'text','required maxlength="180"')+select('church_id','Igreja',db.churches,item.church_id)+select('network_id','Rede',db.networks,item.network_id)+`<label>Situação da célula<select name="is_paused"><option value="false">Está acontecendo</option><option value="true" ${item.is_paused?'selected':''}>Não está acontecendo</option></select></label>`+window.VideiraWeekly.fields(item)+window.VideiraLocation.fields(item)+select('leader_id','Líder',db.profiles.filter(x=>x.active&&['lider','discipulador','master','supervisor','predio'].includes(x.role)),item.leader_id,'display_name',true)+select('discipler_id','Discipulador (a)',db.profiles.filter(x=>x.active&&x.role==='discipulador'),item.discipler_id,'display_name',true);
- if(view==='person')fields=(edit?`
+ if(view==='person')fields=`
   <div class="profile-photo-row wide">
    <div id="memberPhotoPreview" class="profile-avatar"><span aria-label="Sem foto">—</span></div>
    <div>
-    <label>Foto do membro<input id="memberPhotoFile" type="file" accept="image/jpeg,image/png,image/webp"></label>
+    <label>Foto do membro ou visitante (opcional)<input id="memberPhotoFile" type="file" accept="image/jpeg,image/png,image/webp"></label>
     <small>JPG, PNG ou WebP · até 8 MB</small>
     <div class="actions"><button type="button" class="secondary" id="cropMemberPhoto" hidden>Ajustar enquadramento</button></div>
     <p id="memberPhotoFeedback" role="status"></p>
    </div>
-  </div>`:'')+field('full_name','Nome completo',item.full_name,'text','required maxlength="180"')+(!edit||memberTransferRoles.has(db.profile.role)
+  </div>`+field('full_name','Nome completo',item.full_name,'text','required maxlength="180"')+(!edit||memberTransferRoles.has(db.profile.role)
   ?select('cell_id','Célula',db.cells,item.cell_id)
   :`<label>Célula<input value="${esc(label(db.cells,item.cell_id))}" readonly></label>`)+field('phone','Telefone (opcional)',item.phone,'tel','maxlength="40"')+field('birth_date','Data de nascimento (opcional)',item.birth_date,'date','autocomplete="bday"')+`<label>Categoria<select name="category"><option value="Visitante">Visitante</option><option value="Membro" ${item.category==='Membro'?'selected':''}>Membro</option></select></label><label>Batismo<select name="baptized">${['Não informado','Sim','Não'].map(v=>`<option ${item.baptized===v?'selected':''}>${v}</option>`).join('')}</select></label><label>Estado civil<select name="marital_status">${['Não informado','Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)'].map(v=>`<option ${item.marital_status===v?'selected':''}>${v}</option>`).join('')}</select></label>`;
  return `<article class="panel"><h2>${edit?'Editar cadastro':'Novo cadastro'}</h2><form id="entityForm" class="gridform">${fields}<div class="wide actions"><button>Salvar no Supabase</button>${edit?'<button type="button" class="secondary" id="cancelEdit">Cancelar edição</button>':''}</div></form>${view==='person'?'<p><small>Três encontros consecutivos com presença convertem o visitante em membro. Faltas interrompem a sequência.</small></p>':''}</article>`;
@@ -267,7 +267,7 @@ function bindMemberPhoto(form,id){
   img.alt=alt;
   preview.replaceChildren(img);
  };
- call('person_photo',{id}).then(({photo_base64})=>{
+ if(id)call('person_photo',{id}).then(({photo_base64})=>{
   if(!form.isConnected||!photo_base64)return;
   if(!original)original='data:image/jpeg;base64,'+photo_base64;
   if(!photo.image){
@@ -438,11 +438,11 @@ function bind(){const bindViews=()=>document.querySelectorAll('[data-view]').for
    if(!edit){const update=()=>{const church=form.elements.church_id.value;form.elements.network_id.innerHTML='<option value="">Selecione</option>'+db.networks.filter(x=>x.church_id===church).map(x=>`<option value="${x.id}">${esc(x.name)}</option>`).join('');links()};form.elements.church_id.onchange=update;update()}
    form.elements.network_id.onchange=links;links();
   }
-  const memberPhoto=view==='person'&&edit?bindMemberPhoto(form,edit):null;
+  const memberPhoto=view==='person'?bindMemberPhoto(form,edit):null;
   const locationControl=view==='cell'?window.VideiraLocation.bind(form,edit?db.cells.find(c=>c.id===edit):{}, {resolveMaps:url=>call('resolve_maps',{url})}):null;
   form.onsubmit=async e=>{e.preventDefault();if(busy)return;if(locationControl){status('Conferindo localização…');await locationControl.wait();if(!form.isConnected||busy)return;}const data=Object.fromEntries(new FormData(form));if(edit)data.id=edit;if(memberPhoto){
    if(memberPhoto.processing)return status('Aguarde a preparação da foto.',true);
-   data.original_cell_id=db.people.find(person=>person.id===edit).cell_id;
+   if(edit)data.original_cell_id=db.people.find(person=>person.id===edit).cell_id;
    if(memberPhoto.image)data.photo_base64=memberPhoto.image;
   }if(view==='cell'){try{
    const previous=db.cells.find(c=>c.id===edit)?.meeting_schedule||'';
