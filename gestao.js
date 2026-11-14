@@ -220,6 +220,7 @@ function linkedAccountTable(){
   ?'Nenhuma conta encontrada para essa busca e filtros.':'Nenhum cadastro neste escopo.')+'</div>';
  return table(headers,profiles.map(profile=>{
   const row=accountColumns(profile).map(esc);
+  if(master)row[0]=window.VideiraDashboard.personName(profile.id,profile.display_name);
   if(master)row.push(`<button type="button" class="secondary" data-account-edit="${esc(profile.id)}">Editar conta</button>`);
   return row;
  }));
@@ -419,9 +420,21 @@ function bind(){const bindViews=()=>document.querySelectorAll('[data-view]').for
  }
  if(view==='site')window.VideiraSiteEditor.mount($('#siteEditor'),{call,profile:db.profile,config:cfg,getSession:()=>session});
  if(view==='profile')window.VideiraProfile.mount($('#myProfile'),{call,onSaved:async()=>{await reload();render();status('Perfil atualizado no Supabase.')},onPasswordChanged:()=>{clearSession();location.href='gestao.html?senha=alterada'}});
- const bindAccountEditors=()=>document.querySelectorAll('[data-account-edit]').forEach(button=>button.onclick=()=>window.VideiraAccountEditor.open({id:button.dataset.accountEdit,call,requestPhoto:requestLeadershipPhoto,churches:db.churches,networks:db.networks,roles,selfId:db.profile.id,onSaved:async()=>{await reload();if($('#linkedAccounts'))updateAccountFilters();status('Conta atualizada no Supabase.')},onReset:()=>status('Senha da conta redefinida.')}));
- const updateAccountFilters=()=>{$('#linkedAccounts').innerHTML=linkedAccountTable();$('#accountCount').textContent=linkedAccountCount();bindAccountEditors()};
+ const bindAccountEditors=()=>document.querySelectorAll('[data-account-edit]').forEach(button=>button.onclick=()=>window.VideiraAccountEditor.open({id:button.dataset.accountEdit,call,requestPhoto:requestLeadershipPhoto,churches:db.churches,networks:db.networks,roles,selfId:db.profile.id,onSaved:async()=>{await reload();if(accountList?.isConnected){
+  bindAccountPhotos=accountPhotoLoader();
+  updateAccountFilters();
+ }status('Conta atualizada no Supabase.')},onReset:()=>status('Senha da conta redefinida.')}));
+ const accountList=$('#linkedAccounts');
+ const accountPhotoLoader=()=>window.VideiraDashboard.personPhotos(accountList,async id=>(await requestLeadershipPhoto(id)).photo);
+ let bindAccountPhotos=accountList&&db.profile.role==='master'?accountPhotoLoader():null;
+ const updateAccountFilters=()=>{
+  accountList.innerHTML=linkedAccountTable();
+  $('#accountCount').textContent=linkedAccountCount();
+  bindAccountEditors();
+  bindAccountPhotos?.();
+ };
  bindAccountEditors();
+ bindAccountPhotos?.();
  if($('#accountSearch'))$('#accountSearch').oninput=e=>{accountSearch=e.target.value;updateAccountFilters()};
  if($('#accountRoleFilter'))$('#accountRoleFilter').onchange=e=>{accountRoleFilter=e.target.value;updateAccountFilters()};
  if($('#accountChurchFilter'))$('#accountChurchFilter').onchange=e=>{accountChurchFilter=e.target.value;updateAccountFilters()};
