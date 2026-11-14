@@ -322,4 +322,19 @@ svg.meeting-card-icon{width:28px;height:28px;flex-shrink:0}
   .cell-detail-dialog .dash-details-meta { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
 
-.identity-photo { display: grid; margin-bottom: 6px; }
+.identity-photo {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 6px;
+}
+
+.identity-photo img {
+  width: 88%;
+  height: 88%;
+  object-fit: contain;
+}
+
+.identity-photo:has(img) {
+  background: #fff;
+}
