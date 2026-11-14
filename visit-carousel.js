@@ -2,7 +2,7 @@
   const track = document.getElementById('visit-carousel-track');
   if (!track || track.children.length < 2) return;
 
-  const cards = [...track.children];
+  let cards = [...track.children];
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   let requestedIndex = null;
 
@@ -50,5 +50,10 @@
   for (const event of ['pointerdown', 'wheel', 'focusin']) {
     track.addEventListener(event, () => { requestedIndex = null; updateArrows(); }, { passive: true });
   }
+  track.addEventListener('visit-cards-changed', () => {
+    cards = [...track.children];
+    requestedIndex = null;
+    updateArrows();
+  });
   updateArrows();
 })();

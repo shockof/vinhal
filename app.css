@@ -41,7 +41,7 @@
 }
 
 
-:is(#visit-pilar, #visit-satuba, #visit-antonio-lins, #visit-rio-largo, #visit-sao-luis-do-quitunde) .location-photo img[src="assets/logo.png"] {
+.location-panel .location-photo img[src="assets/logo.png"] {
   object-fit: contain;
   padding: clamp(24px, 7vw, 84px);
   background: #fff;
@@ -105,4 +105,8 @@
 .visit-carousel-arrow:focus-visible {
   outline: 2px solid var(--purple);
   outline-offset: 2px;
+}
+
+.visit-carousel .contact-row a[hidden] {
+  display: none;
 }
