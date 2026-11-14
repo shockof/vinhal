@@ -175,25 +175,18 @@ function mountDirectory(root,db,kind,filter,requestPhoto,editPerson){
     const initials = name.trim().split(/\s+/).slice(0, 2).map(word => word.charAt(0)).join('').toUpperCase();
     const personName = `<span class="directory-person"><span class="attendance-avatar" aria-hidden="true" data-directory-photo="${esc(id)}" data-name="${esc(name)}">${esc(initials)}</span>${esc(name)}</span>`;
     return `<tr>${values.map((value,index)=>`<td data-label="${headers[index]}">${!isCells&&index===0?personName:headers[index]==='Rede'?`<span class="directory-network">${esc(value)}</span>`:esc(value)}${isCells&&index===0&&cell.is_paused?'<small class="directory-cell-status">Não está acontecendo</small>':''}</td>`).join('')}
-     ${isCells?`<td class="directory-action"><button class="secondary" type="button" data-directory-cell="${esc(cell.id)}" aria-label="Ver detalhes de ${esc(cell.name)}">›</button></td>`:canEdit?`<td class="directory-action"><button class="secondary" type="button" data-directory-edit="${esc(id)}" aria-label="Editar cadastro de ${esc(name)}">Editar</button></td>`:''}</tr>`;
+     ${isCells?`<td class="directory-action"><button class="secondary" type="button" data-directory-cell="${esc(cell.id)}" aria-haspopup="dialog" aria-label="Ver detalhes de ${esc(cell.name)}">›</button></td>`:canEdit?`<td class="directory-action"><button class="secondary" type="button" data-directory-edit="${esc(id)}" aria-label="Editar cadastro de ${esc(name)}">Editar</button></td>`:''}</tr>`;
    }).join('')}</tbody></table>`;
   bindPhotos();
   body.querySelectorAll('[data-directory-edit]').forEach(button => {
    button.onclick = () => editPerson(button.dataset.directoryEdit);
   });
-  body.querySelectorAll('[data-directory-cell]').forEach(button=>button.onclick=()=>{
-   const cell=source.get(button.dataset.directoryCell);
-   const detail=root.querySelector('.directory-cell-detail');
-   const summary=summarize(db,{from:filter.from,to:filter.to,cell:cell.id});
-   detail.hidden=false;
-   detail.innerHTML=`<h2 tabindex="-1">${esc(cell.name)}</h2><p>${esc(cell.meeting_schedule||'Encontro a definir')}</p>
-    ${cards(summary)}<div class="dash-grid"><article class="dash-panel"><h3>Frequência mensal</h3>${trend(summary)}</article><article class="dash-panel"><h3>Participação no período</h3>${donut(summary)}</article></div>`;
-   detail.querySelector('h2').focus();
+  body.querySelectorAll('[data-directory-cell]').forEach(button => {
+   button.onclick = () => details(db, button.dataset.directoryCell, filter);
   });
  };
- for(const field of fields)field.onchange=()=>{root.querySelector('.directory-cell-detail').hidden=true;update()};
- search.oninput=()=>{root.querySelector('.directory-cell-detail').hidden=true;update()};
- root.insertAdjacentHTML('beforeend','<section class="directory-cell-detail" hidden></section>');
+ for (const field of fields) field.onchange = update;
+ search.oninput = update;
  update();
 }
 
@@ -261,7 +254,7 @@ function visuals(db,filter={},showBirthdays=false){const s=summarize(db,filter),
 function title(role){return ({master:'Visão geral da igreja',supervisor:'Relatórios gerais',predio:'Minha igreja',pastor:'Minha rede',obreiro:'Minha igreja',discipulador:'Minhas células',lider:'Minha célula'})[role]||'Visão geral'}
 function startDate(period){if(period==='all')return '';const today=new Date().toLocaleDateString('en-CA',{timeZone:'America/Maceio'}),[year,month]=today.split('-').map(Number);const date=new Date(Date.UTC(year,month-Number(period),1));return date.toISOString().slice(0,10)}
 function overview(db){return `<section class="dashboard"><div class="dash-toolbar"><div><span class="dash-eyebrow">ACOMPANHAMENTO DE CÉLULAS</span><h1>${icon('cells')}${title(db.profile.role)}</h1><p>Uma visão do cuidado e da participação no seu escopo.</p></div><label>Período da chamada<select id="dashboardPeriod"><option value="1">Último mês</option><option value="3" selected>Últimos 3 meses</option><option value="6">Últimos 6 meses</option><option value="12">Últimos 12 meses</option><option value="all">Todo o histórico</option></select></label></div>${db.profile.role==='supervisor'?`<div class="dash-church-filter"><label>Filtrar por igreja<select id="dashboardChurch"><option value="">Todas as igrejas</option>${db.churches.slice().sort((a,b)=>a.name.localeCompare(b.name,'pt-BR')).map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></label><p>Os indicadores e gráficos acompanham a igreja selecionada.</p></div>`:''}<div id="dashboardVisuals">${visuals(db,{from:startDate('3')},true)}</div><p class="dash-footnote">Dados reais do seu escopo · Cadastros atuais e chamadas no período escolhido. Nenhum dado de exemplo é incluído.</p></section>`}
-function details(db,id,filter){const c=db.cells.find(c=>c.id===id);if(!c)return;const s=summarize(db,{...filter,cell:id}),d=document.createElement('dialog');d.className='dash-dialog';d.innerHTML=`<div class="dash-dialog-head"><div><span class="dash-eyebrow">DETALHES DA CÉLULA</span><h2>${esc(c.name)}</h2></div><button class="secondary" data-close aria-label="Fechar detalhes">Fechar ×</button></div><div class="dash-details-meta"><p><span>Líder</span><b>${esc(leadershipName(db,c.leader_id))}</b></p><p><span>Rede</span><b>${esc(db.networks.find(n=>n.id===c.network_id)?.name||'—')}</b></p><p><span>Igreja</span><b>${esc(db.churches.find(n=>n.id===c.church_id)?.name||'—')}</b></p><p><span>Encontro</span><b>${esc(c.meeting_schedule||'Não informado')}</b></p></div>${cards(s)}<div class="dash-grid"><article class="dash-panel"><h2>Frequência mensal</h2>${trend(s)}</article><article class="dash-panel"><h2>Participação no período</h2>${donut(s)}</article></div>`;document.body.append(d);d.querySelector('[data-close]').onclick=()=>d.close();d.addEventListener('close',()=>d.remove(),{once:true});d.showModal()}
+function details(db,id,filter){const c=db.cells.find(c=>c.id===id);if(!c)return;const s=summarize(db,{...filter,cell:id}),d=document.createElement('dialog');d.className='dash-dialog';d.setAttribute('aria-label','Detalhes de '+c.name);d.innerHTML=`<div class="dash-dialog-head"><div><span class="dash-eyebrow">DETALHES DA CÉLULA</span><h2>${esc(c.name)}</h2></div><button class="secondary" data-close aria-label="Fechar detalhes">Fechar ×</button></div><div class="dash-details-meta"><p><span>Líder</span><b>${esc(leadershipName(db,c.leader_id))}</b></p><p><span>Rede</span><b>${esc(db.networks.find(n=>n.id===c.network_id)?.name||'—')}</b></p><p><span>Igreja</span><b>${esc(db.churches.find(n=>n.id===c.church_id)?.name||'—')}</b></p><p><span>Encontro</span><b>${esc(c.meeting_schedule||'Não informado')}</b></p></div>${cards(s)}<div class="dash-grid"><article class="dash-panel"><h2>Frequência mensal</h2>${trend(s)}</article><article class="dash-panel"><h2>Participação no período</h2>${donut(s)}</article></div>`;document.body.append(d);d.querySelector('[data-close]').onclick=()=>d.close();d.addEventListener('close',()=>d.remove(),{once:true});d.showModal()}
 function bind(root,db,filter={}){
  root.querySelectorAll('[data-dash-cell]').forEach(button=>button.onclick=()=>details(db,button.dataset.dashCell,filter));
 }
