@@ -403,7 +403,16 @@ function bind(){const bindViews=()=>document.querySelectorAll('[data-view]').for
  if(view==='metric'){
   const dashboard=window.VideiraDashboard;
   document.title=(dashboard.metricTitle(db,metricKind)||'Indicador')+' · Igreja Videira';
-  dashboard.mountMetric($('#metricPage'),db,metricKind,metricFilter,async id => (await call('person_photo',{id})).photo_base64);
+  dashboard.mountMetric($('#metricPage'),db,metricKind,metricFilter,async id => (await call('person_photo',{id})).photo_base64, id => {
+   if (!db.people.some(person => person.id === id)) return;
+   history.pushState(null, '', 'gestao.html');
+   document.title = 'Gestão · Igreja Videira';
+   view = 'person';
+   edit = id;
+   render();
+   $('#entityForm').scrollIntoView({block:'start'});
+   $('#entityForm [name=full_name]').focus({preventScroll:true});
+  });
  }
  if(view==='site')window.VideiraSiteEditor.mount($('#siteEditor'),{call,profile:db.profile,config:cfg,getSession:()=>session});
  if(view==='profile')window.VideiraProfile.mount($('#myProfile'),{call,onSaved:async()=>{await reload();render();status('Perfil atualizado no Supabase.')},onPasswordChanged:()=>{clearSession();location.href='gestao.html?senha=alterada'}});

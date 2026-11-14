@@ -76,7 +76,7 @@ function showDirectoryPhoto(name, source) {
  dialog.showModal();
 }
 
-function mountDirectory(root,db,kind,filter,requestPhoto){
+function mountDirectory(root,db,kind,filter,requestPhoto,editPerson){
  const isCells=kind==='cells';
  const select=(key,label)=>`<label>${label}<select name="${key}"></select></label>`;
  root.innerHTML=`<section class="metric-directory">
@@ -101,6 +101,7 @@ function mountDirectory(root,db,kind,filter,requestPhoto){
    .map(person=>({name:person.full_name,id:person.id,cell:source.get(person.cell_id)}));
  rows.sort((a,b)=>compareNames(a.name,b.name)||compareNames(a.cell.name,b.cell.name));
  const label=(key,id)=>key==='network_id'?db.networks.find(n=>n.id===id)?.name||'Rede':cellGroupName(db,key,id);
+ const canEdit = !isCells && metricRoles.has(db.profile.role) && typeof editPerson === 'function';
  const photos = new Map();
  let observer;
  function bindPhotos() {
@@ -166,7 +167,7 @@ function mountDirectory(root,db,kind,filter,requestPhoto){
    body.innerHTML='<p class="dash-empty">Nenhum resultado para os filtros selecionados.</p>';
    return;
   }
-  const headers=[isCells?'Célula':'Nome',...(isCells?[]:['Célula']),'Igreja','Rede','Discipulador',...(isCells?['Líder','Detalhes']:[])];
+  const headers=[isCells?'Célula':'Nome',...(isCells?[]:['Célula']),'Igreja','Rede','Discipulador',...(isCells?['Líder','Detalhes']:canEdit?['Ações']:[])];
   body.innerHTML=`<table class="directory-table"><thead><tr>${headers.map(text=>`<th scope="col">${text}</th>`).join('')}</tr></thead>
    <tbody>${filtered.map(({name,cell,id})=>{
     const values=[name,...(isCells?[]:[cell.name]),label('church_id',cell.church_id),label('network_id',cell.network_id),
@@ -174,9 +175,12 @@ function mountDirectory(root,db,kind,filter,requestPhoto){
     const initials = name.trim().split(/\s+/).slice(0, 2).map(word => word.charAt(0)).join('').toUpperCase();
     const personName = `<span class="directory-person"><span class="attendance-avatar" aria-hidden="true" data-directory-photo="${esc(id)}" data-name="${esc(name)}">${esc(initials)}</span>${esc(name)}</span>`;
     return `<tr>${values.map((value,index)=>`<td data-label="${headers[index]}">${!isCells&&index===0?personName:headers[index]==='Rede'?`<span class="directory-network">${esc(value)}</span>`:esc(value)}${isCells&&index===0&&cell.is_paused?'<small class="directory-cell-status">Não está acontecendo</small>':''}</td>`).join('')}
-     ${isCells?`<td class="directory-action"><button class="secondary" type="button" data-directory-cell="${esc(cell.id)}" aria-label="Ver detalhes de ${esc(cell.name)}">›</button></td>`:''}</tr>`;
+     ${isCells?`<td class="directory-action"><button class="secondary" type="button" data-directory-cell="${esc(cell.id)}" aria-label="Ver detalhes de ${esc(cell.name)}">›</button></td>`:canEdit?`<td class="directory-action"><button class="secondary" type="button" data-directory-edit="${esc(id)}" aria-label="Editar cadastro de ${esc(name)}">Editar</button></td>`:''}</tr>`;
    }).join('')}</tbody></table>`;
   bindPhotos();
+  body.querySelectorAll('[data-directory-edit]').forEach(button => {
+   button.onclick = () => editPerson(button.dataset.directoryEdit);
+  });
   body.querySelectorAll('[data-directory-cell]').forEach(button=>button.onclick=()=>{
    const cell=source.get(button.dataset.directoryCell);
    const detail=root.querySelector('.directory-cell-detail');
@@ -242,7 +246,7 @@ function metricTitle(db,kind){
  return metricRoles.has(db.profile.role)&&Object.hasOwn(metricTitles,kind)?metricTitles[kind]:'';
 }
 
-function mountMetric(root,db,kind,filter,requestPhoto){
+function mountMetric(root,db,kind,filter,requestPhoto,editPerson){
  if(!metricTitle(db,kind)){
   root.textContent='Este indicador não está disponível para o seu perfil.';
   return;
@@ -250,7 +254,7 @@ function mountMetric(root,db,kind,filter,requestPhoto){
  const scoped=metricScope(db);
  root.innerHTML='<div class="metric-details-body"></div>';
  if(kind==='frequency')frequencyDetails(root,scoped,filter);
- else mountDirectory(root.querySelector('.metric-details-body'),scoped,kind,filter,requestPhoto);
+ else mountDirectory(root.querySelector('.metric-details-body'),scoped,kind,filter,requestPhoto,editPerson);
 }
 
 function visuals(db,filter={},showBirthdays=false){const s=summarize(db,filter),global=['master','supervisor','predio'].includes(db.profile.role);return `${cards(showBirthdays&&db.profile.role==='discipulador'?summarize(metricScope(db),filter):s,showBirthdays&&metricRoles.has(db.profile.role),filter)}${showBirthdays?'<section class="dash-panel birthday-panel" id="birthdaysPanel"><h2>Aniversariantes do mês</h2><p role="status">Carregando aniversariantes…</p></section>':''}<div class="dash-grid"><article class="dash-panel"><div class="dash-panel-title"><h2>${global?'Desempenho das redes':db.profile.role==='discipulador'?'Células por líder':db.profile.role==='lider'?'Minhas células':'Células por discipulador'}</h2><span>${global?db.networks.filter(n=>s.cells.some(c=>c.network_id===n.id)).length+' redes':s.cells.length+' células'}</span></div>${global?networkBars(s,db):groupedCells(s,db)}</article><article class="dash-panel"><h2>Evolução da frequência</h2>${trend(s)}</article></div><div class="dash-grid dash-bottom"><article class="dash-panel"><h2>${global?'Células por discipulador':'Células do seu escopo'}</h2>${global?groupedCells(s,db):`<p class="dash-explainer">Acompanhe cada célula e abra os detalhes para conferir seus indicadores. Os números de membros e visitantes representam o cadastro atual.</p><div class="actions"><button data-view="reports">Ver relatório completo →</button><button class="secondary" data-view="meeting">Registrar presença</button></div>`}</article><article class="dash-panel"><h2>Resumo da participação</h2>${donut(s)}</article></div>`}
