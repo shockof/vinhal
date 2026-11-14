@@ -77,35 +77,16 @@ function showDirectoryPhoto(name, source) {
  dialog.showModal();
 }
 
-function mountDirectory(root,db,kind,filter,requestPhoto,editPerson){
- const isCells=kind==='cells';
- const select=(key,label)=>`<label>${label}<select name="${key}"></select></label>`;
- root.innerHTML=`<section class="metric-directory">
-  <div class="directory-filters">
-   <label>Busca<input type="search" placeholder="${isCells?'Buscar célula ou líder':'Buscar nome ou célula'}"></label>
-   ${select('church_id','Igreja')}
-   ${select('network_id','Rede')}
-   ${select('discipler_id','Discipulador')}
-  </div>
-  <div class="directory-results"></div>
-  <p class="directory-count" role="status"></p>
- </section>`;
- const body=root.querySelector('.directory-results');
- const count=root.querySelector('.directory-count');
- const search=root.querySelector('input[type=search]');
- const fields=[...root.querySelectorAll('select')];
- const allLabels={church_id:'Todas as igrejas',network_id:'Todas as redes',discipler_id:'Todos os discipuladores'};
- const normalize=value=>String(value).normalize('NFD').replace(/\p{M}/gu,'').toLowerCase();
- const source=new Map(db.cells.map(cell=>[cell.id,cell]));
- const rows=isCells?db.cells.map(cell=>({name:cell.name,cell})):
-  db.people.filter(person=>person.category===(kind==='members'?'Membro':'Visitante')&&source.has(person.cell_id))
-   .map(person=>({name:person.full_name,id:person.id,cell:source.get(person.cell_id)}));
- rows.sort((a,b)=>compareNames(a.name,b.name)||compareNames(a.cell.name,b.cell.name));
- const label=(key,id)=>key==='network_id'?db.networks.find(n=>n.id===id)?.name||'Rede':cellGroupName(db,key,id);
- const canEdit = !isCells && metricRoles.has(db.profile.role) && typeof editPerson === 'function';
+function personName(id,name) {
+ const initials = name.trim().split(/\s+/).slice(0, 2).map(word => word.charAt(0)).join('').toUpperCase();
+ return `<span class="directory-person"><span class="attendance-avatar" aria-hidden="true" data-directory-photo="${esc(id)}" data-name="${esc(name)}">${esc(initials)}</span>${esc(name)}</span>`;
+}
+
+function personPhotos(body, requestPhoto) {
  const photos = new Map();
  let observer;
- function bindPhotos() {
+ return function bindPhotos() {
+  observer?.disconnect();
   if (!requestPhoto) return;
   const load = async avatar => {
    const {directoryPhoto: id, name} = avatar.dataset;
@@ -144,9 +125,37 @@ function mountDirectory(root,db,kind,filter,requestPhoto,editPerson){
    }
   });
   avatars.forEach(avatar => observer.observe(avatar));
- }
+ };
+}
+ 
+function mountDirectory(root,db,kind,filter,requestPhoto,editPerson){
+ const isCells=kind==='cells';
+ const select=(key,label)=>`<label>${label}<select name="${key}"></select></label>`;
+ root.innerHTML=`<section class="metric-directory">
+  <div class="directory-filters">
+   <label>Busca<input type="search" placeholder="${isCells?'Buscar célula ou líder':'Buscar nome ou célula'}"></label>
+   ${select('church_id','Igreja')}
+   ${select('network_id','Rede')}
+   ${select('discipler_id','Discipulador')}
+  </div>
+  <div class="directory-results"></div>
+  <p class="directory-count" role="status"></p>
+ </section>`;
+ const body=root.querySelector('.directory-results');
+ const count=root.querySelector('.directory-count');
+ const search=root.querySelector('input[type=search]');
+ const fields=[...root.querySelectorAll('select')];
+ const allLabels={church_id:'Todas as igrejas',network_id:'Todas as redes',discipler_id:'Todos os discipuladores'};
+ const normalize=value=>String(value).normalize('NFD').replace(/\p{M}/gu,'').toLowerCase();
+ const source=new Map(db.cells.map(cell=>[cell.id,cell]));
+ const rows=isCells?db.cells.map(cell=>({name:cell.name,cell})):
+  db.people.filter(person=>person.category===(kind==='members'?'Membro':'Visitante')&&source.has(person.cell_id))
+   .map(person=>({name:person.full_name,id:person.id,cell:source.get(person.cell_id)}));
+ rows.sort((a,b)=>compareNames(a.name,b.name)||compareNames(a.cell.name,b.cell.name));
+ const label=(key,id)=>key==='network_id'?db.networks.find(n=>n.id===id)?.name||'Rede':cellGroupName(db,key,id);
+ const canEdit = !isCells && metricRoles.has(db.profile.role) && typeof editPerson === 'function';
+ const bindPhotos = personPhotos(body, requestPhoto);
  const update=()=>{
-  observer?.disconnect();
   let cells=db.cells;
   for(const field of fields){
    const key=field.name;
@@ -166,6 +175,7 @@ function mountDirectory(root,db,kind,filter,requestPhoto,editPerson){
   count.textContent=`${filtered.length} ${noun}${filtered.length===1?'':'s'}`;
   if(!filtered.length){
    body.innerHTML='<p class="dash-empty">Nenhum resultado para os filtros selecionados.</p>';
+   bindPhotos();
    return;
   }
   const headers=[isCells?'Célula':'Nome',...(isCells?[]:['Célula']),'Igreja','Rede','Discipulador',...(isCells?['Líder','Detalhes']:canEdit?['Ações']:[])];
@@ -173,9 +183,7 @@ function mountDirectory(root,db,kind,filter,requestPhoto,editPerson){
    <tbody>${filtered.map(({name,cell,id})=>{
     const values=[name,...(isCells?[]:[cell.name]),label('church_id',cell.church_id),label('network_id',cell.network_id),
      label('discipler_id',cell.discipler_id),...(isCells?[leadershipName(db,cell.leader_id)]:[])];
-    const initials = name.trim().split(/\s+/).slice(0, 2).map(word => word.charAt(0)).join('').toUpperCase();
-    const personName = `<span class="directory-person"><span class="attendance-avatar" aria-hidden="true" data-directory-photo="${esc(id)}" data-name="${esc(name)}">${esc(initials)}</span>${esc(name)}</span>`;
-    return `<tr>${values.map((value,index)=>`<td data-label="${headers[index]}">${!isCells&&index===0?personName:headers[index]==='Rede'?`<span class="directory-network">${esc(value)}</span>`:esc(value)}${isCells&&index===0&&cell.is_paused?'<small class="directory-cell-status">Não está acontecendo</small>':''}</td>`).join('')}
+    return `<tr>${values.map((value,index)=>`<td data-label="${headers[index]}">${!isCells&&index===0?personName(id,name):headers[index]==='Rede'?`<span class="directory-network">${esc(value)}</span>`:esc(value)}${isCells&&index===0&&cell.is_paused?'<small class="directory-cell-status">Não está acontecendo</small>':''}</td>`).join('')}
      ${isCells?`<td class="directory-action"><button class="secondary" type="button" data-directory-cell="${esc(cell.id)}" aria-haspopup="dialog" aria-label="Ver detalhes de ${esc(cell.name)}">›</button></td>`:canEdit?`<td class="directory-action"><button class="secondary" type="button" data-directory-edit="${esc(id)}" aria-label="Editar cadastro de ${esc(name)}">Editar</button></td>`:''}</tr>`;
    }).join('')}</tbody></table>`;
   bindPhotos();
@@ -295,5 +303,5 @@ function details(db,id,filter){
 function bind(root,db,filter={}){
  root.querySelectorAll('[data-dash-cell]').forEach(button=>button.onclick=()=>details(db,button.dataset.dashCell,filter));
 }
-window.VideiraDashboard={overview,visuals,bind,summarize,title,startDate,hierarchy,metricTitle,mountMetric};
+window.VideiraDashboard={overview,visuals,bind,summarize,title,startDate,hierarchy,metricTitle,mountMetric,personName,personPhotos};
 })();
