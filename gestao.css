@@ -245,8 +245,8 @@ svg.meeting-card-icon{width:28px;height:28px;flex-shrink:0}
 
 .report-filters > label, .report-filters input, .report-filters select { min-width: 0; }
 .report-filters input, .report-filters select { width: 100%; }
-/* Normalize the native date control box in mobile Safari. */
-.report-filters input[type=date] {
+/* Keep native date and time controls within the form grid in Safari. */
+:is(.report-filters input[type=date], .weekly-schedule input[type=time]) {
  -webkit-appearance: none;
  appearance: none;
  display: block;
@@ -259,13 +259,13 @@ svg.meeting-card-icon{width:28px;height:28px;flex-shrink:0}
  padding: 0 12px;
  line-height: calc(var(--field-height) - 2px);
 }
-.report-filters input[type=date]::-webkit-date-and-time-value {
+:is(.report-filters input[type=date], .weekly-schedule input[type=time])::-webkit-date-and-time-value {
  min-width: 0;
  margin: 0;
  line-height: inherit;
  text-align: left;
 }
-.report-filters input[type=date]::-webkit-datetime-edit { padding: 0; }
+:is(.report-filters input[type=date], .weekly-schedule input[type=time])::-webkit-datetime-edit { padding: 0; }
 @media (max-width: 560px) {
  .report-filters { grid-template-columns: minmax(0, 1fr); }
 }
