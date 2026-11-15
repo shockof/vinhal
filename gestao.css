@@ -458,3 +458,16 @@ svg.meeting-card-icon{width:28px;height:28px;flex-shrink:0}
  .person-report-print tr { break-inside: avoid; }
  .person-report-print :is(th,td) { padding: 4pt; font-size: 8pt; color: black; overflow-wrap: anywhere; }
 }
+.discipleship-table select[data-person-field] {
+ padding: 5px 15px 5px 4px;
+ font-size: 11px;
+ min-height: 32px;
+}
+@media (min-width: 901px) {
+ .discipleship-table thead th:nth-child(1),
+ .discipleship-table thead th:nth-child(2) { width: 12%; }
+ .discipleship-table thead th:nth-child(3) { width: 10%; }
+ .discipleship-table thead th:nth-child(4) { width: 9%; }
+ .discipleship-table thead th:nth-child(11),
+ .discipleship-table thead th:nth-child(12) { width: 12%; }
+}

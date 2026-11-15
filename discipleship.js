@@ -12,7 +12,7 @@ window.VideiraDiscipleship = (() => {
  const options = entries => Object.entries(entries)
   .map(([key, label]) => `<option value="${key}">${label}</option>`).join('');
 
- function mount(root, call, esc, editable, {meetings, cells, networks}) {
+ function mount(root, call, esc, editable, {meetings, cells, networks, people}) {
   const currentMonth = new Intl.DateTimeFormat('sv-SE', {
    timeZone: 'America/Maceio', year: 'numeric', month: '2-digit'
   }).format(new Date());
@@ -81,6 +81,20 @@ window.VideiraDiscipleship = (() => {
    return esc(row.situacao) + (pending(row) ? '<span class="course-pending">Cursos pendentes</span>' : '');
   }
 
+  const peopleById = new Map(people.map(person => [person.id, person]));
+  const personFields = {baptized:'Batismo', is_tither:'Dizimista'};
+  const personValue = (person, key) => key === 'baptized'
+   ? person?.baptized || 'Não informado'
+   : person?.is_tither === true ? 'Sim' : person?.is_tither === false ? 'Não' : 'Não informado';
+  function personField(row, key, label) {
+   const person = peopleById.get(row.id);
+   const value = personValue(person, key);
+   if (!editable || !person) return esc(value);
+   return `<select data-person-field="${key}" data-person="${esc(row.id)}" aria-label="${esc(label+' · '+row.nome)}">
+    ${['Não informado','Sim','Não'].map(choice => `<option ${choice===value?'selected':''}>${choice}</option>`).join('')}
+   </select>`;
+  }
+
   function render() {
    if (loading || saving) return;
    const groups = new Map();
@@ -91,7 +105,7 @@ window.VideiraDiscipleship = (() => {
    results.innerHTML = [...groups.values()].map(group => `<article class="panel">
     <h2>${esc(group[0].celula)}</h2>
     <div class="table-scroll"><table class="discipleship-table" aria-label="${esc(group[0].celula)}">
-     <thead><tr>${['Nome','Situação','Telefone','Líder','Presença','Falta',...Object.values(courses)]
+     <thead><tr>${['Nome','Situação','Telefone','Líder','Presença','Falta',...Object.values(courses),...Object.values(personFields)]
       .map(title => `<th scope="col">${title}</th>`).join('')}</tr></thead>
      <tbody>${group.map(row => `<tr class="${row.faltas >= 2 ? 'absent-many' : row.faltas ? 'absent-one' : row.presencas ? 'absent-none' : ''}">
       <th scope="row">${esc(row.nome)}</th>
@@ -100,6 +114,7 @@ window.VideiraDiscipleship = (() => {
       <td>${row.presencas}</td><td>${row.faltas}</td>
       ${keys.map(key => `<td><input type="checkbox" data-person="${esc(row.id)}" data-course="${key}"
         aria-label="${esc(courses[key] + ' · ' + row.nome)}" ${row.cursos.includes(key) ? 'checked' : ''} ${editable ? '' : 'disabled'}></td>`).join('')}
+      ${Object.entries(personFields).map(([key,label])=>`<td>${personField(row,key,label)}</td>`).join('')}
      </tr>`).join('')}</tbody>
     </table></div></article>`).join('') || '<p class="empty">Nenhum cadastro corresponde aos filtros.</p>';
   }
@@ -130,7 +145,25 @@ window.VideiraDiscipleship = (() => {
   situation.onchange = course.onchange = cell.onchange = render;
   network.onchange = () => { updateCells(); render(); };
   results.onchange = async event => {
-   const checkbox = event.target;
+   const control = event.target;
+   if (editable && control.matches('[data-person-field]')) {
+    const {person: id, personField: key} = control.dataset;
+    const person = peopleById.get(id);
+    const value = control.value;
+    control.disabled = true;
+    try {
+     await call('discipleship_person_field',{p_person:id,p_field:key,p_value:value});
+     person[key] = key==='is_tither' ? (value==='Não informado'?null:value==='Sim') : value;
+     feedback.textContent = '';
+    } catch (error) {
+     control.value = personValue(person,key);
+     feedback.textContent = error.message;
+    } finally {
+     control.disabled = false;
+    }
+    return;
+   }
+   const checkbox = control;
    if (!editable || saving || !checkbox.matches('[data-person][data-course]')) return;
    saving = true;
    const {person, course: courseKey} = checkbox.dataset;
