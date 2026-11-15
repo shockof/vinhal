@@ -48,6 +48,7 @@ window.VideiraDiscipleship = (() => {
   const course = root.querySelector('[name=course]');
   const network = root.querySelector('[name=network]');
   const cell = root.querySelector('[name=cell]');
+  const networkIndex = new Map(networks.map(item => [item.id, item]));
   const cellNetworks = new Map(cells.map(item => [item.id, item.network_id]));
   const kidsNetworks = new Set(networks.filter(item => item.kind === 'kids').map(item => item.id));
   const exempt = row => row.situacao === 'Membro' && kidsNetworks.has(cellNetworks.get(row.celulaId));
@@ -64,13 +65,18 @@ window.VideiraDiscipleship = (() => {
    control.value = choices.has(previous) ? previous : '';
   }
 
+  function matchesNetwork(row) {
+   const id = cellNetworks.get(row.celulaId);
+   return window.VideiraNetworkFilters.matches(network.value, networkIndex.get(id), id);
+  }
+
   function updateCells() {
-   const available = rows.filter(row => !network.value || cellNetworks.get(row.celulaId) === network.value);
+   const available = rows.filter(matchesNetwork);
    setChoices(cell, new Map(available.map(row => [row.celulaId, row.celula])));
   }
 
   function matchesFilters(row) {
-   if (network.value && cellNetworks.get(row.celulaId) !== network.value) return false;
+   if (!matchesNetwork(row)) return false;
    if (cell.value && row.celulaId !== cell.value) return false;
    const filter = situation.value;
    if (filter === 'pendente' ? !pending(row) : filter && row.situacao !== situations[filter]) return false;
@@ -125,8 +131,8 @@ window.VideiraDiscipleship = (() => {
    results.replaceChildren();
    try {
     rows = await call('discipleship', {p_month: month.value + '-01'});
-    const networkIds = new Set(rows.map(row => cellNetworks.get(row.celulaId)));
-    setChoices(network, new Map(networks.filter(item => networkIds.has(item.id)).map(item => [item.id, item.name])));
+    const churches = new Set(networks.map(item => item.church_id));
+    window.VideiraNetworkFilters.update(network, networks, churches.size === 1 ? networks[0].church_id : '');
     updateCells();
     feedback.textContent = '';
    } catch (error) {

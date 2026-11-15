@@ -166,12 +166,10 @@ window.VideiraPersonReports = (() => {
   const button = form.querySelector('button');
   const {church, network} = form.elements;
   form.elements.course.disabled = form.elements.pending.disabled = !canReadCourses;
-  church.onchange = () => {
-   const previous = network.value;
-   const available = db.networks.filter(item => !church.value || item.church_id === church.value);
-   network.innerHTML = entityOptions(available,'Todas as redes');
-   if (available.some(item => item.id === previous)) network.value = previous;
-  };
+  const networkFilters = window.VideiraNetworkFilters;
+  const updateNetworks = () => networkFilters.update(network, db.networks, church.value);
+  church.onchange = updateNetworks;
+  updateNetworks();
 
   form.onsubmit = async event => {
    event.preventDefault();
@@ -195,7 +193,7 @@ window.VideiraPersonReports = (() => {
      return {...person, cell, courseVisible, networkKind:net?.kind, courses:marks[person.id] || []};
     }).filter(person => {
      if (!person.cell || (filter.church && filter.church !== person.cell.church_id) ||
-        (filter.network && filter.network !== person.cell.network_id)) return false;
+        !networkFilters.matches(filter.network, networks.get(person.cell.network_id), person.cell.network_id)) return false;
      if (filter.category && filter.category !== person.category) return false;
      if (filter.baptism && filter.baptism !== (person.baptized || 'Não informado')) return false;
      const tither = person.is_tither == null ? 'unknown' : String(person.is_tither);
@@ -233,7 +231,7 @@ window.VideiraPersonReports = (() => {
   const cellFeedback = root.querySelector('#cellReportStatus');
   const filters = cellForm.elements;
   const cellMatchesScope = cell => (!filters.church.value || cell.church_id === filters.church.value)
-   && (!filters.network.value || cell.network_id === filters.network.value);
+   && networkFilters.matches(filters.network.value, networks.get(cell.network_id), cell.network_id);
   function updateOptions(control, items, all) {
    const previous = control.value;
    control.innerHTML = entityOptions(items, all);
@@ -243,10 +241,11 @@ window.VideiraPersonReports = (() => {
    updateOptions(filters.cell, db.cells.filter(cellMatchesScope), 'Todas as células');
   }
   filters.church.onchange = () => {
-   updateOptions(filters.network, db.networks.filter(net => !filters.church.value || net.church_id === filters.church.value), 'Todas as redes');
+   networkFilters.update(filters.network, db.networks, filters.church.value);
    updateCellOptions();
   };
   filters.network.onchange = updateCellOptions;
+  filters.church.onchange();
   cellForm.addEventListener('change', () => { cellFeedback.hidden = true; });
   cellForm.onsubmit = event => {
    event.preventDefault();

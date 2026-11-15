@@ -155,10 +155,18 @@ function mountDirectory(root,db,kind,filter,requestPhoto,editPerson){
  const label=(key,id)=>key==='network_id'?db.networks.find(n=>n.id===id)?.name||'Rede':cellGroupName(db,key,id);
  const canEdit = !isCells && metricRoles.has(db.profile.role) && typeof editPerson === 'function';
  const bindPhotos = personPhotos(body, requestPhoto);
+ const networksById=new Map(db.networks.map(network=>[network.id,network]));
  const update=()=>{
   let cells=db.cells;
   for(const field of fields){
    const key=field.name;
+   if(key==='network_id'){
+    const church=fields.find(control=>control.name==='church_id')?.value ?? db.profile.church_id;
+    const filters=window.VideiraNetworkFilters;
+    filters.update(field,db.networks,church);
+    cells=cells.filter(cell=>filters.matches(field.value,networksById.get(cell.network_id),cell.network_id));
+    continue;
+   }
    const selected=field.options.length?field.value:key==='church_id'?filter.church:'';
    const ids=[...new Set(cells.map(cell=>cell[key]||'__unassigned__'))];
    const name=id=>label(key,id==='__unassigned__'?'':id);
@@ -218,10 +226,18 @@ function frequencyDetails(dialog,db,initial){
  const result=dialog.querySelector('.metric-frequency-result');
  const fields=[...dialog.querySelectorAll('.metric-filters select')];
  const emptyLabels={church_id:'Todas as igrejas',network_id:'Todas as redes',discipler_id:'Todos os discipuladores',leader_id:'Todos os líderes'};
+ const networksById=new Map(db.networks.map(network=>[network.id,network]));
  const update=()=>{
   let cells=db.cells;
   for(const field of fields){
    const key=field.name;
+   if(key==='network_id'){
+    const church=fields.find(control=>control.name==='church_id')?.value ?? db.profile.church_id;
+    const filters=window.VideiraNetworkFilters;
+    filters.update(field,db.networks,church);
+    cells=cells.filter(cell=>filters.matches(field.value,networksById.get(cell.network_id),cell.network_id));
+    continue;
+   }
    const selected=field.value||(field.options.length===0&&key==='church_id'?initial.church:'');
    const ids=key==='church_id'?db.churches.map(church=>church.id):
     [...new Set(cells.map(cell=>cell[key]||'__unassigned__'))];
