@@ -459,7 +459,7 @@ function bind(){
   const people=new Map(db.people.map(person=>[person.id,person]));
   const cells=new Map(db.cells.map(cell=>[cell.id,cell]));
   const entries=[...document.querySelectorAll('#workspace tbody tr')].map(row=>{
-   const person=people.get(row.dataset.cellId);
+   const person=people.get(row.querySelector('[data-edit]').dataset.edit);
    const cell=cells.get(person.cell_id);
    const date=person.birth_date||'';
    const phone=person.phone||'';
