@@ -4,6 +4,7 @@ window.VideiraDiscipleship = (() => {
   maturidade: 'Maturidade no Espírito', ctl: 'CTL',
   apocalipse: 'Curso de Apocalipse', seminario: 'Seminário Pastoral'
  };
+ const requiredCourses = ['maturidade', 'ctl'];
  const situations = {
   visitante: 'Visitante', assiduo: 'Frequentador assíduo', membro: 'Membro',
   pendente: 'Membros com cursos pendentes'
@@ -53,7 +54,7 @@ window.VideiraDiscipleship = (() => {
   const feedback = root.querySelector('[role=status]');
   const results = root.querySelector('.discipleship-results');
   const keys = Object.keys(courses);
-  const pending = row => row.situacao === 'Membro' && !exempt(row) && keys.some(key => !row.cursos.includes(key));
+  const pending = row => row.situacao === 'Membro' && !exempt(row) && requiredCourses.some(key => !row.cursos.includes(key));
   let rows = [], loading = false, saving = false;
 
   function setChoices(control, choices) {
