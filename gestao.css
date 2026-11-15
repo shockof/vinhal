@@ -439,5 +439,5 @@ svg.meeting-card-icon{width:28px;height:28px;flex-shrink:0}
 @media (min-width: 901px) {
  .discipleship-table thead th:nth-child(4) { width: 10%; }
  .discipleship-table thead th:nth-child(5) { width: 8%; }
- .discipleship-table thead th:nth-child(9) { width: max(10%, 5.25rem); }
+ .discipleship-table thead th:nth-child(9) { width: 5.5rem; }
 }
