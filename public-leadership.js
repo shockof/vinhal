@@ -4,11 +4,11 @@
   if (!config || new URLSearchParams(location.search).get('editor') === '1') return;
 
   const labels = {
-    supervisor: 'Pastor (a) Supervisor (a)',
-    predio: 'Pastor (a) de prédio',
-    pastor: 'Pastor (a) de rede',
-    obreiro: 'Obreiro (a)',
-    discipulador: 'Discipulador (a)'
+    supervisor: 'Pastor Supervisor',
+    predio: 'Pastor de Prédio',
+    pastor: 'Pastor de Rede',
+    obreiro: 'Obreiro',
+    discipulador: 'Discipulador'
   };
   const sections = [
     ['pastoralProfiles', ['supervisor', 'predio', 'pastor', 'obreiro']],
