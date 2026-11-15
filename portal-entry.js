@@ -24,7 +24,7 @@ document.querySelector('#loginBtn').onclick=()=>{location.href='gestao.html?v=20
  const config=window.VIDEIRA_CONFIG;
  const key='videira:gestao:session:v1';
  const roles={
-  master:'Master',supervisor:'Pastor Supervisor',predio:'Pastor de Prédio',
+  master:'Master',supervisor:'Pastor Supervisor',supervisora_kids:'Pastora Supervisora',predio:'Pastor de Prédio',
   pastor:'Pastor de Rede',obreiro:'Obreiro',discipulador:'Discipulador',lider:'Líder de célula'
  };
  let revision=0;
