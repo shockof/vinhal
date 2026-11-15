@@ -146,7 +146,7 @@ function entityForm(){const item=edit?db[list[view]].find(x=>x.id===edit):{};if(
   </div>`+field('full_name','Nome completo',item.full_name,'text','required maxlength="180"')+(!edit||memberTransferRoles.has(db.profile.role)
   ?select('cell_id','Célula',db.cells,item.cell_id)
   :`<label>Célula<input value="${esc(label(db.cells,item.cell_id))}" readonly></label>`)+field('phone','Telefone (opcional)',item.phone,'tel','maxlength="40"')+field('birth_date','Data de nascimento (opcional)',item.birth_date,'date','autocomplete="bday"')+`<label>Categoria<select name="category"><option value="Visitante">Visitante</option><option value="Membro" ${item.category==='Membro'?'selected':''}>Membro</option></select></label><label>Batismo<select name="baptized">${['Não informado','Sim','Não'].map(v=>`<option ${item.baptized===v?'selected':''}>${v}</option>`).join('')}</select></label><label>Estado civil<select name="marital_status">${['Não informado','Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)'].map(v=>`<option ${item.marital_status===v?'selected':''}>${v}</option>`).join('')}</select></label>`;
- return `<article class="panel"><h2>${edit?'Editar cadastro':'Novo cadastro'}</h2><form id="entityForm" class="gridform">${fields}<div class="wide actions"><button>Salvar no Supabase</button>${edit?'<button type="button" class="secondary" id="cancelEdit">Cancelar edição</button>':''}</div></form>${view==='person'&&edit&&item.active&&item.category==='Membro'&&db.profile.role==='master'?'<div class="actions"><button class="secondary" id="createMemberLeader" type="button" hidden>Criar acesso de liderança</button><button class="secondary" id="linkExistingLeader" type="button" hidden>Vincular conta de líder existente</button><span id="memberLeaderStatus" role="status"></span></div><div id="existingLeaderForm"></div>':''}${view==='person'?'<p><small>O acompanhamento do discipulado registra presenças e o início dos cursos.</small></p>':''}</article>`;
+ return `<article class="panel"><h2>${edit?'Editar cadastro':'Novo cadastro'}</h2><form id="entityForm" class="gridform">${fields}<div class="wide actions"><button>Salvar no Supabase</button>${edit?'<button type="button" class="secondary" id="cancelEdit">Cancelar edição</button>':''}</div></form>${view==='person'&&edit&&item.active&&item.category==='Membro'&&db.profile.role==='master'?'<div class="actions"><button class="secondary" id="createMemberLeader" type="button" hidden>Criar acesso de liderança</button><button class="secondary" id="linkExistingLeader" type="button" hidden>Vincular conta de liderança existente</button><span id="memberLeaderStatus" role="status"></span></div><div id="existingLeaderForm"></div>':''}${view==='person'?'<p><small>O acompanhamento do discipulado registra presenças e o início dos cursos.</small></p>':''}</article>`;
 }
 let cellSearch = '', cellStatus = '';
 
@@ -575,18 +575,18 @@ function bind(){
    const linkButton=$('#linkExistingLeader');
    const linkContainer=$('#existingLeaderForm');
    const linkedAccounts=new Set(Object.values(links));
-   const candidates=db.profiles.filter(profile=>profile.role==='lider'&&profile.active&&!linkedAccounts.has(profile.id))
-    .map(profile=>({id:profile.id,label:[profile.display_name,'@'+profile.username,
+   const candidates=db.profiles.filter(profile=>['lider','discipulador'].includes(profile.role)&&profile.active&&!linkedAccounts.has(profile.id))
+    .map(profile=>({id:profile.id,label:[profile.display_name,'@'+profile.username,roleName(profile),
      label(db.churches,profile.church_id),label(db.networks,profile.network_id)].join(' · ')}));
    linkButton.hidden=false;
    linkButton.onclick=()=>{
     if(busy)return;
     if(!candidates.length){
-     $('#memberLeaderStatus').textContent='Nenhuma conta de líder ativa está disponível para vínculo.';
+     $('#memberLeaderStatus').textContent='Nenhuma conta de líder ou discipulador está disponível para vínculo.';
      return;
     }
     linkContainer.innerHTML=`<form class="gridform">
-     ${select('profile_id','Conta de líder',candidates,'','label')}
+     ${select('profile_id','Conta de liderança',candidates,'','label')}
      <div class="actions wide"><button>Vincular conta</button><button type="button" class="secondary">Cancelar</button></div>
     </form>`;
     const form=linkContainer.querySelector('form');
