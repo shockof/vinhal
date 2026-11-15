@@ -91,12 +91,12 @@ window.VideiraDiscipleship = (() => {
    results.innerHTML = [...groups.values()].map(group => `<article class="panel">
     <h2>${esc(group[0].celula)}</h2>
     <div class="table-scroll"><table class="discipleship-table" aria-label="${esc(group[0].celula)}">
-     <thead><tr>${['Nome','Situação','Telefone','Célula','Líder','Presenças','Faltas',...Object.values(courses)]
+     <thead><tr>${['Nome','Situação','Telefone','Líder','Presenças','Faltas',...Object.values(courses)]
       .map(title => `<th scope="col">${title}</th>`).join('')}</tr></thead>
      <tbody>${group.map(row => `<tr class="${row.faltas >= 2 ? 'absent-many' : row.faltas ? 'absent-one' : row.presencas ? 'absent-none' : ''}">
       <th scope="row">${esc(row.nome)}</th>
       <td data-situation>${situationMarkup(row)}</td>
-      <td>${esc(row.telefone || '—')}</td><td>${esc(row.celula)}</td><td>${esc(row.lider || '—')}</td>
+      <td>${esc(row.telefone || '—')}</td><td>${esc(row.lider || '—')}</td>
       <td>${row.presencas}</td><td>${row.faltas}</td>
       ${keys.map(key => `<td><input type="checkbox" data-person="${esc(row.id)}" data-course="${key}"
         aria-label="${esc(courses[key] + ' · ' + row.nome)}" ${row.cursos.includes(key) ? 'checked' : ''} ${editable ? '' : 'disabled'}></td>`).join('')}

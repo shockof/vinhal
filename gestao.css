@@ -362,10 +362,10 @@ svg.meeting-card-icon{width:28px;height:28px;flex-shrink:0}
 }
 
 .discipleship-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.discipleship-results table { min-width: 66rem; }
+.discipleship-results table { min-width: 60rem; }
 .discipleship-results tbody th { color: inherit; text-transform: none; letter-spacing: normal; }
-.discipleship-results td:nth-child(n+6),
-.discipleship-results thead th:nth-child(n+6) { text-align: center; }
+.discipleship-results td:nth-child(n+5),
+.discipleship-results thead th:nth-child(n+5) { text-align: center; }
 .discipleship-results .absent-none > * { background-color: #e7f4e2; }
 .discipleship-results .absent-one > * { background-color: #fff0dc; }
 .discipleship-results .absent-many > * { background-color: #fbe2e6; }
@@ -380,7 +380,7 @@ svg.meeting-card-icon{width:28px;height:28px;flex-shrink:0}
 .discipleship-legend .legend-orange { background: #fff0dc; }
 .discipleship-legend .legend-red { background: #fbe2e6; }
 .discipleship-legend .course-pending { margin: 0; }
-.discipleship-results .discipleship-table :is(th, td):nth-child(n+8) {
+.discipleship-results .discipleship-table :is(th, td):nth-child(n+7) {
  min-width: 6rem;
  max-width: 10rem;
  text-align: center;
