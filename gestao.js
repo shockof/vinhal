@@ -197,6 +197,16 @@ function reportRows(){const church=$('[name=filterChurch]').value,net=$('[name=f
 const kidsRoleNames={pastor:'Pastora Kids',obreiro:'Obreira',discipulador:'Discipuladora Kids'};
 const isKidsNetwork=id=>db.networks.some(network=>network.id===id&&network.kind==='kids');
 const roleName=profile=>(isKidsNetwork(profile.network_id)&&kidsRoleNames[profile.role])||roles[profile.role];
+function assignKidsSupervisorScope(data, currentNetwork, preferredChurch){
+ if(data.role!=='supervisora_kids')return true;
+ const kids=db.networks.filter(network=>network.kind==='kids');
+ const reference=kids.find(network=>network.id===currentNetwork)
+  || kids.find(network=>network.church_id===preferredChurch) || kids[0];
+ if(!reference)return false;
+ data.church_id=reference.church_id;
+ data.network_id=reference.id;
+ return true;
+}
 function updateRoleOptions(form){
  const kids=isKidsNetwork(form.elements.network_id.value);
  for(const option of form.elements.role.options){
@@ -509,7 +519,7 @@ function bind(){
  }
  if(view==='site')window.VideiraSiteEditor.mount($('#siteEditor'),{call,profile:db.profile,config:cfg,getSession:()=>session});
  if(view==='profile')window.VideiraProfile.mount($('#myProfile'),{call,onSaved:async()=>{await reload();render();status('Perfil atualizado no Supabase.')},onPasswordChanged:()=>{clearSession();location.href='gestao.html?senha=alterada'}});
- const bindAccountEditors=()=>document.querySelectorAll('[data-account-edit]').forEach(button=>button.onclick=()=>window.VideiraAccountEditor.open({id:button.dataset.accountEdit,call,requestPhoto:requestLeadershipPhoto,churches:db.churches,networks:db.networks,roles,updateRoleOptions,selfId:db.profile.id,onSaved:async()=>{await reload();if(accountList?.isConnected){
+ const bindAccountEditors=()=>document.querySelectorAll('[data-account-edit]').forEach(button=>button.onclick=()=>window.VideiraAccountEditor.open({id:button.dataset.accountEdit,call,requestPhoto:requestLeadershipPhoto,churches:db.churches,networks:db.networks,roles,updateRoleOptions,assignKidsSupervisorScope,selfId:db.profile.id,onSaved:async()=>{await reload();if(accountList?.isConnected){
   bindAccountPhotos=accountPhotoLoader();
   updateAccountFilters();
  }status('Conta atualizada no Supabase.')},onReset:()=>status('Senha da conta redefinida.')}));
@@ -553,7 +563,7 @@ function bind(){
   const form=$('#accountForm');
   const photo=window.VideiraLeadershipPhoto.bind(form,()=>busy,requestLeadershipPhoto);
   const submit=form.querySelector('.actions.wide button');
-  const networks=()=>{const role=form.elements.role.value,global=['master','supervisor'].includes(role),old=form.elements.network_id.value,church=form.elements.church_id.value,building=role==='predio',optional=(role==='obreiro'&&!memberForLeaderAccess)||building||global;form.elements.church_id.parentElement.hidden=global;form.elements.network_id.parentElement.hidden=global||building;form.elements.church_id.disabled=global;form.elements.church_id.required=!global;form.elements.network_id.disabled=global||building;form.elements.network_id.required=!optional;form.elements.network_id.innerHTML=`<option value="">${global?'Todas as redes':optional?'Toda a igreja':'Selecione a rede'}</option>`+(global?'':db.networks.filter(n=>n.church_id===church&&(role!=='supervisora_kids'||n.kind==='kids')).map(n=>`<option value="${n.id}">${esc(n.name)}</option>`).join(''));if(!global&&Array.from(form.elements.network_id.options).some(option=>option.value===old))form.elements.network_id.value=old;$('#accountScope').textContent=role==='master'?'Master: acesso administrativo completo na organização, incluindo criação de contas.':role==='supervisor'?'Pastor Supervisor: acompanha todas as igrejas, redes e células da organização. Não cria contas Master.':role==='predio'?'Pastor de Prédio: gere todas as redes e células da igreja selecionada.':role==='supervisora_kids'?'Pastora Supervisora: acompanha as Redes Kids de todas as igrejas. A rede selecionada serve como referência do cadastro.':role==='pastor'?'Pastor de Rede: acompanha as células da rede selecionada.':role==='obreiro'?(db.networks.find(n=>n.id===form.elements.network_id.value)?.kind==='kids'?'Obreiro: acompanha somente a Rede Kids selecionada.':'Obreiro: acompanha as células da igreja selecionada.'):'Após criar o acesso, vincule esta pessoa como líder ou discipulador na aba Células. Até o vínculo, o painel ficará sem células.';};
+  const networks=()=>{const role=form.elements.role.value,global=['master','supervisor','supervisora_kids'].includes(role),old=form.elements.network_id.value,church=form.elements.church_id.value,building=role==='predio',optional=(role==='obreiro'&&!memberForLeaderAccess)||building||global;form.elements.church_id.parentElement.hidden=global;form.elements.network_id.parentElement.hidden=global||building;form.elements.church_id.disabled=global;form.elements.church_id.required=!global;form.elements.network_id.disabled=global||building;form.elements.network_id.required=!optional;form.elements.network_id.innerHTML=`<option value="">${global?'Todas as redes':optional?'Toda a igreja':'Selecione a rede'}</option>`+(global?'':db.networks.filter(n=>n.church_id===church&&(role!=='supervisora_kids'||n.kind==='kids')).map(n=>`<option value="${n.id}">${esc(n.name)}</option>`).join(''));if(!global&&Array.from(form.elements.network_id.options).some(option=>option.value===old))form.elements.network_id.value=old;$('#accountScope').textContent=role==='master'?'Master: acesso administrativo completo na organização, incluindo criação de contas.':role==='supervisor'?'Pastor Supervisor: acompanha todas as igrejas, redes e células da organização. Não cria contas Master.':role==='predio'?'Pastor de Prédio: gere todas as redes e células da igreja selecionada.':role==='supervisora_kids'?'Pastora Supervisora: acompanha as Redes Kids de todas as igrejas.':role==='pastor'?'Pastor de Rede: acompanha as células da rede selecionada.':role==='obreiro'?(db.networks.find(n=>n.id===form.elements.network_id.value)?.kind==='kids'?'Obreiro: acompanha somente a Rede Kids selecionada.':'Obreiro: acompanha as células da igreja selecionada.'):'Após criar o acesso, vincule esta pessoa como líder ou discipulador na aba Células. Até o vínculo, o painel ficará sem células.';};
   const linkedMember=memberForLeaderAccess;
   if(linkedMember){
    form.elements.display_name.value=linkedMember.full_name;
@@ -569,7 +579,7 @@ function bind(){
   }
   const refreshNetworks=()=>{networks();updateRoleOptions(form);};
   form.elements.church_id.onchange=refreshNetworks;form.elements.role.onchange=refreshNetworks;form.elements.network_id.onchange=refreshNetworks;refreshNetworks();
-  form.onsubmit=async e=>{e.preventDefault();if(busy||photo.processing)return;if(form.elements.password.value!==form.elements.confirm_password.value)return status('As senhas não coincidem.',true);const data=Object.fromEntries(new FormData(form));delete data.confirm_password;if(linkedMember)data.member_id=linkedMember.id;busy=true;submit.disabled=true;status('Criando cadastro e acesso no Supabase…');let created;
+  form.onsubmit=async e=>{e.preventDefault();if(busy||photo.processing)return;if(form.elements.password.value!==form.elements.confirm_password.value)return status('As senhas não coincidem.',true);const data=Object.fromEntries(new FormData(form));delete data.confirm_password;if(!assignKidsSupervisorScope(data,null,form.elements.church_id.value))return status('Cadastre uma Rede Kids para criar uma Pastora Supervisora.',true);if(linkedMember)data.member_id=linkedMember.id;busy=true;submit.disabled=true;status('Criando cadastro e acesso no Supabase…');let created;
    try{created=await call('create_account',data);let photoFailed=false;if(photo.value){try{await requestLeadershipPhoto(created.id,photo.value)}catch{photoFailed=true}}memberForLeaderAccess=null;form.reset();await reload();render();status(photoFailed?'Conta criada. Para tentar carregar a foto novamente, abra Editar conta.':`Acesso ${created.username} criado. Para líderes e discipuladores, confira o vínculo na aba Células.`,photoFailed)}catch(error){status(created?'O acesso foi criado, mas a lista não pôde ser atualizada. Recarregue e entre novamente antes de repetir o cadastro.':error.uncertain?'Não foi possível confirmar o resultado. Confira a lista e, se necessário, o Supabase antes de repetir o cadastro.':error.message,true);form.elements.password.value='';form.elements.confirm_password.value='';submit.disabled=false}finally{data.password='';busy=false}
   };
  }

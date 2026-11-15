@@ -21,7 +21,7 @@
 .leadership-carousel {
   position: relative;
 }
-.leadership-track:is(#pastoralProfiles, #leaderProfiles) {
+.leadership-track:is(#pastoralProfiles, #leaderProfiles, #kidsPastoralProfiles, #kidsDisciplerProfiles) {
   display: flex;
   gap: 14px;
   overflow-x: auto;
@@ -62,12 +62,12 @@
 .leadership-arrow:disabled { opacity: .45; cursor: default; }
 
 /* Keep the saved profile framing in the public leadership cards. */
-:is(#pastoralProfiles, #leaderProfiles) .person > :is(.profile-photo, .profile-initials) {
+:is(#pastoralProfiles, #leaderProfiles, #kidsPastoralProfiles, #kidsDisciplerProfiles) .person > :is(.profile-photo, .profile-initials) {
   width: 100%;
   height: auto;
   aspect-ratio: 1;
 }
-:is(#pastoralProfiles, #leaderProfiles) .person > .profile-photo {
+:is(#pastoralProfiles, #leaderProfiles, #kidsPastoralProfiles, #kidsDisciplerProfiles) .person > .profile-photo {
   display: block;
   object-fit: contain;
 }

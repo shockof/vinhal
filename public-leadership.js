@@ -4,16 +4,21 @@
   if (!config || new URLSearchParams(location.search).get('editor') === '1') return;
 
   const labels = {
+    supervisora_kids: 'Pastora Supervisora',
     supervisor: 'Pastor Supervisor',
     predio: 'Pastor de Prédio',
     pastor: 'Pastor de Rede',
     obreiro: 'Obreiro',
     discipulador: 'Discipulador'
   };
+  const pastoralRoles = ['supervisor', 'predio', 'pastor', 'obreiro'];
   const sections = [
-    ['pastoralProfiles', ['supervisor', 'predio', 'pastor', 'obreiro']],
-    ['leaderProfiles', ['discipulador']]
+    ['pastoralProfiles', pastoralRoles, false],
+    ['leaderProfiles', ['discipulador'], false],
+    ['kidsPastoralProfiles', ['supervisora_kids', ...pastoralRoles], true],
+    ['kidsDisciplerProfiles', ['discipulador'], true]
   ];
+  const kidsLabels = {pastor: 'Pastora Kids', obreiro: 'Obreira', discipulador: 'Discipuladora Kids'};
 
   function setupCarousel(id) {
     const track = document.getElementById(id);
@@ -92,7 +97,7 @@
   }
 
   function pastoralPriority(profile) {
-    if (profile.role === 'supervisor') return 0;
+    if (['supervisor', 'supervisora_kids'].includes(profile.role)) return 0;
     if (profile.role === 'obreiro') return 3;
     const church = String(profile.church || '').normalize('NFD')
       .replace(/\p{M}/gu, '').trim().toLowerCase();
@@ -100,11 +105,11 @@
   }
 
   function render(entries) {
-    for (const [id, roles] of sections) {
+    for (const [id, roles, kids] of sections) {
       const container = document.getElementById(id);
       const cards = document.createDocumentFragment();
-      const visible = entries.filter(({profile}) => roles.includes(profile.role));
-      if (id === 'pastoralProfiles') {
+      const visible = entries.filter(({profile}) => roles.includes(profile.role) && Boolean(profile.kids) === kids);
+      if (roles.includes('pastor')) {
         visible.sort((a, b) => pastoralPriority(a.profile) - pastoralPriority(b.profile));
       }
       for (const {profile, image} of visible) {
@@ -112,7 +117,7 @@
         card.className = 'person';
         card.id = 'perfil-' + profile.id;
         card.innerHTML = `<div class="person-copy"><h3>${esc(profile.name)}</h3>
-          <p>${esc(labels[profile.role])}${profile.church ? '<br>' + esc(profile.church) : ''}</p></div>`;
+          <p>${esc((kids && kidsLabels[profile.role]) || labels[profile.role])}${profile.church ? '<br>' + esc(profile.church) : ''}</p></div>`;
         if (image) {
           card.prepend(image);
         } else {
@@ -150,7 +155,8 @@
     try {
       const profiles = await rpc('videira_public_leadership');
       if (!Array.isArray(profiles)) throw Error('Diretório indisponível');
-      const entries = await Promise.all(profiles.map(async profile => ({
+      const displayed = profiles.filter(profile => sections.some(([, roles]) => roles.includes(profile.role)));
+      const entries = await Promise.all(displayed.map(async profile => ({
         profile,
         image: await loadPhoto(profile)
       })));
@@ -170,6 +176,6 @@
   }
   refresh();
   window.addEventListener('videira:navigation', () => {
-    if (/^#(lideranca|equipe|perfil-)/.test(location.hash)) refresh();
+    if (/^#(lideranca|equipe|kids|perfil-)/.test(location.hash)) refresh();
   });
 })();
