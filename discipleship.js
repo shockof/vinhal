@@ -1,7 +1,7 @@
 'use strict';
 window.VideiraDiscipleship = (() => {
  const courses = {
-  maturidade: 'Maturidade no Espírito', ctl: 'CTL',
+  maturidade: 'Cursão', ctl: 'CTL',
   apocalipse: 'Curso de Apocalipse', seminario: 'Seminário Pastoral'
  };
  const requiredCourses = ['maturidade', 'ctl'];
