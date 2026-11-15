@@ -13,6 +13,7 @@ function readManagementRoute(){
 }
 readManagementRoute();
 let memberSearch='',accountSearch='';
+let memberForLeaderAccess=null;
 const normalizeSearch=value=>String(value??'').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().trim();
 const names={overview:'Visão geral',profile:'Meu perfil',church:'Igrejas',network:'Redes',cell:'Células',person:'Membros e visitantes',meeting:'Presenças',reports:'Relatórios Excel',site:'Editar site',accounts:'Contas e liderança'};
 const cellEditorRoles=new Set(['master','supervisor','predio']);
@@ -142,7 +143,7 @@ function entityForm(){const item=edit?db[list[view]].find(x=>x.id===edit):{};if(
   </div>`+field('full_name','Nome completo',item.full_name,'text','required maxlength="180"')+(!edit||memberTransferRoles.has(db.profile.role)
   ?select('cell_id','Célula',db.cells,item.cell_id)
   :`<label>Célula<input value="${esc(label(db.cells,item.cell_id))}" readonly></label>`)+field('phone','Telefone (opcional)',item.phone,'tel','maxlength="40"')+field('birth_date','Data de nascimento (opcional)',item.birth_date,'date','autocomplete="bday"')+`<label>Categoria<select name="category"><option value="Visitante">Visitante</option><option value="Membro" ${item.category==='Membro'?'selected':''}>Membro</option></select></label><label>Batismo<select name="baptized">${['Não informado','Sim','Não'].map(v=>`<option ${item.baptized===v?'selected':''}>${v}</option>`).join('')}</select></label><label>Estado civil<select name="marital_status">${['Não informado','Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)'].map(v=>`<option ${item.marital_status===v?'selected':''}>${v}</option>`).join('')}</select></label>`;
- return `<article class="panel"><h2>${edit?'Editar cadastro':'Novo cadastro'}</h2><form id="entityForm" class="gridform">${fields}<div class="wide actions"><button>Salvar no Supabase</button>${edit?'<button type="button" class="secondary" id="cancelEdit">Cancelar edição</button>':''}</div></form>${view==='person'?'<p><small>Três encontros consecutivos com presença convertem o visitante em membro. Faltas interrompem a sequência.</small></p>':''}</article>`;
+ return `<article class="panel"><h2>${edit?'Editar cadastro':'Novo cadastro'}</h2><form id="entityForm" class="gridform">${fields}<div class="wide actions"><button>Salvar no Supabase</button>${edit?'<button type="button" class="secondary" id="cancelEdit">Cancelar edição</button>':''}</div></form>${view==='person'&&edit&&item.active&&item.category==='Membro'&&db.profile.role==='master'?'<div class="actions"><button class="secondary" id="createMemberLeader" type="button" hidden>Criar acesso de líder</button><span id="memberLeaderStatus" role="status"></span></div>':''}${view==='person'?'<p><small>Três encontros consecutivos com presença convertem o visitante em membro. Faltas interrompem a sequência.</small></p>':''}</article>`;
 }
 let cellSearch = '', cellStatus = '';
 
@@ -442,7 +443,7 @@ async function showIdentityPhoto() {
 function bind(){
  showIdentityPhoto();const bindViews=()=>document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{
  if(view==='metric'){history.replaceState(null,'','gestao.html');document.title='Gestão · Igreja Videira';}
- view=b.dataset.view;edit=null;render();
+ view=b.dataset.view;edit=null;memberForLeaderAccess=null;render();
 });bindViews();
  if(view==='overview'){const filters=()=>({from:window.VideiraDashboard.startDate($('#dashboardPeriod').value),church:$('#dashboardChurch')?.value||''}),bindDashboard=()=>window.VideiraDashboard.bind($('#dashboardVisuals'),db,filters()),update=()=>{
   const birthdays=$('#birthdaysPanel');
@@ -517,14 +518,47 @@ function bind(){
  if($('#accountSearch'))$('#accountSearch').oninput=e=>{accountSearch=e.target.value;updateAccountFilters()};
  if($('#accountRoleFilter'))$('#accountRoleFilter').onchange=e=>{accountRoleFilter=e.target.value;updateAccountFilters()};
  if($('#accountChurchFilter'))$('#accountChurchFilter').onchange=e=>{accountChurchFilter=e.target.value;updateAccountFilters()};
+ const createMemberLeader=$('#createMemberLeader');
+ if(createMemberLeader){
+  const member=db.people.find(person=>person.id===edit);
+  call('member_leader_links').then(links=>{
+   if(!createMemberLeader.isConnected)return;
+   if(Object.hasOwn(links,member.id)){
+    $('#memberLeaderStatus').textContent='Acesso de líder já vinculado.';
+    return;
+   }
+   createMemberLeader.hidden=false;
+   createMemberLeader.onclick=()=>{
+    if(busy)return;
+    memberForLeaderAccess=member;
+    view='accounts';
+    edit=null;
+    render();
+    $('#accountForm')?.scrollIntoView({block:'start'});
+   };
+  }).catch(()=>{
+   if(createMemberLeader.isConnected)$('#memberLeaderStatus').textContent='Não foi possível consultar o vínculo de liderança.';
+  });
+ }
  if($('#accountForm')){
   const form=$('#accountForm');
   const photo=window.VideiraLeadershipPhoto.bind(form,()=>busy,requestLeadershipPhoto);
   const submit=form.querySelector('.actions.wide button');
   const networks=()=>{const role=form.elements.role.value,global=['master','supervisor'].includes(role),old=form.elements.network_id.value,church=form.elements.church_id.value,building=role==='predio',optional=role==='obreiro'||building||global;form.elements.church_id.parentElement.hidden=global;form.elements.network_id.parentElement.hidden=global||building;form.elements.church_id.disabled=global;form.elements.church_id.required=!global;form.elements.network_id.disabled=global||building;form.elements.network_id.required=!optional;form.elements.network_id.innerHTML=`<option value="">${global?'Todas as redes':optional?'Toda a igreja':'Selecione a rede'}</option>`+(global?'':db.networks.filter(n=>n.church_id===church).map(n=>`<option value="${n.id}">${esc(n.name)}</option>`).join(''));if(!global&&db.networks.some(n=>n.id===old&&n.church_id===church))form.elements.network_id.value=old;$('#accountScope').textContent=role==='master'?'Master: acesso administrativo completo na organização, incluindo criação de contas.':role==='supervisor'?'Pastor (a) Supervisor (a): acompanha todas as igrejas, redes e células da organização. Não cria contas Master.':role==='predio'?'Pastor (a) de prédio: gere todas as redes e células da igreja selecionada.':role==='pastor'?'Pastor (a): acompanha as células da rede selecionada.':role==='obreiro'?'Obreiro (a): acompanha as células da igreja selecionada.':'Após criar o acesso, vincule esta pessoa como líder ou discipulador na aba Células. Até o vínculo, o painel ficará sem células.';};
+  const linkedMember=memberForLeaderAccess;
+  if(linkedMember){
+   form.elements.display_name.value=linkedMember.full_name;
+   form.elements.display_name.readOnly=true;
+   form.elements.birth_date.value=linkedMember.birth_date||'';
+   form.elements.birth_date.readOnly=true;
+   form.elements.role.value='lider';
+   form.elements.role.disabled=true;
+   form.elements.church_id.value=db.cells.find(cell=>cell.id===linkedMember.cell_id)?.church_id||'';
+   submit.textContent='Criar acesso de líder';
+  }
   form.elements.church_id.onchange=networks;form.elements.role.onchange=networks;networks();
-  form.onsubmit=async e=>{e.preventDefault();if(busy||photo.processing)return;if(form.elements.password.value!==form.elements.confirm_password.value)return status('As senhas não coincidem.',true);const data=Object.fromEntries(new FormData(form));delete data.confirm_password;busy=true;submit.disabled=true;status('Criando cadastro e acesso no Supabase…');let created;
-   try{created=await call('create_account',data);let photoFailed=false;if(photo.value){try{await requestLeadershipPhoto(created.id,photo.value)}catch{photoFailed=true}}form.reset();await reload();render();status(photoFailed?'Conta criada. Para tentar carregar a foto novamente, abra Editar conta.':`Acesso ${created.username} criado. Para líderes e discipuladores, confira o vínculo na aba Células.`,photoFailed)}catch(error){status(created?'O acesso foi criado, mas a lista não pôde ser atualizada. Recarregue e entre novamente antes de repetir o cadastro.':error.uncertain?'Não foi possível confirmar o resultado. Confira a lista e, se necessário, o Supabase antes de repetir o cadastro.':error.message,true);form.elements.password.value='';form.elements.confirm_password.value='';submit.disabled=false}finally{data.password='';busy=false}
+  form.onsubmit=async e=>{e.preventDefault();if(busy||photo.processing)return;if(form.elements.password.value!==form.elements.confirm_password.value)return status('As senhas não coincidem.',true);const data=Object.fromEntries(new FormData(form));delete data.confirm_password;if(linkedMember){data.role='lider';data.member_id=linkedMember.id;}busy=true;submit.disabled=true;status('Criando cadastro e acesso no Supabase…');let created;
+   try{created=await call('create_account',data);let photoFailed=false;if(photo.value){try{await requestLeadershipPhoto(created.id,photo.value)}catch{photoFailed=true}}memberForLeaderAccess=null;form.reset();await reload();render();status(photoFailed?'Conta criada. Para tentar carregar a foto novamente, abra Editar conta.':`Acesso ${created.username} criado. Para líderes e discipuladores, confira o vínculo na aba Células.`,photoFailed)}catch(error){status(created?'O acesso foi criado, mas a lista não pôde ser atualizada. Recarregue e entre novamente antes de repetir o cadastro.':error.uncertain?'Não foi possível confirmar o resultado. Confira a lista e, se necessário, o Supabase antes de repetir o cadastro.':error.message,true);form.elements.password.value='';form.elements.confirm_password.value='';submit.disabled=false}finally{data.password='';busy=false}
   };
  }
  if($('#entityForm')){
