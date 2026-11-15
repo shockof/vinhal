@@ -15,7 +15,7 @@ readManagementRoute();
 let memberSearch='',accountSearch='';
 let memberForLeaderAccess=null;
 const normalizeSearch=value=>String(value??'').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().trim();
-const discipleshipRoles=new Set(['discipulador','pastor','predio','obreiro','supervisor']);
+const discipleshipRoles=new Set(['master','discipulador','pastor','predio','obreiro','supervisor']);
 const names={discipleship:'Acompanhamento do discipulado',overview:'Visão geral',profile:'Meu perfil',church:'Igrejas',network:'Redes',cell:'Células',person:'Membros e visitantes',meeting:'Presenças',reports:'Relatórios Excel',site:'Editar site',accounts:'Contas e liderança'};
 const cellEditorRoles=new Set(['master','supervisor','predio']);
 const memberTransferRoles=new Set(['master','supervisor','pastor','obreiro','predio','supervisora_kids']);
@@ -474,7 +474,7 @@ function bind(){
   bindDashboard();bindViews();
  };bindDashboard();loadBirthdays($('#birthdaysPanel'));$('#dashboardPeriod').onchange=update;if($('#dashboardChurch'))$('#dashboardChurch').onchange=update}
 
- if(view==='discipleship')window.VideiraDiscipleship.mount($('#discipleshipPanel'),call,esc,db.profile.role==='discipulador');
+ if(view==='discipleship')window.VideiraDiscipleship.mount($('#discipleshipPanel'),call,esc,['master','discipulador'].includes(db.profile.role));
  if(view==='cell')bindCellFilters();
  if(view==='person'){
   const search=$('#memberSearch');
