@@ -380,43 +380,20 @@ svg.meeting-card-icon{width:28px;height:28px;flex-shrink:0}
 .discipleship-legend .legend-orange { background: #fff0dc; }
 .discipleship-legend .legend-red { background: #fbe2e6; }
 .discipleship-legend .course-pending { margin: 0; }
-.discipleship-results .discipleship-table :is(th, td):nth-child(n+7) {
- min-width: 6rem;
- max-width: 10rem;
- text-align: center;
+.discipleship-results .discipleship-table :is(th, td) {
+ padding: 10px 8px;
+ white-space: nowrap;
+ overflow-wrap: normal;
  vertical-align: middle;
- white-space: normal;
 }
+.discipleship-table thead th { letter-spacing: .2px; }
+.discipleship-table :is(th, td):nth-child(n+5) { text-align: center; }
 .discipleship-table input[type="checkbox"] {
  display: block;
  width: 1.15rem;
  height: 1.15rem;
  margin: auto;
  accent-color: var(--purple);
-}
-
-@media (min-width: 901px) {
- .discipleship-results .discipleship-table {
-  min-width: 0;
-  table-layout: fixed;
- }
- .discipleship-results .discipleship-table :is(th, td) {
-  padding: 10px 6px;
-  min-width: 0;
-  max-width: none;
-  white-space: normal;
-  overflow-wrap: anywhere;
- }
- .discipleship-table thead th {
-  letter-spacing: .2px;
-  line-height: 1.3;
- }
- .discipleship-table thead th:nth-child(1),
- .discipleship-table thead th:nth-child(2) { width: 15%; }
- .discipleship-table thead th:nth-child(3) { width: 12%; }
- .discipleship-table thead th:nth-child(4) { width: 11%; }
- .discipleship-table thead th:nth-child(5) { width: 9%; }
- .discipleship-table thead th:nth-child(6) { width: 7%; }
 }
 
 @media (max-width: 900px) {
@@ -430,28 +407,4 @@ svg.meeting-card-icon{width:28px;height:28px;flex-shrink:0}
   background: var(--purple);
   border-radius: 999px;
  }
-}
-
-.discipleship-results .discipleship-table thead th:nth-child(9) {
- white-space: nowrap;
- overflow-wrap: normal;
-}
-@media (min-width: 901px) {
- .discipleship-table thead th:nth-child(4) { width: 10%; }
- .discipleship-table thead th:nth-child(5) { width: 8%; }
- .discipleship-table thead th:nth-child(9) { width: 5.5rem; }
-}
-
-.discipleship-table select[data-person-field] {
- padding: 5px 15px 5px 4px;
- font-size: 11px;
- min-height: 32px;
-}
-@media (min-width: 901px) {
- .discipleship-table thead th:nth-child(1),
- .discipleship-table thead th:nth-child(2) { width: 12%; }
- .discipleship-table thead th:nth-child(3) { width: 10%; }
- .discipleship-table thead th:nth-child(4) { width: 9%; }
- .discipleship-table thead th:nth-child(11),
- .discipleship-table thead th:nth-child(12) { width: 12%; }
 }

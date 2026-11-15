@@ -83,16 +83,14 @@ window.VideiraDiscipleship = (() => {
 
   const peopleById = new Map(people.map(person => [person.id, person]));
   const personFields = {baptized:'Batismo', is_tither:'Dizimista'};
-  const personValue = (person, key) => key === 'baptized'
-   ? person?.baptized || 'Não informado'
-   : person?.is_tither === true ? 'Sim' : person?.is_tither === false ? 'Não' : 'Não informado';
+  const personChecked = (person, key) => key === 'baptized'
+   ? person.baptized === 'Sim' : person.is_tither === true;
   function personField(row, key, label) {
    const person = peopleById.get(row.id);
-   const value = personValue(person, key);
-   if (!editable || !person) return esc(value);
-   return `<select data-person-field="${key}" data-person="${esc(row.id)}" aria-label="${esc(label+' · '+row.nome)}">
-    ${['Não informado','Sim','Não'].map(choice => `<option ${choice===value?'selected':''}>${choice}</option>`).join('')}
-   </select>`;
+   if (!person) return '—';
+   return `<input type="checkbox" data-person-field="${key}" data-person="${esc(row.id)}"
+    aria-label="${esc(label + ' · ' + row.nome)}" ${personChecked(person, key) ? 'checked' : ''}
+    ${editable ? '' : 'disabled'}>`;
   }
 
   function render() {
@@ -149,14 +147,14 @@ window.VideiraDiscipleship = (() => {
    if (editable && control.matches('[data-person-field]')) {
     const {person: id, personField: key} = control.dataset;
     const person = peopleById.get(id);
-    const value = control.value;
+    const value = control.checked ? 'Sim' : 'Não';
     control.disabled = true;
     try {
      await call('discipleship_person_field',{p_person:id,p_field:key,p_value:value});
-     person[key] = key==='is_tither' ? (value==='Não informado'?null:value==='Sim') : value;
+     person[key] = key==='is_tither' ? (value === 'Sim') : value;
      feedback.textContent = '';
     } catch (error) {
-     control.value = personValue(person,key);
+     control.checked = personChecked(person, key);
      feedback.textContent = error.message;
     } finally {
      control.disabled = false;
@@ -170,7 +168,7 @@ window.VideiraDiscipleship = (() => {
    const focused = document.activeElement === checkbox;
    const monthDate = month.value + '-01';
    const selectors = [month, situation, course, network, cell];
-   const inputs = [...results.querySelectorAll('input')];
+   const inputs = [...results.querySelectorAll('[data-course]')];
    const locks = [...selectors, ...inputs];
    locks.forEach(control => { control.disabled = true; });
    let saved = false;
