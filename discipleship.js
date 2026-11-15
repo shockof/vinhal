@@ -69,15 +69,22 @@ window.VideiraDiscipleship = (() => {
    setChoices(cell, new Map(available.map(row => [row.celulaId, row.celula])));
   }
 
+  function matchesFilters(row) {
+   if (network.value && cellNetworks.get(row.celulaId) !== network.value) return false;
+   if (cell.value && row.celulaId !== cell.value) return false;
+   const filter = situation.value;
+   if (filter === 'pendente' ? !pending(row) : filter && row.situacao !== situations[filter]) return false;
+   return !course.value || (!exempt(row) && !row.cursos.includes(course.value));
+  }
+
+  function situationMarkup(row) {
+   return esc(row.situacao) + (pending(row) ? '<span class="course-pending">Cursos pendentes</span>' : '');
+  }
+
   function render() {
    if (loading || saving) return;
    const groups = new Map();
-   for (const row of rows) {
-    if (network.value && cellNetworks.get(row.celulaId) !== network.value) continue;
-    if (cell.value && row.celulaId !== cell.value) continue;
-    const filter = situation.value;
-    if (filter === 'pendente' ? !pending(row) : filter && row.situacao !== situations[filter]) continue;
-    if (course.value && (exempt(row) || row.cursos.includes(course.value))) continue;
+   for (const row of rows.filter(matchesFilters)) {
     if (!groups.has(row.celulaId)) groups.set(row.celulaId, []);
     groups.get(row.celulaId).push(row);
    }
@@ -88,7 +95,7 @@ window.VideiraDiscipleship = (() => {
       .map(title => `<th scope="col">${title}</th>`).join('')}</tr></thead>
      <tbody>${group.map(row => `<tr class="${row.faltas >= 2 ? 'absent-many' : row.faltas ? 'absent-one' : row.presencas ? 'absent-none' : ''}">
       <th scope="row">${esc(row.nome)}</th>
-      <td>${esc(row.situacao)}${pending(row) ? '<span class="course-pending">Cursos pendentes</span>' : ''}</td>
+      <td data-situation>${situationMarkup(row)}</td>
       <td>${esc(row.telefone || '—')}</td><td>${esc(row.celula)}</td><td>${esc(row.lider || '—')}</td>
       <td>${row.presencas}</td><td>${row.faltas}</td>
       ${keys.map(key => `<td><input type="checkbox" data-person="${esc(row.id)}" data-course="${key}"
@@ -126,23 +133,50 @@ window.VideiraDiscipleship = (() => {
    const checkbox = event.target;
    if (!editable || saving || !checkbox.matches('[data-person][data-course]')) return;
    saving = true;
-   month.disabled = true;
+   const {person, course: courseKey} = checkbox.dataset;
+   const focused = document.activeElement === checkbox;
+   const monthDate = month.value + '-01';
+   const selectors = [month, situation, course, network, cell];
    const inputs = [...results.querySelectorAll('input')];
-   inputs.forEach(input => { input.disabled = true; });
+   const locks = [...selectors, ...inputs];
+   locks.forEach(control => { control.disabled = true; });
+   let saved = false;
    try {
     await call('discipleship', {
-     p_month: month.value + '-01', p_person: checkbox.dataset.person,
-     p_course: checkbox.dataset.course, p_marked: checkbox.checked
+     p_month: monthDate, p_person: person, p_course: courseKey, p_marked: checkbox.checked
     });
-    saving = false;
-    await load();
+    saved = true;
+    const updatedRows = await call('discipleship', {p_month: monthDate});
+    if (!root.isConnected) return;
+
+    const updated = updatedRows.find(row => row.id === person);
+    rows = updatedRows;
+    const line = checkbox.closest('tr');
+    if (updated && matchesFilters(updated)) {
+     line.querySelector('[data-situation]').innerHTML = situationMarkup(updated);
+     for (const input of line.querySelectorAll('[data-course]')) {
+      input.checked = updated.cursos.includes(input.dataset.course);
+     }
+    } else {
+     const block = line.closest('article');
+     line.remove();
+     if (!block.querySelector('tbody tr')) block.remove();
+     if (!results.childElementCount) {
+      results.innerHTML = '<p class="empty">Nenhum cadastro corresponde aos filtros.</p>';
+     }
+    }
+    feedback.textContent = '';
    } catch (error) {
-    checkbox.checked = !checkbox.checked;
-    feedback.textContent = error.message;
+    if (!saved) checkbox.checked = !checkbox.checked;
+    feedback.textContent = saved
+     ? 'Curso salvo. Troque o mês ou recarregue para atualizar a situação.'
+     : error.message;
    } finally {
     saving = false;
-    month.disabled = false;
-    inputs.forEach(input => { input.disabled = false; });
+    locks.forEach(control => { control.disabled = false; });
+    if (focused && checkbox.isConnected && document.activeElement === document.body) {
+     checkbox.focus({preventScroll: true});
+    }
    }
   };
   load();
