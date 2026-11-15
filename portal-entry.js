@@ -54,7 +54,7 @@ document.querySelector('#loginBtn').onclick=()=>{location.href='gestao.html?v=20
   avatar.setAttribute('aria-hidden','true');
   avatar.textContent=name.split(/\s+/).slice(0,2).map(part=>Array.from(part)[0]).join('').toUpperCase();
   const photo=profile.photo_url;
-  if(typeof photo==='string'&&photo.startsWith(config.url+'/storage/v1/object/sign/videira-avatars/')){
+  if(typeof photo==='string'&&(photo.startsWith(config.url+'/storage/v1/object/sign/videira-avatars/')||/^data:image\/jpeg;base64,\/9j\/[A-Za-z0-9+/]*={0,2}$/.test(photo))){
    const image=new Image();
    image.alt='';
    image.onload=()=>avatar.replaceChildren(image);

@@ -505,7 +505,7 @@ function bind(){
   updateAccountFilters();
  }status('Conta atualizada no Supabase.')},onReset:()=>status('Senha da conta redefinida.')}));
  const accountList=$('#linkedAccounts');
- const accountPhotoLoader=()=>window.VideiraDashboard.personPhotos(accountList,async id=>(await requestLeadershipPhoto(id)).photo);
+ const accountPhotoLoader=()=>window.VideiraDashboard.personPhotos(accountList,async id=>(await requestLeadershipPhoto(id)).photo||(await call('linked_member_avatar',{id})).photo);
  let bindAccountPhotos=accountList&&db.profile.role==='master'?accountPhotoLoader():null;
  const updateAccountFilters=()=>{
   accountList.innerHTML=linkedAccountTable();
