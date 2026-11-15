@@ -48,10 +48,12 @@ window.VideiraDiscipleship = (() => {
   const network = root.querySelector('[name=network]');
   const cell = root.querySelector('[name=cell]');
   const cellNetworks = new Map(cells.map(item => [item.id, item.network_id]));
+  const kidsNetworks = new Set(networks.filter(item => item.kind === 'kids').map(item => item.id));
+  const exempt = row => row.situacao === 'Membro' && kidsNetworks.has(cellNetworks.get(row.celulaId));
   const feedback = root.querySelector('[role=status]');
   const results = root.querySelector('.discipleship-results');
   const keys = Object.keys(courses);
-  const pending = row => row.situacao === 'Membro' && keys.some(key => !row.cursos.includes(key));
+  const pending = row => row.situacao === 'Membro' && !exempt(row) && keys.some(key => !row.cursos.includes(key));
   let rows = [], loading = false, saving = false;
 
   function setChoices(control, choices) {
@@ -74,7 +76,7 @@ window.VideiraDiscipleship = (() => {
     if (cell.value && row.celulaId !== cell.value) continue;
     const filter = situation.value;
     if (filter === 'pendente' ? !pending(row) : filter && row.situacao !== situations[filter]) continue;
-    if (course.value && row.cursos.includes(course.value)) continue;
+    if (course.value && (exempt(row) || row.cursos.includes(course.value))) continue;
     if (!groups.has(row.celulaId)) groups.set(row.celulaId, []);
     groups.get(row.celulaId).push(row);
    }
