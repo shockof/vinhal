@@ -11,12 +11,27 @@ window.VideiraDiscipleship = (() => {
  const options = entries => Object.entries(entries)
   .map(([key, label]) => `<option value="${key}">${label}</option>`).join('');
 
- function mount(root, call, esc, editable) {
+ function mount(root, call, esc, editable, meetings) {
   const currentMonth = new Intl.DateTimeFormat('sv-SE', {
    timeZone: 'America/Maceio', year: 'numeric', month: '2-digit'
   }).format(new Date());
+  const [year, monthNumber] = currentMonth.split('-').map(Number);
+  const firstYear = meetings.reduce((first, meeting) => {
+   const meetingYear = Number(meeting.meeting_date?.slice(0, 4));
+   return meetingYear >= 1 ? Math.min(first, meetingYear) : first;
+  }, year);
+  const monthLabel = new Intl.DateTimeFormat('pt-BR', {
+   timeZone: 'UTC', month: 'long', year: 'numeric'
+  });
+  const monthOptions = [];
+  for (let offset = 0; offset < (year - firstYear) * 12 + monthNumber; offset++) {
+   const date = new Date(Date.UTC(year, monthNumber - 1 - offset, 1));
+   const value = date.toISOString().slice(0, 7);
+   const label = monthLabel.format(date);
+   monthOptions.push(`<option value="${value}">${label[0].toUpperCase() + label.slice(1)}</option>`);
+  }
   root.innerHTML = `<div class="panel discipleship-filters gridform">
-   <label>Mês<input type="month" value="${currentMonth}" required></label>
+   <label>Mês<select name="month">${monthOptions.join('')}</select></label>
    <label>Situação<select name="situation"><option value="">Todas as situações</option>${options(situations)}</select></label>
    <label>Curso<select name="course"><option value="">Todos os cursos</option>${options(courses)}</select></label>
    <small class="wide">Selecione um curso para filtrar as pendências desse curso.</small>
@@ -25,7 +40,7 @@ window.VideiraDiscipleship = (() => {
    <span class="legend-green">Sem faltas</span><span class="legend-orange">1 falta</span>
    <span class="legend-red">2 ou mais faltas</span><span class="course-pending">Cursos pendentes (membros)</span>
   </div>`;
-  const month = root.querySelector('input');
+  const month = root.querySelector('[name=month]');
   const situation = root.querySelector('[name=situation]');
   const course = root.querySelector('[name=course]');
   const feedback = root.querySelector('[role=status]');
