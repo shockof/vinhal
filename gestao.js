@@ -54,18 +54,18 @@ async function request(action,data,token){
  const controller=new AbortController();
  const timer=setTimeout(()=>controller.abort(),30000);
  try{
-  const discipleship=action==='discipleship';
-  const response=await fetch(discipleship?cfg.url+'/rest/v1/rpc/videira_discipleship':cfg.gateway,{
+  const rpc={discipleship:'videira_discipleship',link_existing_leader:'videira_link_existing_leader'}[action];
+  const response=await fetch(rpc?cfg.url+'/rest/v1/rpc/'+rpc:cfg.gateway,{
    method:'POST',
    headers:{'Content-Type':'application/json',apikey:cfg.publicKey,
-    Authorization:'Bearer '+(discipleship?token:cfg.publicKey),
-    ...(discipleship?{}:{'X-Videira-Session':token||''})},
-   body:JSON.stringify(discipleship?data:action==='login'?{action,...data}:{action,data}),
+    Authorization:'Bearer '+(rpc?token:cfg.publicKey),
+    ...(rpc?{}:{'X-Videira-Session':token||''})},
+   body:JSON.stringify(rpc?data:action==='login'?{action,...data}:{action,data}),
    signal:controller.signal
   });
   const result=await response.json();
   if(!response.ok){
-   const failure=Error(result.error||(discipleship&&result.message)||'Não foi possível concluir esta operação.');
+   const failure=Error(result.error||(rpc&&result.message)||'Não foi possível concluir esta operação.');
    failure.status=response.status;
    if(action==='create_account'&&response.status>=500)failure.uncertain=true;
    throw failure;
@@ -146,7 +146,7 @@ function entityForm(){const item=edit?db[list[view]].find(x=>x.id===edit):{};if(
   </div>`+field('full_name','Nome completo',item.full_name,'text','required maxlength="180"')+(!edit||memberTransferRoles.has(db.profile.role)
   ?select('cell_id','Célula',db.cells,item.cell_id)
   :`<label>Célula<input value="${esc(label(db.cells,item.cell_id))}" readonly></label>`)+field('phone','Telefone (opcional)',item.phone,'tel','maxlength="40"')+field('birth_date','Data de nascimento (opcional)',item.birth_date,'date','autocomplete="bday"')+`<label>Categoria<select name="category"><option value="Visitante">Visitante</option><option value="Membro" ${item.category==='Membro'?'selected':''}>Membro</option></select></label><label>Batismo<select name="baptized">${['Não informado','Sim','Não'].map(v=>`<option ${item.baptized===v?'selected':''}>${v}</option>`).join('')}</select></label><label>Estado civil<select name="marital_status">${['Não informado','Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)'].map(v=>`<option ${item.marital_status===v?'selected':''}>${v}</option>`).join('')}</select></label>`;
- return `<article class="panel"><h2>${edit?'Editar cadastro':'Novo cadastro'}</h2><form id="entityForm" class="gridform">${fields}<div class="wide actions"><button>Salvar no Supabase</button>${edit?'<button type="button" class="secondary" id="cancelEdit">Cancelar edição</button>':''}</div></form>${view==='person'&&edit&&item.active&&item.category==='Membro'&&db.profile.role==='master'?'<div class="actions"><button class="secondary" id="createMemberLeader" type="button" hidden>Criar acesso de liderança</button><span id="memberLeaderStatus" role="status"></span></div>':''}${view==='person'?'<p><small>O acompanhamento do discipulado registra presenças e o início dos cursos.</small></p>':''}</article>`;
+ return `<article class="panel"><h2>${edit?'Editar cadastro':'Novo cadastro'}</h2><form id="entityForm" class="gridform">${fields}<div class="wide actions"><button>Salvar no Supabase</button>${edit?'<button type="button" class="secondary" id="cancelEdit">Cancelar edição</button>':''}</div></form>${view==='person'&&edit&&item.active&&item.category==='Membro'&&db.profile.role==='master'?'<div class="actions"><button class="secondary" id="createMemberLeader" type="button" hidden>Criar acesso de liderança</button><button class="secondary" id="linkExistingLeader" type="button" hidden>Vincular conta de líder existente</button><span id="memberLeaderStatus" role="status"></span></div><div id="existingLeaderForm"></div>':''}${view==='person'?'<p><small>O acompanhamento do discipulado registra presenças e o início dos cursos.</small></p>':''}</article>`;
 }
 let cellSearch = '', cellStatus = '';
 
@@ -566,9 +566,55 @@ function bind(){
   call('member_leader_links').then(links=>{
    if(!createMemberLeader.isConnected)return;
    if(Object.hasOwn(links,member.id)){
-    $('#memberLeaderStatus').textContent='Acesso de liderança já vinculado.';
+    const account=db.profiles.find(profile=>profile.id===links[member.id]);
+    $('#memberLeaderStatus').textContent=account
+     ? 'Conta vinculada: '+account.display_name+' (@'+account.username+').'
+     : 'Acesso de liderança já vinculado.';
     return;
    }
+   const linkButton=$('#linkExistingLeader');
+   const linkContainer=$('#existingLeaderForm');
+   const linkedAccounts=new Set(Object.values(links));
+   const candidates=db.profiles.filter(profile=>profile.role==='lider'&&profile.active&&!linkedAccounts.has(profile.id))
+    .map(profile=>({id:profile.id,label:[profile.display_name,'@'+profile.username,
+     label(db.churches,profile.church_id),label(db.networks,profile.network_id)].join(' · ')}));
+   linkButton.hidden=false;
+   linkButton.onclick=()=>{
+    if(busy)return;
+    if(!candidates.length){
+     $('#memberLeaderStatus').textContent='Nenhuma conta de líder ativa está disponível para vínculo.';
+     return;
+    }
+    linkContainer.innerHTML=`<form class="gridform">
+     ${select('profile_id','Conta de líder',candidates,'','label')}
+     <div class="actions wide"><button>Vincular conta</button><button type="button" class="secondary">Cancelar</button></div>
+    </form>`;
+    const form=linkContainer.querySelector('form');
+    const accountSelect=form.elements.profile_id;
+    const [confirm,cancel]=form.querySelectorAll('button');
+    accountSelect.focus();
+    cancel.onclick=()=>{linkContainer.replaceChildren();linkButton.focus({preventScroll:true});};
+    form.onsubmit=async event=>{
+     event.preventDefault();
+     if(busy)return;
+     const profileId=accountSelect.value;
+     busy=true;
+     confirm.disabled=cancel.disabled=accountSelect.disabled=true;
+     try{
+      await call('link_existing_leader',{p_member_id:member.id,p_profile_id:profileId});
+      if(!form.isConnected)return;
+      const account=db.profiles.find(profile=>profile.id===profileId);
+      linkContainer.replaceChildren();
+      linkButton.hidden=createMemberLeader.hidden=true;
+      $('#memberLeaderStatus').textContent='Conta vinculada: '+account.display_name+' (@'+account.username+').';
+     }catch(error){
+      if(form.isConnected)$('#memberLeaderStatus').textContent=error.message;
+     }finally{
+      busy=false;
+      confirm.disabled=cancel.disabled=accountSelect.disabled=false;
+     }
+    };
+   };
    createMemberLeader.hidden=false;
    createMemberLeader.onclick=()=>{
     if(busy)return;
