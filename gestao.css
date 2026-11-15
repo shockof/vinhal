@@ -442,22 +442,6 @@ svg.meeting-card-icon{width:28px;height:28px;flex-shrink:0}
  .discipleship-table thead th:nth-child(9) { width: 5.5rem; }
 }
 
-.person-report-print { display: none; }
-@media print {
- body.printing-person-report { background: white; color: black; }
- .printing-person-report .shell { display: block; }
- .printing-person-report .shell > aside,
- .printing-person-report .main > :not(#workspace),
- .printing-person-report #personReports > :not(.person-report-print) { display: none; }
- .printing-person-report .main { padding: 0; }
- .printing-person-report .person-report-print { display: block; }
- .person-report-print h1 { font-size: 18pt; }
- .person-report-print p { font-size: 10pt; color: black; }
- .person-report-print table { white-space: normal; }
- .person-report-print thead { display: table-header-group; }
- .person-report-print tr { break-inside: avoid; }
- .person-report-print :is(th,td) { padding: 4pt; font-size: 8pt; color: black; overflow-wrap: anywhere; }
-}
 .discipleship-table select[data-person-field] {
  padding: 5px 15px 5px 4px;
  font-size: 11px;
