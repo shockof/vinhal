@@ -474,7 +474,7 @@ function bind(){
   bindDashboard();bindViews();
  };bindDashboard();loadBirthdays($('#birthdaysPanel'));$('#dashboardPeriod').onchange=update;if($('#dashboardChurch'))$('#dashboardChurch').onchange=update}
 
- if(view==='discipleship')window.VideiraDiscipleship.mount($('#discipleshipPanel'),call,esc,['master','discipulador'].includes(db.profile.role),db.meetings);
+ if(view==='discipleship')window.VideiraDiscipleship.mount($('#discipleshipPanel'),call,esc,['master','discipulador'].includes(db.profile.role),db);
  if(view==='cell')bindCellFilters();
  if(view==='person'){
   const search=$('#memberSearch');

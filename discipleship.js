@@ -11,7 +11,7 @@ window.VideiraDiscipleship = (() => {
  const options = entries => Object.entries(entries)
   .map(([key, label]) => `<option value="${key}">${label}</option>`).join('');
 
- function mount(root, call, esc, editable, meetings) {
+ function mount(root, call, esc, editable, {meetings, cells, networks}) {
   const currentMonth = new Intl.DateTimeFormat('sv-SE', {
    timeZone: 'America/Maceio', year: 'numeric', month: '2-digit'
   }).format(new Date());
@@ -34,6 +34,8 @@ window.VideiraDiscipleship = (() => {
    <label>Mês<select name="month">${monthOptions.join('')}</select></label>
    <label>Situação<select name="situation"><option value="">Todas as situações</option>${options(situations)}</select></label>
    <label>Curso<select name="course"><option value="">Todos os cursos</option>${options(courses)}</select></label>
+   <label>Rede<select name="network"><option value="">Todas as redes</option></select></label>
+   <label>Célula<select name="cell"><option value="">Todas as células</option></select></label>
    <small class="wide">Selecione um curso para filtrar as pendências desse curso.</small>
   </div><p role="status" class="discipleship-status"></p><div class="discipleship-results"></div>
   <div class="discipleship-legend">
@@ -43,16 +45,33 @@ window.VideiraDiscipleship = (() => {
   const month = root.querySelector('[name=month]');
   const situation = root.querySelector('[name=situation]');
   const course = root.querySelector('[name=course]');
+  const network = root.querySelector('[name=network]');
+  const cell = root.querySelector('[name=cell]');
+  const cellNetworks = new Map(cells.map(item => [item.id, item.network_id]));
   const feedback = root.querySelector('[role=status]');
   const results = root.querySelector('.discipleship-results');
   const keys = Object.keys(courses);
   const pending = row => row.situacao === 'Membro' && keys.some(key => !row.cursos.includes(key));
   let rows = [], loading = false, saving = false;
 
+  function setChoices(control, choices) {
+   const previous = control.value;
+   control.length = 1;
+   for (const [id, title] of choices) control.add(new Option(title, id));
+   control.value = choices.has(previous) ? previous : '';
+  }
+
+  function updateCells() {
+   const available = rows.filter(row => !network.value || cellNetworks.get(row.celulaId) === network.value);
+   setChoices(cell, new Map(available.map(row => [row.celulaId, row.celula])));
+  }
+
   function render() {
    if (loading || saving) return;
    const groups = new Map();
    for (const row of rows) {
+    if (network.value && cellNetworks.get(row.celulaId) !== network.value) continue;
+    if (cell.value && row.celulaId !== cell.value) continue;
     const filter = situation.value;
     if (filter === 'pendente' ? !pending(row) : filter && row.situacao !== situations[filter]) continue;
     if (course.value && row.cursos.includes(course.value)) continue;
@@ -61,7 +80,7 @@ window.VideiraDiscipleship = (() => {
    }
    results.innerHTML = [...groups.values()].map(group => `<article class="panel">
     <h2>${esc(group[0].celula)}</h2>
-    <div class="table-scroll"><table aria-label="${esc(group[0].celula)}">
+    <div class="table-scroll"><table class="discipleship-table" aria-label="${esc(group[0].celula)}">
      <thead><tr>${['Nome','Situação','Telefone','Célula','Líder','Presenças','Faltas',...Object.values(courses)]
       .map(title => `<th scope="col">${title}</th>`).join('')}</tr></thead>
      <tbody>${group.map(row => `<tr class="${row.faltas >= 2 ? 'absent-many' : row.faltas ? 'absent-one' : row.presencas ? 'absent-none' : ''}">
@@ -83,6 +102,9 @@ window.VideiraDiscipleship = (() => {
    results.replaceChildren();
    try {
     rows = await call('discipleship', {p_month: month.value + '-01'});
+    const networkIds = new Set(rows.map(row => cellNetworks.get(row.celulaId)));
+    setChoices(network, new Map(networks.filter(item => networkIds.has(item.id)).map(item => [item.id, item.name])));
+    updateCells();
     feedback.textContent = '';
    } catch (error) {
     rows = [];
@@ -95,7 +117,8 @@ window.VideiraDiscipleship = (() => {
    render();
   }
   month.onchange = load;
-  situation.onchange = course.onchange = render;
+  situation.onchange = course.onchange = cell.onchange = render;
+  network.onchange = () => { updateCells(); render(); };
   results.onchange = async event => {
    const checkbox = event.target;
    if (!editable || saving || !checkbox.matches('[data-person][data-course]')) return;

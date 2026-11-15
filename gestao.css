@@ -380,3 +380,17 @@ svg.meeting-card-icon{width:28px;height:28px;flex-shrink:0}
 .discipleship-legend .legend-orange { background: #fff0dc; }
 .discipleship-legend .legend-red { background: #fbe2e6; }
 .discipleship-legend .course-pending { margin: 0; }
+.discipleship-results .discipleship-table :is(th, td):nth-child(n+8) {
+ min-width: 6rem;
+ max-width: 10rem;
+ text-align: center;
+ vertical-align: middle;
+ white-space: normal;
+}
+.discipleship-table input[type="checkbox"] {
+ display: block;
+ width: 1.15rem;
+ height: 1.15rem;
+ margin: auto;
+ accent-color: var(--purple);
+}
