@@ -15,7 +15,8 @@ readManagementRoute();
 let memberSearch='',accountSearch='';
 let memberForLeaderAccess=null;
 const normalizeSearch=value=>String(value??'').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().trim();
-const names={overview:'Visão geral',profile:'Meu perfil',church:'Igrejas',network:'Redes',cell:'Células',person:'Membros e visitantes',meeting:'Presenças',reports:'Relatórios Excel',site:'Editar site',accounts:'Contas e liderança'};
+const discipleshipRoles=new Set(['discipulador','pastor','predio','obreiro','supervisor']);
+const names={discipleship:'Acompanhamento do discipulado',overview:'Visão geral',profile:'Meu perfil',church:'Igrejas',network:'Redes',cell:'Células',person:'Membros e visitantes',meeting:'Presenças',reports:'Relatórios Excel',site:'Editar site',accounts:'Contas e liderança'};
 const cellEditorRoles=new Set(['master','supervisor','predio']);
 const memberTransferRoles=new Set(['master','supervisor','pastor','obreiro','predio','supervisora_kids']);
 const list={church:'churches',network:'networks',cell:'cells',person:'people'};
@@ -53,16 +54,18 @@ async function request(action,data,token){
  const controller=new AbortController();
  const timer=setTimeout(()=>controller.abort(),30000);
  try{
-  const response=await fetch(cfg.gateway,{
+  const discipleship=action==='discipleship';
+  const response=await fetch(discipleship?cfg.url+'/rest/v1/rpc/videira_discipleship':cfg.gateway,{
    method:'POST',
    headers:{'Content-Type':'application/json',apikey:cfg.publicKey,
-    Authorization:'Bearer '+cfg.publicKey,'X-Videira-Session':token||''},
-   body:JSON.stringify(action==='login'?{action,...data}:{action,data}),
+    Authorization:'Bearer '+(discipleship?token:cfg.publicKey),
+    ...(discipleship?{}:{'X-Videira-Session':token||''})},
+   body:JSON.stringify(discipleship?data:action==='login'?{action,...data}:{action,data}),
    signal:controller.signal
   });
   const result=await response.json();
   if(!response.ok){
-   const failure=Error(result.error||'Não foi possível concluir esta operação.');
+   const failure=Error(result.error||(discipleship&&result.message)||'Não foi possível concluir esta operação.');
    failure.status=response.status;
    if(action==='create_account'&&response.status>=500)failure.uncertain=true;
    throw failure;
@@ -143,7 +146,7 @@ function entityForm(){const item=edit?db[list[view]].find(x=>x.id===edit):{};if(
   </div>`+field('full_name','Nome completo',item.full_name,'text','required maxlength="180"')+(!edit||memberTransferRoles.has(db.profile.role)
   ?select('cell_id','Célula',db.cells,item.cell_id)
   :`<label>Célula<input value="${esc(label(db.cells,item.cell_id))}" readonly></label>`)+field('phone','Telefone (opcional)',item.phone,'tel','maxlength="40"')+field('birth_date','Data de nascimento (opcional)',item.birth_date,'date','autocomplete="bday"')+`<label>Categoria<select name="category"><option value="Visitante">Visitante</option><option value="Membro" ${item.category==='Membro'?'selected':''}>Membro</option></select></label><label>Batismo<select name="baptized">${['Não informado','Sim','Não'].map(v=>`<option ${item.baptized===v?'selected':''}>${v}</option>`).join('')}</select></label><label>Estado civil<select name="marital_status">${['Não informado','Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)'].map(v=>`<option ${item.marital_status===v?'selected':''}>${v}</option>`).join('')}</select></label>`;
- return `<article class="panel"><h2>${edit?'Editar cadastro':'Novo cadastro'}</h2><form id="entityForm" class="gridform">${fields}<div class="wide actions"><button>Salvar no Supabase</button>${edit?'<button type="button" class="secondary" id="cancelEdit">Cancelar edição</button>':''}</div></form>${view==='person'&&edit&&item.active&&item.category==='Membro'&&db.profile.role==='master'?'<div class="actions"><button class="secondary" id="createMemberLeader" type="button" hidden>Criar acesso de liderança</button><span id="memberLeaderStatus" role="status"></span></div>':''}${view==='person'?'<p><small>Três encontros consecutivos com presença convertem o visitante em membro. Faltas interrompem a sequência.</small></p>':''}</article>`;
+ return `<article class="panel"><h2>${edit?'Editar cadastro':'Novo cadastro'}</h2><form id="entityForm" class="gridform">${fields}<div class="wide actions"><button>Salvar no Supabase</button>${edit?'<button type="button" class="secondary" id="cancelEdit">Cancelar edição</button>':''}</div></form>${view==='person'&&edit&&item.active&&item.category==='Membro'&&db.profile.role==='master'?'<div class="actions"><button class="secondary" id="createMemberLeader" type="button" hidden>Criar acesso de liderança</button><span id="memberLeaderStatus" role="status"></span></div>':''}${view==='person'?'<p><small>O acompanhamento do discipulado registra presenças e o início dos cursos.</small></p>':''}</article>`;
 }
 let cellSearch = '', cellStatus = '';
 
@@ -323,7 +326,7 @@ async function loadBirthdays(panel) {
  }
 }
 
-function render(){const menuScroll=$('.shell > aside > nav')?.scrollLeft??0;const tabs=['overview','profile',...(['master','supervisor'].includes(db.profile.role)?['church','network','cell']:db.profile.role==='predio'?['network','cell']:['pastor','obreiro','supervisora_kids'].includes(db.profile.role)?['cell']:[]),'person','meeting','reports','accounts',...(db.profile.role==='master'?['site']:[])];$('#app').innerHTML=`<div class="shell"><aside><img class="management-logo" src="assets/logo.png" alt="Videira"><div class="identity"><div><span class="attendance-avatar identity-photo" id="identityPhoto" aria-hidden="true">${esc(personInitials(db.profile.display_name))}</span>${esc(db.profile.display_name)}<small>${roleName(db.profile)} · ${esc(db.profile.username)}</small></div><button class="secondary" id="logout">Sair</button></div><nav aria-label="Gestão">${tabs.map(v=>`<button data-view="${v}" class="${view===v?'active':''}">${names[v]}</button>`).join('')}</nav></aside><main class="main ${view==='overview'?'dashboard-main':''}"><div class="top"><span class="badge">Conectado ao Supabase · Dados reais</span><a href="index.html">Ver site ↗</a></div>${view==='overview'?'':`<div class="heading ${view==='metric'?'directory-heading':''}"><small>${view==='metric'?'Gestão / Visão geral':'IGREJA VIDEIRA / GESTÃO'}</small><h1>${view==='metric'?window.VideiraDashboard.metricTitle(db,metricKind)||'Indicador':names[view]}</h1>${view==='metric'?'<a class="directory-back" href="gestao.html?v=20261112-panel-nav">← Voltar à Visão geral</a>':'<p>Somente os registros permitidos ao seu perfil.</p>'}</div>`}<div id="status" role="status" aria-live="polite"></div><div id="workspace">${view==='overview'?overview():view==='metric'?'<section id="metricPage" class="dashboard"></section>':view==='site'?'<div id="siteEditor"></div>':view==='profile'?'<div id="myProfile"></div>':list[view]?entityForm()+entityList():view==='meeting'?meeting():view==='reports'?report():accounts()}</div><small>Gravação no servidor. Membros, telefones e presenças não são publicados no site.</small></main></div>`;$('.shell > aside > nav').scrollLeft=menuScroll;bind();}
+function render(){const menuScroll=$('.shell > aside > nav')?.scrollLeft??0;const tabs=['overview','profile',...(discipleshipRoles.has(db.profile.role)?['discipleship']:[]),...(['master','supervisor'].includes(db.profile.role)?['church','network','cell']:db.profile.role==='predio'?['network','cell']:['pastor','obreiro','supervisora_kids'].includes(db.profile.role)?['cell']:[]),'person','meeting','reports','accounts',...(db.profile.role==='master'?['site']:[])];$('#app').innerHTML=`<div class="shell"><aside><img class="management-logo" src="assets/logo.png" alt="Videira"><div class="identity"><div><span class="attendance-avatar identity-photo" id="identityPhoto" aria-hidden="true">${esc(personInitials(db.profile.display_name))}</span>${esc(db.profile.display_name)}<small>${roleName(db.profile)} · ${esc(db.profile.username)}</small></div><button class="secondary" id="logout">Sair</button></div><nav aria-label="Gestão">${tabs.map(v=>`<button data-view="${v}" class="${view===v?'active':''}">${names[v]}</button>`).join('')}</nav></aside><main class="main ${view==='overview'?'dashboard-main':''}"><div class="top"><span class="badge">Conectado ao Supabase · Dados reais</span><a href="index.html">Ver site ↗</a></div>${view==='overview'?'':`<div class="heading ${view==='metric'?'directory-heading':''}"><small>${view==='metric'?'Gestão / Visão geral':'IGREJA VIDEIRA / GESTÃO'}</small><h1>${view==='metric'?window.VideiraDashboard.metricTitle(db,metricKind)||'Indicador':names[view]}</h1>${view==='metric'?'<a class="directory-back" href="gestao.html?v=20261112-panel-nav">← Voltar à Visão geral</a>':'<p>Somente os registros permitidos ao seu perfil.</p>'}</div>`}<div id="status" role="status" aria-live="polite"></div><div id="workspace">${view==='overview'?overview():view==='metric'?'<section id="metricPage" class="dashboard"></section>':view==='discipleship'?'<div id="discipleshipPanel"></div>':view==='site'?'<div id="siteEditor"></div>':view==='profile'?'<div id="myProfile"></div>':list[view]?entityForm()+entityList():view==='meeting'?meeting():view==='reports'?report():accounts()}</div><small>Gravação no servidor. Membros, telefones e presenças não são publicados no site.</small></main></div>`;$('.shell > aside > nav').scrollLeft=menuScroll;bind();}
 function bindMemberPhoto(form,id){
  const file=form.querySelector('#memberPhotoFile');
  const preview=form.querySelector('#memberPhotoPreview');
@@ -471,6 +474,7 @@ function bind(){
   bindDashboard();bindViews();
  };bindDashboard();loadBirthdays($('#birthdaysPanel'));$('#dashboardPeriod').onchange=update;if($('#dashboardChurch'))$('#dashboardChurch').onchange=update}
 
+ if(view==='discipleship')window.VideiraDiscipleship.mount($('#discipleshipPanel'),call,esc,db.profile.role==='discipulador');
  if(view==='cell')bindCellFilters();
  if(view==='person'){
   const search=$('#memberSearch');
@@ -646,7 +650,7 @@ function bind(){
  document.querySelectorAll('[data-call-archive]').forEach(button=>button.onclick=async()=>{if(busy)return;const restore=button.dataset.restore==='true';if(!confirm(restore?'Restaurar esta chamada nos relatórios?':'Excluir esta chamada dos relatórios? Você poderá restaurá-la em Chamadas excluídas.'))return;busy=true;button.disabled=true;try{await call('meeting_archive',{id:button.dataset.callArchive,restore});await reload();render();status(restore?'Chamada restaurada.':'Chamada excluída. Disponível em Chamadas excluídas.')}catch(e){status(e.message,true);button.disabled=false}finally{busy=false}});
  if(view==='reports'){const update=()=>{try{const filter={church:$('[name=filterChurch]').value,network:$('[name=filterNetwork]').value,from:$('[name=from]').value,to:$('[name=to]').value};reportRows();$('#reportVisuals').innerHTML=window.VideiraDashboard.visuals(db,filter);window.VideiraDashboard.bind($('#reportVisuals'),db,filter);bindViews();$('#reportTable').innerHTML=table(['Igreja','Município','Células','Pessoas','Membros','Visitantes','Presenças','Registros','Frequência'],reportRows().map(r=>[...r.map(esc),r[7]?Math.round(100*r[6]/r[7])+'%':'—']));status('')}catch(e){$('#reportVisuals').innerHTML='';$('#reportTable').innerHTML='';status(e.message,true)}};document.querySelectorAll('.report-filters input,.report-filters select').forEach(x=>x.onchange=update);update();$('#downloadExcel').onclick=()=>{try{const rows=reportRows();if(!rows.length)throw Error('Não há igrejas neste filtro.');const period=[$('[name=from]').value||'Primeiro registro',$('[name=to]').value||'Último registro'].join(' até '),bytes=createReportXlsx({rows,title:'Relatório · '+roles[db.profile.role],scope:roles[db.profile.role]+' / '+($('[name=filterChurch]').selectedOptions[0].textContent)+' / '+($('[name=filterNetwork]').selectedOptions[0].textContent),person:db.profile.display_name,period,issued:new Date().toLocaleString('pt-BR'),real:true}),url=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})),a=document.createElement('a');a.href=url;a.download='videira-relatorio-'+new Date().toISOString().slice(0,10)+'.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000)}catch(e){status(e.message,true)}};}
 }
-async function save(action,data){busy=true;document.querySelectorAll('form button').forEach(b=>b.disabled=true);status('Salvando no Supabase…');try{const result=await call(action,data);await reload();edit=null;render();status(action==='meeting'?`Encontro salvo. ${result.present} presentes; ${result.converted} visitante(s) convertido(s) em membro.`:'Cadastro salvo no Supabase.')}catch(e){status(e.message,true);document.querySelectorAll('form button').forEach(b=>b.disabled=false)}finally{busy=false}}
+async function save(action,data){busy=true;document.querySelectorAll('form button').forEach(b=>b.disabled=true);status('Salvando no Supabase…');try{const result=await call(action,data);await reload();edit=null;render();status(action==='meeting'?`Encontro salvo. ${result.present} presente(s).`:'Cadastro salvo no Supabase.')}catch(e){status(e.message,true);document.querySelectorAll('form button').forEach(b=>b.disabled=false)}finally{busy=false}}
 if(new URLSearchParams(location.search).get('senha')==='alterada'){$('#message').textContent='Senha alterada. Entre novamente.';$('#message').style.color='#28644c'}
 const loginForm=$('#loginReal');
 const loginButton=loginForm.querySelector('button');
