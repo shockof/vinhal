@@ -1,33 +1,59 @@
 'use strict';
 const SLIDE_DEFAULTS={inicio:[{src:'assets/banner/SHK02722.jpg',alt:'Bandeira durante o louvor'},{src:'assets/banner/SHK02702.jpg',alt:'Pregação no encontro Radicais Livres'},{src:'assets/banner/SHK01022.jpg',alt:'Mensagem no palco dos Radicais Livres'},{src:'assets/banner/SHK02755.jpg',alt:'Momento de louvor da igreja'},{src:'assets/banner/SHK00847.jpg',alt:'Mensagem em um encontro da Videira'},{src:'assets/banner/SHK02747.jpg',alt:'Pregação no auditório'},{src:'assets/banner/SHK02753.jpg',alt:'Oração em comunidade'},{src:'assets/banner/SHK02735.jpg',alt:'Momento de oração dos Radicais Livres'}],kids:[{src:'assets/kids/SHK04707.jpg',alt:'Momento de louvor no seminário Kids'},{src:'assets/kids/IMG_1034.jpg',alt:'Mensagem com microfone e globo terrestre'},{src:'assets/kids/SHK04700.jpg',alt:'Momento de oração no encontro Kids'},{src:'assets/kids/SHK04715.jpg',alt:'Apresentação da Rede Kids'},{src:'assets/kids/IMG_1035.jpg',alt:'Mensagem no palco do seminário'},{src:'assets/kids/SHK04676.jpg',alt:'Público no Seminário de Louvor e Adoração'},{src:'assets/kids/SHK04778.jpg',alt:'Equipe Kids reunida no auditório'},{src:'assets/kids/SHK04755.jpg',alt:'Atividade no palco do seminário'}]};
 const slidePlayers=[];
+const slideDelay = 4000;
+const slideTextFields = [
+ {key:'title', label:'Título sobre a foto', selector:'h1', limit:120},
+ {key:'description', label:'Texto sobre a foto', selector:'p', limit:240}
+];
+function slideTextEditor(photo, index) {
+ return slideTextFields.map(({key,label,limit}) => `<label>${label} (opcional)
+  <textarea data-slide-copy="${index}" data-copy-key="${key}" rows="2" maxlength="${limit}">${esc(photo[key])}</textarea>
+ </label>`).join('');
+}
+function bindSlideText(hero) {
+ const fields = slideTextFields.map(({key,selector}) => {
+  const element = hero.querySelector('.hero-content ' + selector);
+  return {key,element,original:[...element.childNodes]};
+ });
+ return (photo, animate = false) => {
+  for (const {key,element,original} of fields) {
+   const custom = typeof photo[key] === 'string' ? photo[key].trim() : '';
+   if (custom ? element.textContent === custom : original.every((node,index) => node === element.childNodes[index]) && element.childNodes.length === original.length) continue;
+   if (custom) element.textContent = custom;
+   else element.replaceChildren(...original);
+   if (animate) element.animate([{opacity:.45,transform:'translateY(5px)'},{opacity:1,transform:'translateY(0)'}],{duration:420,easing:'ease-out'});
+  }
+ };
+}
+
 function slideList(d,group){return Array.isArray(d.slides?.[group])?d.slides[group].filter(x=>cmsImage(x.src)):SLIDE_DEFAULTS[group]}
-const slidesPageEditor=cmsPageEditor;cmsPageEditor=function(group){const base=slidesPageEditor(group);if(!['inicio','kids'].includes(group))return base;const photos=slideList(cmsWorking,group);return `<div class="slides-editor"><h2>Fotos que passam no destaque · ${group==='kids'?'Kids':'Início'}</h2><p>Selecione as fotos dos eventos desta área. A primeira aparece ao abrir a página; as demais passam a cada 6 segundos.</p><p class="help">Demonstração local: até 8 fotos PNG/JPEG/WebP de até 500 KB por área. Use somente imagens fictícias nos testes.</p><label>Selecionar fotos dos eventos<input id="slideFiles" type="file" accept="image/png,image/jpeg,image/webp" multiple></label><div class="slide-edit-grid">${photos.map((x,i)=>`<article><img src="${esc(x.src)}" alt="${esc(x.alt)}"><label>Descrição da foto ${i+1}<input data-slide-alt="${i}" value="${esc(x.alt)}" maxlength="180"></label><div class="toolbar"><button class="dash-button" data-slide-up="${i}" ${i===0?'disabled':''}>↑ Antes</button><button class="dash-button" data-slide-down="${i}" ${i===photos.length-1?'disabled':''}>↓ Depois</button><button class="dash-button" data-slide-remove="${i}">Retirar</button></div></article>`).join('')}</div><p>${photos.length} fotos selecionadas. ${photos.length===0?'Sem fotos: será exibida a imagem de capa da página.':''}</p><button class="dash-button" id="slideRestore">Restaurar fotos padrão</button></div>`+base};
+const slidesPageEditor=cmsPageEditor;cmsPageEditor=function(group){const base=slidesPageEditor(group);if(!['inicio','kids'].includes(group))return base;const photos=slideList(cmsWorking,group);return `<div class="slides-editor"><h2>Fotos que passam no destaque · ${group==='kids'?'Kids':'Início'}</h2><p>Selecione as fotos dos eventos desta área. As fotos passam a cada ${slideDelay/1000} segundos. Os textos opcionais aparecem junto da foto escolhida. Campos vazios usam o texto padrão da página.</p><p class="help">Demonstração local: até 8 fotos PNG/JPEG/WebP de até 500 KB por área. Use somente imagens fictícias nos testes.</p><label>Selecionar fotos dos eventos<input id="slideFiles" type="file" accept="image/png,image/jpeg,image/webp" multiple></label><div class="slide-edit-grid">${photos.map((x,i)=>`<article><img src="${esc(x.src)}" alt="${esc(x.alt)}"><label>Descrição da foto ${i+1}<input data-slide-alt="${i}" value="${esc(x.alt)}" maxlength="180"></label>${slideTextEditor(x,i)}<div class="toolbar"><button class="dash-button" data-slide-up="${i}" ${i===0?'disabled':''}>↑ Antes</button><button class="dash-button" data-slide-down="${i}" ${i===photos.length-1?'disabled':''}>↓ Depois</button><button class="dash-button" data-slide-remove="${i}">Retirar</button></div></article>`).join('')}</div><p>${photos.length} fotos selecionadas. ${photos.length===0?'Sem fotos: será exibida a imagem de capa da página.':''}</p><button class="dash-button" id="slideRestore">Restaurar fotos padrão</button></div>`+base};
 function editSlides(){cmsWorking.slides={...cmsWorking.slides};cmsWorking.slides[cmsActive]=cmsClone(slideList(cmsWorking,cmsActive));return cmsWorking.slides[cmsActive]}
-const slidesBind=cmsBind;cmsBind=function(){slidesBind();if(!$('#slideFiles'))return;$('#slideFiles').onchange=async e=>{const files=[...e.target.files];if(!files.length)return;const currentPhotos=slideList(cmsWorking,cmsActive);if(currentPhotos.length+files.length>8)return toast('Use até 8 fotos por área. Retire fotos antes de adicionar outras.');cmsBusy=true;try{const photos=[];for(const file of files){const src=await imageFile({files:[file]});photos.push({src,alt:'Foto de evento · '+file.name.replace(/\.[^.]+$/,'')})}editSlides().push(...photos);cmsMarkDirty();cmsRender();toast('Fotos adicionadas ao rascunho. Salve, visualize e publique.')}catch(err){toast(err.message)}finally{cmsBusy=false}};for(const el of $$('[data-slide-alt]'))el.oninput=()=>{editSlides()[Number(el.dataset.slideAlt)].alt=el.value;cmsMarkDirty()};for(const el of $$('[data-slide-remove]'))el.onclick=()=>{editSlides().splice(Number(el.dataset.slideRemove),1);cmsMarkDirty();cmsRender()};for(const [selector,key,delta] of [['[data-slide-up]','slideUp',-1],['[data-slide-down]','slideDown',1]])for(const el of $$(selector))el.onclick=()=>{const list=editSlides(),i=Number(el.dataset[key]),j=i+delta;if(j<0||j>=list.length)return;[list[i],list[j]]=[list[j],list[i]];cmsMarkDirty();cmsRender()};$('#slideRestore').onclick=()=>{cmsWorking.slides={...cmsWorking.slides};delete cmsWorking.slides[cmsActive];cmsMarkDirty();cmsRender()}};
+const slidesBind=cmsBind;cmsBind=function(){slidesBind();if(!$('#slideFiles'))return;$('#slideFiles').onchange=async e=>{const files=[...e.target.files];if(!files.length)return;const currentPhotos=slideList(cmsWorking,cmsActive);if(currentPhotos.length+files.length>8)return toast('Use até 8 fotos por área. Retire fotos antes de adicionar outras.');cmsBusy=true;try{const photos=[];for(const file of files){const src=await imageFile({files:[file]});photos.push({src,alt:'Foto de evento · '+file.name.replace(/\.[^.]+$/,'')})}editSlides().push(...photos);cmsMarkDirty();cmsRender();toast('Fotos adicionadas ao rascunho. Salve, visualize e publique.')}catch(err){toast(err.message)}finally{cmsBusy=false}};for(const el of $$('[data-slide-copy]'))el.oninput=()=>{editSlides()[Number(el.dataset.slideCopy)][el.dataset.copyKey]=el.value;cmsMarkDirty()};for(const el of $$('[data-slide-alt]'))el.oninput=()=>{editSlides()[Number(el.dataset.slideAlt)].alt=el.value;cmsMarkDirty()};for(const el of $$('[data-slide-remove]'))el.onclick=()=>{editSlides().splice(Number(el.dataset.slideRemove),1);cmsMarkDirty();cmsRender()};for(const [selector,key,delta] of [['[data-slide-up]','slideUp',-1],['[data-slide-down]','slideDown',1]])for(const el of $$(selector))el.onclick=()=>{const list=editSlides(),i=Number(el.dataset[key]),j=i+delta;if(j<0||j>=list.length)return;[list[i],list[j]]=[list[j],list[i]];cmsMarkDirty();cmsRender()};$('#slideRestore').onclick=()=>{cmsWorking.slides={...cmsWorking.slides};delete cmsWorking.slides[cmsActive];cmsMarkDirty();cmsRender()}};
 function refreshSlides(d){
- for(const player of slidePlayers)player.dispose();slidePlayers.length=0;
  for(const group of ['inicio','kids']){
   const hero=$('#page-'+group+' .hero'),image=hero.querySelector('.hero-image');
   hero.querySelector('.slide-controls')?.remove();hero.querySelectorAll('.slide-outgoing').forEach(x=>x.remove());
   const list=slideList(d,group);if(!list.length)continue;
+  const paintText=bindSlideText(hero);
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');let index=0,paused=reduced.matches,request=0,disposed=false;
   const controls=document.createElement('div');controls.className='slide-controls';controls.setAttribute('aria-label','Fotos dos eventos');
   controls.innerHTML=`<div class="slide-dots" role="group" aria-label="Escolher foto">${list.map((x,i)=>`<button type="button" class="slide-dot" aria-label="Ver foto ${i+1} de ${list.length}"><span></span></button>`).join('')}</div>`;
   hero.append(controls);const dots=[...controls.querySelectorAll('.slide-dot')];
   const paint=()=>{controls.querySelector('.slide-dots').style.setProperty('--slide-index',index);dots.forEach((dot,i)=>{dot.classList.toggle('active',i===index);dot.setAttribute('aria-current',i===index?'true':'false')})};
-  async function select(next){if(next===index)return;const token=++request,loader=new Image();loader.src=list[next].src;try{await loader.decode()}catch{return}if(disposed||token!==request)return;
+  async function select(next){const token=++request;if(next===index)return;const loader=new Image();loader.src=list[next].src;try{await loader.decode()}catch{return}if(disposed||token!==request)return;
    image.getAnimations().forEach(a=>a.cancel());hero.querySelectorAll('.slide-outgoing').forEach(x=>x.remove());
    const old=image.cloneNode();old.className='slide-outgoing';old.alt='';old.setAttribute('aria-hidden','true');image.after(old);
-   index=next;image.src=list[index].src;image.alt=list[index].alt||'Foto de evento';paint();const rail=controls.querySelector('.slide-dots');rail.classList.remove('is-moving');void rail.offsetWidth;if(!reduced.matches)rail.classList.add('is-moving');
+   index=next;image.src=list[index].src;image.alt=list[index].alt||'Foto de evento';paintText(list[index],!reduced.matches);paint();const rail=controls.querySelector('.slide-dots');rail.classList.remove('is-moving');void rail.offsetWidth;if(!reduced.matches)rail.classList.add('is-moving');
    if(reduced.matches){old.remove();return}
    image.animate([{transform:'scale(1.045)'},{transform:'scale(1)'}],{duration:1000,easing:'cubic-bezier(.2,.65,.3,1)'});
    const fade=old.animate([{opacity:1},{opacity:0}],{duration:850,easing:'ease-in-out',fill:'forwards'});fade.onfinish=()=>old.remove();
   }
   dots.forEach((dot,i)=>dot.onclick=()=>select(i));controls.hidden=list.length<2;
-  image.src=list[0].src;image.alt=list[0].alt||'Foto de evento';paint();
-  const timer=setInterval(()=>{if(!paused&&!document.hidden&&hero.closest('.page-section').classList.contains('active')&&!hero.contains(document.activeElement)&&!hero.matches(':hover'))select((index+1)%list.length)},6000);
-  slidePlayers.push({dispose(){disposed=true;request++;clearInterval(timer);image.getAnimations().forEach(a=>a.cancel())}});
+  image.src=list[0].src;image.alt=list[0].alt||'Foto de evento';paintText(list[0]);paint();
+  const timer=setInterval(()=>{if(!paused&&!document.hidden&&hero.closest('.page-section').classList.contains('active')&&!hero.contains(document.activeElement)&&!hero.matches(':hover'))select((index+1)%list.length)},slideDelay);
+  slidePlayers.push({dispose(){disposed=true;request++;clearInterval(timer);paintText({});image.getAnimations().forEach(a=>a.cancel())}});
  }
 }
-const slidesApply=applyContent;applyContent=function(d){slidesApply(d);refreshSlides(d)};publicRefresh();
+const slidesApply=applyContent;applyContent=function(d){for(const player of slidePlayers)player.dispose();slidePlayers.length=0;slidesApply(d);refreshSlides(d)};publicRefresh();
