@@ -16,6 +16,17 @@ window.VideiraPersonReports = (() => {
   const entityOptions = (items, all) => `<option value="">${all}</option>` +
    items.map(item => `<option value="${esc(item.id)}">${esc(item.name)}</option>`).join('');
   const courseOptions = state => choices(Object.entries(courses).map(([key,label]) => [`${state}:${key}`,label]));
+  const cellStatuses = [['','Todas as situações'],['active','Está acontecendo'],['paused','Não está acontecendo']];
+  const cellFilterMarkup = `<article class="panel"><h2>Relatórios de células</h2>
+   <form id="cellReportFilters" class="report-filters">
+    ${select('church','Igreja',entityOptions(db.churches,'Todas as igrejas'))}
+    ${select('network','Rede',entityOptions(db.networks,'Todas as redes'))}
+    ${select('cell','Célula',entityOptions(db.cells,'Todas as células'))}
+    ${select('status','Situação',choices(cellStatuses))}
+    <label>Data inicial<input type="date" name="from"></label>
+    <label>Data final<input type="date" name="to"></label>
+    <div class="actions wide"><button type="submit">Exportar relatório de células em PDF</button></div>
+   </form><p id="cellReportStatus" role="status" hidden></p></article>`;
   root.innerHTML = `<article class="panel"><form id="personReportFilters" class="report-filters">
     ${select('church','Igreja',entityOptions(db.churches,'Todas as igrejas'))}
     ${select('network','Rede',entityOptions(db.networks,'Todas as redes'))}
@@ -27,10 +38,11 @@ window.VideiraPersonReports = (() => {
     <div class="actions wide"><button type="submit">Exportar em PDF</button></div>
     <small class="wide">No menu de impressão, escolha a opção para salvar como PDF. Pendências consideram Cursão e CTL de membros fora da Rede Kids.</small>
    </form><p id="personReportStatus" role="status" hidden></p></article>
+   ${cellFilterMarkup}
    <section id="personReportPrint" class="person-report-print" aria-label="Relatório para impressão"></section>`;
 
-  const form = root.querySelector('form');
-  const feedback = root.querySelector('[role=status]');
+  const form = root.querySelector('#personReportFilters');
+  const feedback = root.querySelector('#personReportStatus');
   const printable = root.querySelector('#personReportPrint');
   const button = form.querySelector('button');
   const {church, network} = form.elements;
@@ -89,9 +101,7 @@ window.VideiraPersonReports = (() => {
       person.cell.name,person.category,yesNo(person.is_tither),person.baptized || 'Não informado',
       person.courses.map(key => courses[key]).filter(Boolean).join(', '),person.courseVisible && isPending(person) ? 'Sim' : '—'
      ].map(value => `<td>${esc(value || '—')}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
-    document.body.classList.add('printing-person-report');
-    window.addEventListener('afterprint', () => document.body.classList.remove('printing-person-report'), {once:true});
-    window.print();
+    printReport();
    } catch (error) {
     feedback.textContent = error.message;
     feedback.hidden = false;
@@ -99,6 +109,78 @@ window.VideiraPersonReports = (() => {
     button.disabled = false;
    }
   };
+  function printReport() {
+    document.body.classList.add('printing-person-report');
+    window.addEventListener('afterprint', () => document.body.classList.remove('printing-person-report'), {once:true});
+    window.print();
+  }
+
+  const cellForm = root.querySelector('#cellReportFilters');
+  const cellFeedback = root.querySelector('#cellReportStatus');
+  const filters = cellForm.elements;
+  const cellMatchesScope = cell => (!filters.church.value || cell.church_id === filters.church.value)
+   && (!filters.network.value || cell.network_id === filters.network.value);
+  function updateOptions(control, items, all) {
+   const previous = control.value;
+   control.innerHTML = entityOptions(items, all);
+   if (items.some(item => item.id === previous)) control.value = previous;
+  }
+  function updateCellOptions() {
+   updateOptions(filters.cell, db.cells.filter(cellMatchesScope), 'Todas as células');
+  }
+  filters.church.onchange = () => {
+   updateOptions(filters.network, db.networks.filter(net => !filters.church.value || net.church_id === filters.church.value), 'Todas as redes');
+   updateCellOptions();
+  };
+  filters.network.onchange = updateCellOptions;
+  cellForm.addEventListener('change', () => { cellFeedback.hidden = true; });
+  cellForm.onsubmit = event => {
+   event.preventDefault();
+   const {cell, status, from, to} = Object.fromEntries(new FormData(cellForm));
+   const selected = db.cells.filter(item => cellMatchesScope(item) && (!cell || item.id === cell)
+    && (!status || Boolean(item.is_paused) === (status === 'paused')));
+   const problem = from && to && from > to ? 'A data final deve ser igual ou posterior à data inicial.'
+    : selected.length ? '' : 'Nenhuma célula corresponde aos filtros.';
+   cellFeedback.textContent = problem;
+   cellFeedback.hidden = !problem;
+   if (problem) return;
+
+   const totals = new Map(selected.map(item => [item.id, {members:0, visitors:0, meetings:0, present:0, absent:0}]));
+   for (const person of db.people) {
+    const count = totals.get(person.cell_id);
+    if (!count || person.active === false) continue;
+    if (person.category === 'Membro') count.members++;
+    if (person.category === 'Visitante') count.visitors++;
+   }
+   const meetingTotals = new Map();
+   for (const meeting of db.meetings) {
+    const count = totals.get(meeting.cell_id);
+    if (!count || meeting.deleted_at || (from && meeting.meeting_date < from) || (to && meeting.meeting_date > to)) continue;
+    count.meetings++;
+    meetingTotals.set(meeting.id, count);
+   }
+   for (const attendance of db.attendance) {
+    const count = meetingTotals.get(attendance.meeting_id);
+    if (!count) continue;
+    if (attendance.present === true) count.present++;
+    if (attendance.present === false) count.absent++;
+   }
+   const headings = ['Célula','Igreja','Rede','Situação','Membros atuais','Visitantes atuais','Encontros','Presenças','Faltas','Frequência'];
+   const dateLabel = value => value.split('-').reverse().join('/');
+   const period = [from && `desde ${dateLabel(from)}`, to && `até ${dateLabel(to)}`].filter(Boolean).join(' ');
+   printable.innerHTML = `<h1>Relatório de células · Igreja Videira</h1>
+    <p>${selected.length} célula(s) · ${period || 'Todo o histórico de encontros'}</p>
+    <table><thead><tr>${headings.map(title => `<th scope="col">${title}</th>`).join('')}</tr></thead>
+    <tbody>${selected.map(item => {
+     const {members, visitors, meetings, present, absent} = totals.get(item.id);
+     const frequency = present + absent ? `${Math.round(100 * present / (present + absent))}%` : '—';
+     return `<tr>${[item.name,churches.get(item.church_id)?.name,networks.get(item.network_id)?.name,
+      cellStatuses[item.is_paused ? 2 : 1][1],members,visitors,meetings,present,absent,frequency]
+      .map(value => `<td>${esc(value ?? '—')}</td>`).join('')}</tr>`;
+    }).join('')}</tbody></table>`;
+   printReport();
+  };
+
  }
  return {mount};
 })();
