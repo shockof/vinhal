@@ -1,24 +1,30 @@
 'use strict';
-window.VideiraLeadershipPhone = (() => {
- const attributes = 'maxlength="40" autocomplete="tel-national" inputmode="tel" placeholder="(82) 91234-5678"';
- function format(value) {
+window.VideiraPhone = (() => {
+ const attributes = 'maxlength="40" autocomplete="tel-national" inputmode="tel" placeholder="82 99999-9999"';
+ function nationalDigits(value) {
   const digits = value.replace(/\D/g, '');
-  const local = digits.length === 13 && digits.startsWith('55') ? digits.slice(2) : digits;
-  if (local.length <= 2) return local;
-  const area = local.slice(0, 2);
-  const number = local.slice(2);
-  return '(' + area + ') ' + number.slice(0, 5) + (number.length > 5 ? '-' + number.slice(5) : '');
+  return /^55\d{10,11}$/.test(digits) ? digits.slice(2) : digits;
  }
- function bind(input) {
-  const isMobile = value => /^[1-9]\d9\d{8}$/.test(value.replace(/\D/g, ''));
-  const initial = input.value;
-  const formatted = format(initial);
-  if (isMobile(formatted)) input.value = formatted;
-  input.addEventListener('input', () => {
-   const value = format(input.value);
-   if (isMobile(value)) input.value = value;
-   input.setCustomValidity(input.value && !isMobile(value) ? 'Informe um celular com DDD e nove dígitos, como (82) 91234-5678.' : '');
-  });
+ function format(value) {
+  if (!/^[+\d\s().-]+$/.test(value) || (value.trim().startsWith('+') && !/^\+55\d{10,11}$/.test(value.replace(/[\s().-]/g, '')))) return value;
+  const digits = nationalDigits(value);
+  if (!/^[1-9]\d{9,10}$/.test(digits)) return value;
+  return digits.slice(0, 2) + ' ' + digits.slice(2, -4) + '-' + digits.slice(-4);
+ }
+ function bind(input, {mobileOnly = false} = {}) {
+  if (input.dataset.phoneFormatting) return;
+  input.dataset.phoneFormatting = 'true';
+  input.value = format(input.value);
+  function update() {
+   const value = input.value.trim();
+   const valid = !value || (/^[+\d\s().-]+$/.test(value) &&
+    (!value.startsWith('+') || /^\+55[\s(\d]/.test(value)) &&
+    (mobileOnly ? /^[1-9]\d9\d{8}$/ : /^[1-9]\d{9,10}$/).test(nationalDigits(value)));
+   if (valid) input.value = format(value);
+   input.setCustomValidity(valid ? '' : 'Informe um número brasileiro com DDD. Ex.: 82 99999-9999.');
+  }
+  input.addEventListener('input', update);
+  input.addEventListener('blur', () => { input.value = format(input.value); });
   input.form.addEventListener('reset', () => input.setCustomValidity(''));
  }
  return {attributes, bind};

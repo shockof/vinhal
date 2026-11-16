@@ -158,6 +158,7 @@ function renderRegistrations(event, isPreview) {
   panel.hidden = !enabled;
   button.disabled = true;
   form.reset();
+  window.VideiraPhone.bind(form.elements.whatsapp);
   const cpf = form.elements.cpf;
   cpf.oninput = () => {
     cpf.value = cpf.value.replace(/\D/g, '').slice(0, 11)
