@@ -122,13 +122,14 @@ window.VideiraProfile=(()=>{
     dialog.querySelector('[data-apply]').onclick=()=>{
      try{
       const output=document.createElement('canvas');
-      output.width=output.height=diameter;
+      const avatarSize=384;
+      output.width=output.height=avatarSize;
       const final=output.getContext('2d');
       const size=diameter/scale();
       final.fillStyle='#fff';
-      final.fillRect(0,0,diameter,diameter);
-      final.drawImage(image,x-size/2,y-size/2,size,size,0,0,diameter,diameter);
-      const value=output.toDataURL('image/jpeg',0.85).split(',')[1];
+      final.fillRect(0,0,avatarSize,avatarSize);
+      final.drawImage(image,x-size/2,y-size/2,size,size,0,0,avatarSize,avatarSize);
+      const value=output.toDataURL('image/jpeg',0.80).split(',')[1];
       if(!value||value.length>700000)throw Error('Escolha uma foto menor.');
       crop={value,position:{zoom,x,y}};
       dialog.close();

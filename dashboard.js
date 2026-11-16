@@ -123,7 +123,7 @@ function personPhotos(body, requestPhoto) {
     observer.unobserve(entry.target);
     load(entry.target);
    }
-  });
+  }, {rootMargin:'160px'});
   avatars.forEach(avatar => observer.observe(avatar));
  };
 }

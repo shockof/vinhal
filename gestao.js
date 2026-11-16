@@ -40,7 +40,23 @@ function storeSession(value){
  try{sessionStore?.setItem(sessionKey,JSON.stringify(value))}catch{}
 }
 
+const avatarRequests = new Map();
+function cachedAvatar(key, load) {
+ const now = Date.now();
+ const cached = avatarRequests.get(key);
+ if (cached && cached.expires > now) return cached.result;
+ if (avatarRequests.size >= 120) avatarRequests.delete(avatarRequests.keys().next().value);
+ const entry = {expires:now + 60000};
+ entry.result = load().catch(error => {
+  if (avatarRequests.get(key) === entry) avatarRequests.delete(key);
+  throw error;
+ });
+ avatarRequests.set(key,entry);
+ return entry.result;
+}
+
 function clearSession(){
+ avatarRequests.clear();
  session=null;
  db=null;
  ownProfile=null;
@@ -54,13 +70,15 @@ async function request(action,data,token){
  const controller=new AbortController();
  const timer=setTimeout(()=>controller.abort(),30000);
  try{
-  const rpc={discipleship_person_field:'videira_discipleship_person_field',report_courses:'videira_report_courses',discipleship:'videira_discipleship',link_existing_leader:'videira_link_existing_leader'}[action];
+  const rpc={discipleship_person_field:'videira_discipleship_person_field',report_courses:'videira_report_courses',discipleship:'videira_discipleship',link_existing_leader:'videira_link_existing_leader',
+   member_leader_links:'videira_member_leader_links',person_photo:'videira_portal'}[action];
+  const payload=action==='person_photo'?{p_action:action,p_data:data}:rpc?(data||{}):action==='login'?{action,...data}:{action,data};
   const response=await fetch(rpc?cfg.url+'/rest/v1/rpc/'+rpc:cfg.gateway,{
    method:'POST',
    headers:{'Content-Type':'application/json',apikey:cfg.publicKey,
     Authorization:'Bearer '+(rpc?token:cfg.publicKey),
     ...(rpc?{}:{'X-Videira-Session':token||''})},
-   body:JSON.stringify(rpc?(data||{}):action==='login'?{action,...data}:{action,data}),
+   body:JSON.stringify(payload),
    signal:controller.signal
   });
   const result=await response.json();
@@ -247,7 +265,13 @@ function linkedAccountTable(){
  }));
 }
 function linkedAccountCount(){const n=linkedProfiles().length;return n+' de '+db.profiles.length+' '+(db.profiles.length===1?'conta':'contas')}
-const requestLeadershipPhoto = (id, photo) => call('leadership_photo', {id, photo});
+async function requestLeadershipPhoto(id, photo) {
+ const key = 'leadership:' + id;
+ if (photo === undefined) return cachedAvatar(key,()=>call('leadership_photo',{id}));
+ const result = await call('leadership_photo',{id,photo});
+ avatarRequests.delete(key);
+ return result;
+}
 function accounts(){const master=db.profile.role==='master';return `${master?`<article class="panel"><h2>Cadastrar acesso da liderança</h2><p>Crie o acesso e depois vincule o líder ou discipulador à célula correspondente na aba Células.</p>${`<form id="accountForm" class="gridform">${window.VideiraLeadershipPhoto.field()}${field('display_name','Nome completo','','text','required maxlength="180" autocomplete="name"')}${field('username','Nome de usuário','','text','required minlength="3" maxlength="50" pattern="[a-z0-9][a-z0-9._-]{2,49}" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Ex.: maria.silva"')}${field('phone','Telefone celular (opcional)','','tel',window.VideiraLeadershipPhone.attributes)}${field('birth_date','Data de nascimento (opcional)','','date','autocomplete="bday"')}${field('email','E-mail (opcional)','','email','maxlength="254" autocomplete="off"')}${select('church_id','Igreja',db.churches)}<label>Rede<select name="network_id" required><option value="">Selecione a igreja primeiro</option></select></label><label>Função<select name="role" required><option value="lider">Líder de célula</option><option value="master">Master</option><option value="supervisor">Pastor Supervisor</option><option value="supervisora_kids">Pastora Supervisora</option><option value="discipulador">Discipulador</option><option value="predio">Pastor de Prédio</option><option value="pastor">Pastor de Rede</option><option value="obreiro">Obreiro</option></select></label>${field('password','Senha inicial','','password','required minlength="8" maxlength="128" autocomplete="new-password"')}${field('confirm_password','Confirme a senha inicial','','password','required minlength="8" maxlength="128" autocomplete="new-password"')}<div class="notice wide">A senha inicial precisa ter de 8 a 128 caracteres. Entregue o usuário e a senha à pessoa por um meio privado. O e-mail é opcional: o acesso funciona com usuário e senha. Este cadastro não envia e-mail automaticamente. O e-mail não será exibido na lista de liderança nem no site público.</div><div class="notice wide" id="accountScope"></div><div class="wide actions"><button>Criar cadastro e acesso</button></div></form>`}</article>`:''}<article class="panel"><div class="account-list-toolbar"><div><h2>Contas vinculadas</h2><small id="accountCount" aria-live="polite">${linkedAccountCount()}</small></div><div class="account-list-filters"><label>Pesquisar contas<input id="accountSearch" type="search" value="${esc(accountSearch)}" placeholder="Nome, usuário, função, igreja, rede ou estado…" autocomplete="off"></label><label>Filtrar por função<select id="accountRoleFilter"><option value="">Todas as funções</option>${['master','supervisor','predio','pastor','obreiro','discipulador','lider'].map(role=>`<option value="${role}" ${accountRoleFilter===role?'selected':''}>${roles[role]}</option>`).join('')}</select></label><label>Filtrar por igreja<select id="accountChurchFilter"><option value="">Todas as igrejas</option><option value="__global__" ${accountChurchFilter==='__global__'?'selected':''}>Acesso a todas (Master/Supervisor)</option>${db.churches.slice().sort((a,b)=>accountNameOrder.compare(a.name,b.name)).map(c=>`<option value="${c.id}" ${accountChurchFilter===c.id?'selected':''}>${esc(c.name)}</option>`).join('')}</select></label></div></div><p class="account-order-note">Master · Pastor Supervisor · Pastor de prédio · Pastores de rede / Obreiros · Discipuladores · Líderes</p><div id="linkedAccounts">${linkedAccountTable()}</div></article>`}
 
 function bindBirthdayCarousel(panel) {
@@ -359,7 +383,7 @@ function bindMemberPhoto(form,id){
   img.alt=alt;
   preview.replaceChildren(img);
  };
- if(id)call('person_photo',{id}).then(({photo_base64})=>{
+ if(id)requestPersonPhoto(id).then(photo_base64=>{
   if(!form.isConnected||!photo_base64)return;
   if(!original)original='data:image/jpeg;base64,'+photo_base64;
   if(!photo.image){
@@ -410,7 +434,7 @@ async function loadPersonPhotos(list){
    try {
     let url=avatar.dataset.photoUrl;
     if(!url){
-     const {photo_base64}=await call('person_photo',{id:avatar.dataset.personPhoto});
+     const photo_base64=await requestPersonPhoto(avatar.dataset.personPhoto);
      if(!photo_base64||!avatar.isConnected)continue;
      url='data:image/jpeg;base64,'+photo_base64;
     }
@@ -451,7 +475,7 @@ window.addEventListener('popstate',()=>{
  if(session&&db)renderManagementRoute();
 });
 
-const requestPersonPhoto = async id => (await call('person_photo',{id})).photo_base64;
+const requestPersonPhoto = id => cachedAvatar('person:'+id,async ()=>(await call('person_photo',{id})).photo_base64);
 
 async function showIdentityPhoto() {
  const avatar = $('#identityPhoto');
@@ -545,7 +569,7 @@ function bind(){
   updateAccountFilters();
  }status('Conta atualizada no Supabase.')},onReset:()=>status('Senha da conta redefinida.')}));
  const accountList=$('#linkedAccounts');
- const accountPhotoLoader=()=>window.VideiraDashboard.personPhotos(accountList,async id=>(await requestLeadershipPhoto(id)).photo||(await call('linked_member_avatar',{id})).photo);
+ const accountPhotoLoader=()=>window.VideiraDashboard.personPhotos(accountList,async id=>(await requestLeadershipPhoto(id)).photo||await cachedAvatar('linked:'+id,async ()=>(await call('linked_member_avatar',{id})).photo));
  let bindAccountPhotos=accountList&&db.profile.role==='master'?accountPhotoLoader():null;
  const updateAccountFilters=()=>{
   accountList.innerHTML=linkedAccountTable();
@@ -600,6 +624,7 @@ function bind(){
      confirm.disabled=cancel.disabled=accountSelect.disabled=true;
      try{
       await call('link_existing_leader',{p_member_id:member.id,p_profile_id:profileId});
+      avatarRequests.delete('linked:'+profileId);
       if(!form.isConnected)return;
       const account=db.profiles.find(profile=>profile.id===profileId);
       linkContainer.replaceChildren();
@@ -722,6 +747,7 @@ function bind(){
  if(view==='reports')window.VideiraPersonReports.mount($('#personReports'),db,call,esc);
 }
 async function save(action,data){busy=true;document.querySelectorAll('form button').forEach(b=>b.disabled=true);status('Salvando no Supabase…');try{const result=await call(action,data);
+ if(action==='person')avatarRequests.clear();
  if(action==='cell'){
   try{localStorage.setItem('videira-public-cells-changed',String(Date.now()))}catch{}
  }
