@@ -410,14 +410,34 @@ svg.meeting-card-icon{width:28px;height:28px;flex-shrink:0}
 }
 
 @media (min-width: 901px) {
- #linkedAccounts table { width: 100%; min-width: 0; table-layout: fixed; white-space: normal; }
- #linkedAccounts :is(th, td) { padding-inline: clamp(4px, 0.7vw, 12px); overflow-wrap: anywhere; }
- #linkedAccounts th:nth-child(1) { width: 25%; }
- #linkedAccounts th:nth-child(2) { width: 17%; }
+ #linkedAccounts,
+ #linkedAccounts .table-scroll {
+  min-width: 0;
+  max-width: 100%;
+ }
+ #linkedAccounts table {
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+  white-space: normal;
+ }
+ #linkedAccounts :is(th, td) {
+  padding-inline: clamp(6px, 0.7vw, 12px);
+  overflow-wrap: anywhere;
+ }
+ #linkedAccounts th:nth-child(1) { width: 24%; }
+ #linkedAccounts th:nth-child(2) { width: 15%; }
  #linkedAccounts th:nth-child(3) { width: 16%; }
- #linkedAccounts th:nth-child(5) { width: 9%; }
- #linkedAccounts th:nth-child(6) { width: 14%; }
+ #linkedAccounts th:nth-child(5) { width: 10%; }
+ #linkedAccounts th:nth-child(6) { width: clamp(104px, 10vw, 140px); }
  #linkedAccounts .directory-person { max-width: 100%; }
- #linkedAccounts .attendance-avatar { flex-shrink: 0; }
- #linkedAccounts [data-account-edit] { max-width: 100%; white-space: normal; padding-inline: 8px; }
+ #linkedAccounts .directory-person > * { min-width: 0; }
+ #linkedAccounts .attendance-avatar,
+ #linkedAccounts .directory-photo-button { flex: none; }
+ #linkedAccounts [data-account-edit] {
+  max-width: 100%;
+  white-space: normal;
+  font-size: .875rem;
+  padding-inline: 8px;
+ }
 }
