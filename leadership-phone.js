@@ -5,10 +5,11 @@ window.VideiraPhone = (() => {
   const digits = value.replace(/\D/g, '');
   return /^55\d{10,11}$/.test(digits) ? digits.slice(2) : digits;
  }
- function format(value) {
+ function format(value = '') {
+  if (value == null) return '';
   if (!/^[+\d\s().-]+$/.test(value) || (value.trim().startsWith('+') && !/^\+55\d{10,11}$/.test(value.replace(/[\s().-]/g, '')))) return value;
   const digits = nationalDigits(value);
-  if (!/^[1-9]\d{9,10}$/.test(digits)) return value;
+  if (!/^\d{10,11}$/.test(digits)) return value;
   return digits.slice(0, 2) + ' ' + digits.slice(2, -4) + '-' + digits.slice(-4);
  }
  function bind(input, {mobileOnly = false} = {}) {
@@ -27,5 +28,5 @@ window.VideiraPhone = (() => {
   input.addEventListener('blur', () => { input.value = format(input.value); });
   input.form.addEventListener('reset', () => input.setCustomValidity(''));
  }
- return {attributes, bind};
+ return {attributes, bind, format};
 })();
