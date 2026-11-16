@@ -138,7 +138,11 @@
     description.textContent = latest.description || '';
     description.hidden = !description.textContent;
   }
-  window.VideiraYouTube = {setFiles(value) { files = value; renderFiles(); renderFeatured(); }};
+  const catalogRequest = loadCatalog();
+  window.VideiraYouTube = {
+    getCatalog: () => catalogRequest,
+    setFiles(value) { files = value; renderFiles(); renderFeatured(); }
+  };
   window.VideiraYouTube.setFiles(cmsNormalize(preview && state.draft ? state.draft : state.published).wordFiles);
   openPlaylist();
 
@@ -156,7 +160,7 @@
     return catalog;
   }
 
-  loadCatalog().then(items => {
+  catalogRequest.then(items => {
     catalog = items;
     renderFeatured();
     const latest = catalog[0];
