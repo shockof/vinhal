@@ -70,7 +70,7 @@ async function request(action,data,token){
  const controller=new AbortController();
  const timer=setTimeout(()=>controller.abort(),30000);
  try{
-  const rpc={account_get:'videira_account_card',account_save:'videira_account_card',discipleship_person_field:'videira_discipleship_person_field',report_courses:'videira_report_courses',discipleship:'videira_discipleship',link_existing_leader:'videira_link_existing_leader',
+  const rpc={enroll_regular_leader:'videira_regular_leader_enroll',account_get:'videira_account_card',account_save:'videira_account_card',discipleship_person_field:'videira_discipleship_person_field',report_courses:'videira_report_courses',discipleship:'videira_discipleship',link_existing_leader:'videira_link_existing_leader',
    member_leader_links:'videira_member_leader_links',person_photo:'videira_portal'}[action];
   const payload=rpc==='videira_account_card'?{p_action:action==='account_get'?'get':'save',p_data:data}:action==='person_photo'?{p_action:action,p_data:data}:rpc?(data||{}):action==='login'?{action,...data}:{action,data};
   const response=await fetch(rpc?cfg.url+'/rest/v1/rpc/'+rpc:cfg.gateway,{
@@ -164,7 +164,7 @@ function entityForm(){const item=edit?db[list[view]].find(x=>x.id===edit):{};if(
   </div>`+field('full_name','Nome completo',item.full_name,'text','required maxlength="180"')+(!edit||memberTransferRoles.has(db.profile.role)
   ?select('cell_id','Célula',db.cells,item.cell_id)
   :`<label>Célula<input value="${esc(label(db.cells,item.cell_id))}" readonly></label>`)+field('phone','Telefone (opcional)',item.phone,'tel',window.VideiraPhone.attributes)+field('birth_date','Data de nascimento (opcional)',item.birth_date,'date','autocomplete="bday"')+`<label>Categoria<select name="category"><option value="Visitante">Visitante</option><option value="Membro" ${item.category==='Membro'?'selected':''}>Membro</option></select></label><label>Batismo<select name="baptized">${['Não informado','Sim','Não'].map(v=>`<option ${item.baptized===v?'selected':''}>${v}</option>`).join('')}</select></label><label>Estado civil<select name="marital_status">${['Não informado','Solteiro(a)','Casado(a)','Divorciado(a)','Viúvo(a)'].map(v=>`<option ${item.marital_status===v?'selected':''}>${v}</option>`).join('')}</select></label><label>Dizimista<select name="is_tither"><option value="">Não informado</option><option value="true" ${item.is_tither===true?'selected':''}>Sim</option><option value="false" ${item.is_tither===false?'selected':''}>Não</option></select></label>`;
- return `<article class="panel"><h2>${edit?'Editar cadastro':'Novo cadastro'}</h2><form id="entityForm" class="gridform">${fields}<div class="wide actions"><button>Salvar no Supabase</button>${edit?'<button type="button" class="secondary" id="cancelEdit">Cancelar edição</button>':''}</div></form>${view==='person'&&edit&&item.active&&item.category==='Membro'&&db.profile.role==='master'?'<div class="actions"><button class="secondary" id="createMemberLeader" type="button" hidden>Criar acesso de liderança</button><button class="secondary" id="linkExistingLeader" type="button" hidden>Vincular conta de liderança existente</button><span id="memberLeaderStatus" role="status"></span></div><div id="existingLeaderForm"></div>':''}${view==='person'?'<p><small>O acompanhamento do discipulado registra presenças e o início dos cursos.</small></p>':''}</article>`;
+ return `<article class="panel"><h2>${edit?'Editar cadastro':'Novo cadastro'}</h2><form id="entityForm" class="gridform">${fields}<div class="wide actions"><button>Salvar no Supabase</button>${edit?'<button type="button" class="secondary" id="cancelEdit">Cancelar edição</button>':''}</div></form>${view==='person'&&edit&&item.active&&item.category==='Membro'&&db.profile.role==='master'?'<div class="actions"><button class="secondary" id="createMemberLeader" type="button" hidden>Criar acesso de liderança</button><span id="memberLeaderStatus" role="status"></span></div>':''}${view==='person'?'<p><small>O acompanhamento do discipulado registra presenças e o início dos cursos.</small></p>':''}</article>`;
 }
 let cellSearch = '', cellStatus = '';
 
@@ -564,7 +564,9 @@ function bind(){
  }
  if(view==='site')window.VideiraSiteEditor.mount($('#siteEditor'),{call,profile:db.profile,config:cfg,getSession:()=>session});
  if(view==='profile')window.VideiraProfile.mount($('#myProfile'),{call,onSaved:async()=>{await reload();render();status('Perfil atualizado no Supabase.')},onPasswordChanged:()=>{clearSession();location.href='gestao.html?senha=alterada'}});
- const bindAccountEditors=()=>document.querySelectorAll('[data-account-edit]').forEach(button=>button.onclick=()=>window.VideiraAccountEditor.open({id:button.dataset.accountEdit,call,requestPhoto:requestLeadershipPhoto,churches:db.churches,networks:db.networks,roles,updateRoleOptions,assignKidsSupervisorScope,selfId:db.profile.id,onSaved:async()=>{await reload();if(accountList?.isConnected){
+ const bindAccountEditors=()=>document.querySelectorAll('[data-account-edit]').forEach(button=>button.onclick=()=>window.VideiraAccountEditor.open({id:button.dataset.accountEdit,call,requestPhoto:requestLeadershipPhoto,churches:db.churches,networks:db.networks,
+  regularCells:db.cells.filter(cell=>cell.active&&!cell.is_paused&&db.networks.some(network=>network.id===cell.network_id&&network.kind==='regular')),
+  people:db.people,roles,updateRoleOptions,assignKidsSupervisorScope,selfId:db.profile.id,onSaved:async()=>{await reload();if(accountList?.isConnected){
   bindAccountPhotos=accountPhotoLoader();
   updateAccountFilters();
  }status('Conta atualizada no Supabase.')},onReset:()=>status('Senha da conta redefinida.')}));
@@ -594,50 +596,6 @@ function bind(){
      : 'Acesso de liderança já vinculado.';
     return;
    }
-   const linkButton=$('#linkExistingLeader');
-   const linkContainer=$('#existingLeaderForm');
-   const linkedAccounts=new Set(Object.values(links));
-   const candidates=db.profiles.filter(profile=>['lider','discipulador'].includes(profile.role)&&profile.active&&!linkedAccounts.has(profile.id))
-    .map(profile=>({id:profile.id,label:[profile.display_name,'@'+profile.username,roleName(profile),
-     label(db.churches,profile.church_id),label(db.networks,profile.network_id)].join(' · ')}));
-   linkButton.hidden=false;
-   linkButton.onclick=()=>{
-    if(busy)return;
-    if(!candidates.length){
-     $('#memberLeaderStatus').textContent='Nenhuma conta de líder ou discipulador está disponível para vínculo.';
-     return;
-    }
-    linkContainer.innerHTML=`<form class="gridform">
-     ${select('profile_id','Conta de liderança',candidates,'','label')}
-     <div class="actions wide"><button>Vincular conta</button><button type="button" class="secondary">Cancelar</button></div>
-    </form>`;
-    const form=linkContainer.querySelector('form');
-    const accountSelect=form.elements.profile_id;
-    const [confirm,cancel]=form.querySelectorAll('button');
-    accountSelect.focus();
-    cancel.onclick=()=>{linkContainer.replaceChildren();linkButton.focus({preventScroll:true});};
-    form.onsubmit=async event=>{
-     event.preventDefault();
-     if(busy)return;
-     const profileId=accountSelect.value;
-     busy=true;
-     confirm.disabled=cancel.disabled=accountSelect.disabled=true;
-     try{
-      await call('link_existing_leader',{p_member_id:member.id,p_profile_id:profileId});
-      avatarRequests.delete('linked:'+profileId);
-      if(!form.isConnected)return;
-      const account=db.profiles.find(profile=>profile.id===profileId);
-      linkContainer.replaceChildren();
-      linkButton.hidden=createMemberLeader.hidden=true;
-      $('#memberLeaderStatus').textContent='Conta vinculada: '+account.display_name+' (@'+account.username+').';
-     }catch(error){
-      if(form.isConnected)$('#memberLeaderStatus').textContent=error.message;
-     }finally{
-      busy=false;
-      confirm.disabled=cancel.disabled=accountSelect.disabled=false;
-     }
-    };
-   };
    createMemberLeader.hidden=false;
    createMemberLeader.onclick=()=>{
     if(busy)return;
@@ -655,7 +613,7 @@ function bind(){
   const form=$('#accountForm');
   const photo=window.VideiraLeadershipPhoto.bind(form,()=>busy,requestLeadershipPhoto);
   const submit=form.querySelector('.actions.wide button');
-  const networks=()=>{const role=form.elements.role.value,global=['master','supervisor','supervisora_kids'].includes(role),old=form.elements.network_id.value,church=form.elements.church_id.value,building=role==='predio',optional=(role==='obreiro'&&!memberForLeaderAccess)||building||global;form.elements.church_id.parentElement.hidden=global;form.elements.network_id.parentElement.hidden=global||building;form.elements.church_id.disabled=global;form.elements.church_id.required=!global;form.elements.network_id.disabled=global||building;form.elements.network_id.required=!optional;form.elements.network_id.innerHTML=`<option value="">${global?'Todas as redes':optional?'Toda a igreja':'Selecione a rede'}</option>`+(global?'':db.networks.filter(n=>n.church_id===church&&(role!=='supervisora_kids'||n.kind==='kids')).map(n=>`<option value="${n.id}">${esc(n.name)}</option>`).join(''));if(!global&&Array.from(form.elements.network_id.options).some(option=>option.value===old))form.elements.network_id.value=old;$('#accountScope').textContent=role==='master'?'Master: acesso administrativo completo na organização, incluindo criação de contas.':role==='supervisor'?'Pastor Supervisor: acompanha todas as igrejas, redes e células da organização. Não cria contas Master.':role==='predio'?'Pastor de Prédio: gere todas as redes e células da igreja selecionada.':role==='supervisora_kids'?'Pastora Supervisora: acompanha as Redes Kids de todas as igrejas.':role==='pastor'?'Pastor de Rede: acompanha as células da rede selecionada.':role==='obreiro'?(db.networks.find(n=>n.id===form.elements.network_id.value)?.kind==='kids'?'Obreiro: acompanha somente a Rede Kids selecionada.':'Obreiro: acompanha as células da igreja selecionada.'):'Após criar o acesso, vincule esta pessoa como líder ou discipulador na aba Células. Até o vínculo, o painel ficará sem células.';};
+  const networks=()=>{const role=form.elements.role.value,global=['master','supervisor','supervisora_kids'].includes(role),old=form.elements.network_id.value,church=form.elements.church_id.value,building=role==='predio',optional=role==='obreiro'||building||global;form.elements.church_id.parentElement.hidden=global;form.elements.network_id.parentElement.hidden=global||building;form.elements.church_id.disabled=global;form.elements.church_id.required=!global;form.elements.network_id.disabled=global||building;form.elements.network_id.required=!optional;form.elements.network_id.innerHTML=`<option value="">${global?'Todas as redes':optional?'Toda a igreja':'Selecione a rede'}</option>`+(global?'':db.networks.filter(n=>n.church_id===church&&(role!=='supervisora_kids'||n.kind==='kids')).map(n=>`<option value="${n.id}">${esc(n.name)}</option>`).join(''));if(!global&&Array.from(form.elements.network_id.options).some(option=>option.value===old))form.elements.network_id.value=old;$('#accountScope').textContent=role==='master'?'Master: acesso administrativo completo na organização, incluindo criação de contas.':role==='supervisor'?'Pastor Supervisor: acompanha todas as igrejas, redes e células da organização. Não cria contas Master.':role==='predio'?'Pastor de Prédio: gere todas as redes e células da igreja selecionada.':role==='supervisora_kids'?'Pastora Supervisora: acompanha as Redes Kids de todas as igrejas.':role==='pastor'?'Pastor de Rede: acompanha as células da rede selecionada.':role==='obreiro'?(db.networks.find(n=>n.id===form.elements.network_id.value)?.kind==='kids'?'Obreiro: acompanha somente a Rede Kids selecionada.':'Obreiro: acompanha as células da igreja selecionada.'):'Após criar o acesso, vincule esta pessoa como líder ou discipulador na aba Células. Até o vínculo, o painel ficará sem células.';};
   const linkedMember=memberForLeaderAccess;
   if(linkedMember){
    form.elements.display_name.value=linkedMember.full_name;
@@ -663,11 +621,8 @@ function bind(){
    form.elements.birth_date.value=linkedMember.birth_date||'';
    form.elements.birth_date.readOnly=true;
    form.elements.role.value='lider';
-   for(const option of [...form.elements.role.options]){
-    if(!['lider','discipulador','pastor','obreiro','supervisora_kids'].includes(option.value))option.remove();
-   }
    form.elements.church_id.value=db.cells.find(cell=>cell.id===linkedMember.cell_id)?.church_id||'';
-   submit.textContent='Criar acesso vinculado';
+   submit.textContent='Criar acesso de liderança';
   }
   if(linkedMember)form.elements.phone.value=linkedMember.phone||'';
   window.VideiraUsername.bind(form.elements.username);

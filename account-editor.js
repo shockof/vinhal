@@ -1,7 +1,7 @@
 'use strict';
 window.VideiraAccountEditor=(()=>{
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
- async function open({id,call,requestPhoto,churches,networks,roles,updateRoleOptions,assignKidsSupervisorScope,selfId,onSaved,onReset}){
+ async function open({id,call,requestPhoto,churches,networks,regularCells,people,roles,updateRoleOptions,assignKidsSupervisorScope,selfId,onSaved,onReset}){
   const dialog=document.createElement('dialog');dialog.className='account-editor';dialog.innerHTML='<p>Carregando conta…</p>';document.body.append(dialog);dialog.showModal();dialog.addEventListener('close',()=>dialog.remove(),{once:true});let account;
   try{account=await call('account_get',{id})}catch(e){dialog.innerHTML='<p>'+esc(e.message)+'</p><button type="button">Fechar</button>';dialog.querySelector('button').onclick=()=>dialog.close();return}if(!dialog.isConnected)return;
   const field=(name,title,value='',type='text',extra='',labelAttrs='')=>`<label${labelAttrs}>${title}<input name="${name}" type="${type}" value="${esc(value)}" ${extra}></label>`;
@@ -15,6 +15,54 @@ window.VideiraAccountEditor=(()=>{
   updateRoleOptions?.(form);
   for(const key of ['role','church_id','network_id'])form.elements[key].addEventListener('change',()=>updateRoleOptions?.(form));
   form.onsubmit=async e=>{e.preventDefault();if(saving||photo.processing)return;saving=true;saveButton.disabled=true;message.textContent='Salvando alterações…';const data=Object.fromEntries(new FormData(form));data.card_name=data.username.trim().replace(/^@/,"").trim();data.username=window.VideiraUsername.login(data.card_name);if(!account.card_name&&data.card_name===account.username)delete data.card_name;data.id=id;data.active=form.elements.active.checked;if(id===selfId)data.role=account.role;try{if(!assignKidsSupervisorScope(data,account.network_id,form.elements.church_id.value))throw Error('Cadastre uma Rede Kids para salvar a Pastora Supervisora.');await call('account_save',data);if(photo.value!==undefined)await requestPhoto(id,photo.value);await onSaved();dialog.close()}catch(error){message.textContent=error.message;saveButton.disabled=false}finally{saving=false}};
+  if(account.active && regularCells.length){
+   const membership=document.createElement('section');
+   membership.className='account-password-section';
+   membership.innerHTML=`<h3>Participação como membro</h3>
+    <p>Para quem lidera mais de uma célula regular, a inscrição nas próprias células fica na que tiver menos membros.</p>
+    <form class="gridform">
+     <label>Célula regular<select name="cell_id" required><option value="">Selecione</option>${regularCells.map(cell=>`<option value="${esc(cell.id)}">${esc(cell.name)}</option>`).join('')}</select></label>
+     <label hidden>Cadastro nesta célula<select name="member_id" disabled></select></label>
+     <div class="actions wide"><button disabled>Inscrever como membro</button></div>
+    </form><p role="status" aria-live="polite"></p>`;
+   message.after(membership);
+   const enrollment=membership.querySelector('form');
+   const feedback=membership.querySelector('[role=status]');
+   const cellField=enrollment.elements.cell_id;
+   const memberField=enrollment.elements.member_id;
+   const button=enrollment.querySelector('button');
+   const key=name=>name.normalize('NFD').replace(/\p{M}/gu,'').trim().toLowerCase();
+   call('member_leader_links').then(links=>{
+    if(!membership.isConnected)return;
+    const current=people.find(person=>person.active&&person.category==='Membro'&&links[person.id]===id&&regularCells.some(cell=>cell.id===person.cell_id));
+    cellField.value=current?.cell_id||'';
+    button.textContent=current?'Atualizar célula de membro':'Inscrever como membro';
+    function updateChoices(){
+     const options=current?[]:people.filter(person=>person.active&&person.category==='Membro'&&person.cell_id===cellField.value&&!links[person.id]&&key(person.full_name)===key(account.display_name));
+     memberField.innerHTML='<option value="">Criar cadastro de membro</option>'+options.map(person=>`<option value="${esc(person.id)}">${esc(person.full_name)}</option>`).join('');
+     memberField.closest('label').hidden=!options.length;
+     memberField.disabled=!options.length;
+     if(options.length===1)memberField.value=options[0].id;
+     button.disabled=!cellField.value;
+    }
+    cellField.onchange=updateChoices;
+    updateChoices();
+    enrollment.onsubmit=async event=>{
+     event.preventDefault();
+     if(saving||!cellField.value)return;
+     saving=true;
+     button.disabled=true;
+     try{
+      await call('enroll_regular_leader',{p_profile_id:id,p_cell_id:cellField.value,p_member_id:memberField.value||null});
+      await onSaved();
+      dialog.close();
+     }catch(error){
+      feedback.textContent=error.message;
+      button.disabled=false;
+     }finally{saving=false}
+    };
+   }).catch(error=>{feedback.textContent=error.message});
+  }
   const reset=dialog.querySelector('#resetAccountPassword');if(reset){let resetting=false;const notice=dialog.querySelector('#resetAccountMessage');reset.onsubmit=async e=>{e.preventDefault();if(resetting)return;const data=Object.fromEntries(new FormData(reset));if(data.new_password!==data.confirm_password)return notice.textContent='As novas senhas não coincidem.';resetting=true;reset.querySelector('button').disabled=true;notice.textContent='Redefinindo senha…';try{await call('account_reset_password',{id,master_password:data.master_password,new_password:data.new_password});reset.reset();notice.textContent='Senha redefinida com sucesso.';onReset?.()}catch(error){notice.textContent=error.message;reset.reset()}finally{data.master_password=data.new_password=data.confirm_password='';resetting=false;reset.querySelector('button').disabled=false}}}
  }
  return {open};
