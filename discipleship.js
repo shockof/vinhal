@@ -92,7 +92,7 @@ window.VideiraDiscipleship = (() => {
   const personChecked = (person, key) => key === 'baptized'
    ? person.baptized === 'Sim' : person.is_tither === true;
   function personField(row, key, label) {
-   const person = peopleById.get(row.id);
+   const person = Object.hasOwn(row, key) ? row : peopleById.get(row.id);
    if (!person) return '—';
    return `<input type="checkbox" data-person-field="${key}" data-person="${esc(row.id)}"
     aria-label="${esc(label + ' · ' + row.nome)}" ${personChecked(person, key) ? 'checked' : ''}
@@ -152,15 +152,18 @@ window.VideiraDiscipleship = (() => {
    const control = event.target;
    if (editable && control.matches('[data-person-field]')) {
     const {person: id, personField: key} = control.dataset;
+    const row = rows.find(row => row.id === id);
     const person = peopleById.get(id);
     const value = control.checked ? 'Sim' : 'Não';
     control.disabled = true;
     try {
      await call('discipleship_person_field',{p_person:id,p_field:key,p_value:value});
-     person[key] = key==='is_tither' ? (value === 'Sim') : value;
+     const updatedValue = key === 'is_tither' ? value === 'Sim' : value;
+     if (row) row[key] = updatedValue;
+     if (person) person[key] = updatedValue;
      feedback.textContent = '';
     } catch (error) {
-     control.checked = personChecked(person, key);
+     control.checked = personChecked(Object.hasOwn(row ?? {}, key) ? row : person ?? {}, key);
      feedback.textContent = error.message;
     } finally {
      control.disabled = false;
