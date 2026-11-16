@@ -238,7 +238,7 @@ function accountColumns(profile){
  const churchAndNetwork=profile.role==='supervisora_kids'?'Redes Kids de todas as igrejas':['master','supervisor'].includes(profile.role)?'Todas as igrejas e redes':
   label(db.churches,profile.church_id)+' / '+(profile.role==='predio'||profile.role==='obreiro'&&!profile.network_id
    ?'Todas as redes':label(db.networks,profile.network_id));
- return [profile.display_name,profile.username,roleName(profile),churchAndNetwork,profile.active?'Ativo':'Desativado'];
+ return [profile.display_name,profile.username?'@'+profile.username:'—',roleName(profile),churchAndNetwork,profile.active?'Ativo':'Desativado'];
 }
 function linkedProfiles(){
  const terms=normalizeSearch(accountSearch).split(/\s+/).filter(Boolean);
@@ -253,7 +253,7 @@ function linkedProfiles(){
 }
 function linkedAccountTable(){
  const profiles=linkedProfiles(),master=db.profile.role==='master';
- const headers=['Nome','Usuário','Função','Igreja / rede','Estado'];
+ const headers=['Nome','@login','Função','Igreja / rede','Estado'];
  if(master)headers.push('Ações');
  if(!profiles.length)return '<div class="empty">'+(accountSearch.trim()||accountRoleFilter||accountChurchFilter
   ?'Nenhuma conta encontrada para essa busca e filtros.':'Nenhum cadastro neste escopo.')+'</div>';
