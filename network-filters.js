@@ -1,6 +1,7 @@
 'use strict';
 window.VideiraNetworkFilters = (() => {
  const categories = new Map([['group:adults','Adultos'],['group:youth','Jovens'],['group:kids','Kids']]);
+ const adultsAndYouth = 'group:adults-youth';
  const churchOf = network => network.church_id ?? network.church;
  function category(network) {
   const name = (network?.name || '').trim().toLowerCase().replace(/^rede\s+/, '');
@@ -9,10 +10,11 @@ window.VideiraNetworkFilters = (() => {
   if (name === 'jovens') return 'group:youth';
   return '';
  }
- function update(select, networks, church, all = 'Todas as redes') {
+ function update(select, networks, church, all = 'Todas as redes', {includeAdultsAndYouth = false} = {}) {
   const previous = select.value;
   const scoped = church ? networks.filter(network => churchOf(network) === church) : networks;
   const options = new Map(categories);
+  if (includeAdultsAndYouth) options.set(adultsAndYouth, 'Adultos + Jovens');
   const kids = scoped.filter(network => category(network) === 'group:kids');
   if (church && kids.length > 1) {
    for (const network of kids.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))) {
@@ -28,6 +30,7 @@ window.VideiraNetworkFilters = (() => {
  }
  function matches(value, network, id = network?.id) {
   if (!value) return true;
+  if (value === adultsAndYouth) return ['group:adults', 'group:youth'].includes(category(network));
   if (categories.has(value)) return category(network) === value;
   return value === id || value === 'name:' + network?.name;
  }

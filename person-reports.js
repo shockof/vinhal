@@ -148,7 +148,7 @@ window.VideiraPersonReports = (() => {
     <label>Data final<input type="date" name="to"></label>
     <div class="actions wide"><button type="submit">Exportar relatório de células em PDF</button></div>
    </form><p id="cellReportStatus" role="status" hidden></p></article>`;
-  root.innerHTML = `<article class="panel"><form id="personReportFilters" class="report-filters">
+  root.innerHTML = `<article class="panel"><h2>Relatório Geral</h2><form id="personReportFilters" class="report-filters">
     ${select('church','Igreja',entityOptions(db.churches,'Todas as igrejas'))}
     ${select('network','Rede',entityOptions(db.networks,'Todas as redes'))}
     ${select('tither','Dízimo',choices(answers))}
@@ -167,7 +167,9 @@ window.VideiraPersonReports = (() => {
   const {church, network} = form.elements;
   form.elements.course.disabled = form.elements.pending.disabled = !canReadCourses;
   const networkFilters = window.VideiraNetworkFilters;
-  const updateNetworks = () => networkFilters.update(network, db.networks, church.value);
+  const updateReportNetworks = (control, churchId) =>
+   networkFilters.update(control, db.networks, churchId, 'Todas as redes', {includeAdultsAndYouth:true});
+  const updateNetworks = () => updateReportNetworks(network, church.value);
   church.onchange = updateNetworks;
   updateNetworks();
 
@@ -241,7 +243,7 @@ window.VideiraPersonReports = (() => {
    updateOptions(filters.cell, db.cells.filter(cellMatchesScope), 'Todas as células');
   }
   filters.church.onchange = () => {
-   networkFilters.update(filters.network, db.networks, filters.church.value);
+   updateReportNetworks(filters.network, filters.church.value);
    updateCellOptions();
   };
   filters.network.onchange = updateCellOptions;
