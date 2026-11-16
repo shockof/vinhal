@@ -171,7 +171,8 @@ function renderRegistrationPage(content, isPreview) {
     back.onclick = () => {
       openRegistrationId = '';
       renderRegistrationPage(content, isPreview);
-      list.querySelector('button')?.focus();
+      list.querySelector('button')?.focus({preventScroll: true});
+      list.scrollIntoView({block:'start', behavior:'instant'});
     };
     return;
   }
@@ -211,7 +212,8 @@ function renderRegistrationPage(content, isPreview) {
     button.onclick = () => {
       openRegistrationId = event.id;
       renderRegistrationPage(content, isPreview);
-      document.getElementById('registration-title').focus();
+      document.getElementById('registration-title').focus({preventScroll:true});
+      back.scrollIntoView({block:'start', behavior:'instant'});
     };
     copy.append(count,progress,button);
     card.append(copy);
@@ -367,16 +369,19 @@ function drawRegistrationSeats(confirmed, event, target = document.getElementByI
   const stageY = layout === 'workshop' ? 744 : 722;
   const left = Math.min(515, ...points.map(([x]) => x)) - 30;
   const right = Math.max(925, ...points.map(([x]) => x)) + 30;
-  const top = Math.min(425, ...points.map(([,y]) => y)) - 30;
+  const firstSeatY = Math.min(...points.map(([,y]) => y));
+  const top = firstSeatY - 38;
   const bottom = Math.max(stageY + 89, ...points.map(([,y]) => y)) + 24;
-  const hasAisle = layout === 'conference' || layout === 'front';
+  const centralRows = points.filter(point => point[3].startsWith('Central'));
+  const firstCentralY = Math.min(...centralRows.map(([,y]) => y));
+  const hasAisle = (layout === 'conference' || layout === 'front') && 640 - firstCentralY >= 120;
   target.innerHTML = `<svg viewBox="${left} ${top} ${right-left} ${bottom-top}" role="img" aria-label="Mapa com ${capacity} ${capacity === 1 ? 'cadeira' : 'cadeiras'}">
     <defs><g id="${chairId}"><rect x="-11" y="-9" width="22" height="17" rx="4"/><path d="M-9 5h18"/></g></defs>
     ${tables.map(([x,y],i) => `<circle cx="${x}" cy="${y}" r="22" fill="#ede4f6" stroke="#ba9ad7"/><text x="${x}" y="${y+4}" text-anchor="middle" font-size="13" fill="var(--purple)">${i+1}</text>`).join('')}
     ${chairs.join('')}
     <rect x="533" y="${stageY}" width="374" height="89" rx="13" fill="var(--purple)"/>
     <text x="720" y="${stageY + 52}" fill="white" text-anchor="middle">PALCO</text>
-    ${hasAisle ? '<text class="registration-aisle" transform="translate(724 563) rotate(-90)" text-anchor="middle">Corredor central</text>' : ''}
+    ${hasAisle ? `<text class="registration-aisle" transform="translate(724 ${(firstCentralY + 640) / 2}) rotate(-90)" text-anchor="middle">Corredor central</text>` : ''}
   </svg>`;
 }
 

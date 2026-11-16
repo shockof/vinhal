@@ -19,7 +19,7 @@ async function optimizeSiteImage(file) {
  }
 }
 window.VideiraSiteEditor={mount(root,{call,profile,config,getSession}){
- root.innerHTML='<div class="notice">Edite por seção, salve o rascunho e confira a prévia antes de publicar. Arquivos enviados à biblioteca recebem links públicos. A publicação altera o site para todos os visitantes.</div><iframe class="site-editor-frame" title="Editor do site Videira" src="index.html?editor=1&amp;versao=mapas-por-evento"></iframe>';
+ root.innerHTML='<div class="notice">Edite por seção, salve o rascunho e confira a prévia antes de publicar. Arquivos enviados à biblioteca recebem links públicos. A publicação altera o site para todos os visitantes.</div><iframe class="site-editor-frame" title="Editor do site Videira" src="index.html?editor=1&amp;versao=inscricoes-compactas"></iframe>';
  const frame=root.querySelector('iframe'),allowed=['site_editor_load','site_editor_save','site_editor_publish','site_editor_discard'];
  const listener=async event=>{if(event.origin!==location.origin||event.source!==frame.contentWindow||event.data?.channel!=='videira-site-editor')return;const {id,action,data}=event.data;let result,error;
  try{if(allowed.includes(action))result=await call(action,data);else if(action==='upload'){
