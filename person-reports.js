@@ -36,7 +36,7 @@ window.VideiraPersonReports = (() => {
   return [...lines, line];
  }
 
- function makePdf({title, notes, headers, widths, rows}) {
+ function makePdf({title, notes, headers, widths, rows, sections = [{rows}]}) {
   const width = 841.89, height = 595.28, margin = 30;
   const tableWidth = widths.reduce((sum, column) => sum + column, 0);
   const size = 8.5, leading = 11, padding = 5;
@@ -63,7 +63,7 @@ window.VideiraPersonReports = (() => {
    commands.push(`0.87 0.84 0.91 RG 0.5 w ${margin} ${y} m ${margin + tableWidth} ${y} l S`);
   }
 
-  function beginPage() {
+  function beginPage(section) {
    commands = [];
    y = height - margin;
    write(title, margin, y - 17, 17, 'F2', '0.29 0.16 0.49');
@@ -75,6 +75,19 @@ window.VideiraPersonReports = (() => {
     }
    }
    y -= 8;
+   if (section.title) {
+    for (const line of wrapText(section.title, tableWidth, 13)) {
+     write(line, margin, y, 13, 'F2', '0.29 0.16 0.49');
+     y -= 17;
+    }
+    for (const detail of section.details) {
+     for (const line of wrapText(detail, tableWidth, 9)) {
+      write(line, margin, y, 9);
+      y -= 12;
+     }
+    }
+    y -= 6;
+   }
    drawRow(headings, Math.max(...headings.map(lines => lines.length)), true);
   }
 
@@ -87,22 +100,24 @@ window.VideiraPersonReports = (() => {
   }
 
   const availableLines = () => Math.floor((y - margin - 2 * padding) / leading);
-  beginPage();
-  const fullPageLines = availableLines();
-  for (const row of rows) {
-   const columns = row.map((value, index) => wrapText(value, widths[index] - 2 * padding, size));
-   const total = Math.max(...columns.map(lines => lines.length));
-   for (let start = 0; start < total;) {
-    if (Math.min(total - start, fullPageLines) > availableLines()) {
-     finishPage();
-     beginPage();
+  for (const section of sections) {
+   beginPage(section);
+   const fullPageLines = availableLines();
+   for (const row of section.rows) {
+    const columns = row.map((value, index) => wrapText(value, widths[index] - 2 * padding, size));
+    const total = Math.max(...columns.map(lines => lines.length));
+    for (let start = 0; start < total;) {
+     if (Math.min(total - start, fullPageLines) > availableLines()) {
+      finishPage();
+      beginPage(section);
+     }
+     const count = Math.min(total - start, availableLines());
+     drawRow(columns.map(lines => lines.slice(start, start + count)), count);
+     start += count;
     }
-    const count = Math.min(total - start, availableLines());
-    drawRow(columns.map(lines => lines.slice(start, start + count)), count);
-    start += count;
    }
+   finishPage();
   }
-  finishPage();
 
   objects[0] = '<< /Type /Catalog /Pages 2 0 R >>';
   objects[1] = `<< /Type /Pages /Count ${pages.length} /Kids [${pages.map(page => page + ' 0 R').join(' ')}] >>`;
@@ -130,6 +145,56 @@ window.VideiraPersonReports = (() => {
   setTimeout(() => URL.revokeObjectURL(url), 60000);
  }
 
+ function groupedCellSections(db, selected, marks, canReadCourses, networks, from, to) {
+  const meetings = new Map(db.meetings.filter(item => !item.deleted_at).map(item => [item.id, item]));
+  const profiles = new Map([...db.profiles, ...(db.cell_leadership || [])].map(item => [item.id, item.display_name]));
+  const people = new Map(db.people.map(item => [item.id, item]));
+  const groups = new Map(selected.map(cell => [cell.id, []]));
+  const counts = new Map();
+  for (const person of db.people) {
+   if (person.active === false || !groups.has(person.cell_id)) continue;
+   groups.get(person.cell_id).push(person);
+   counts.set(person.id, {present:0, absent:0, lifetimePresent:0});
+  }
+  for (const record of db.attendance) {
+   const count = counts.get(record.person_id);
+   const meeting = meetings.get(record.meeting_id);
+   if (!count || !meeting) continue;
+   if (record.present === true) count.lifetimePresent++;
+   if (meeting.cell_id !== people.get(record.person_id).cell_id ||
+       (from && meeting.meeting_date < from) || (to && meeting.meeting_date > to)) continue;
+   if (record.present === true) count.present++;
+   if (record.present === false) count.absent++;
+  }
+  return selected.map(cell => {
+   const address = cell.address_details || {};
+   const street = [address.street, address.house_number].filter(Boolean).join(', ');
+   const location = [street || cell.private_address, address.postal_code && `CEP ${address.postal_code}`].filter(Boolean).join(' · ');
+   const courseVisible = canReadCourses && (db.profile.role !== 'discipulador' || cell.discipler_id === db.profile.id);
+   const networkKind = networks.get(cell.network_id)?.kind;
+   const rows = groups.get(cell.id).map(person => {
+    const {present, absent, lifetimePresent} = counts.get(person.id);
+    const personCourses = marks[person.id] || [];
+    let status = person.category;
+    if (status === 'Visitante' && courseVisible && lifetimePresent >= 3 && !personCourses.length) status = 'Frequentador assíduo';
+    if (courseVisible && isPending({...person, networkKind, courses:personCourses})) status += ' · Cursos pendentes';
+    return [person.full_name, status, window.VideiraPhone?.format(person.phone) || person.phone || '—', present, absent,
+     ...Object.keys(courses).map(key => courseVisible ? yesNo(personCourses.includes(key)) : '—'),
+     person.baptized || 'Não informado', yesNo(person.is_tither)];
+   });
+   return {
+    title:cell.name,
+    details:[
+     `Líder: ${profiles.get(cell.leader_id) || 'Não informado'}`,
+     `Líder em treinamento: ${people.get(db.cell_trainees?.[cell.id])?.full_name || 'Não informado'}`,
+     `Dia e horário: ${cell.meeting_schedule || 'Não informado'}`,
+     `Endereço: ${location || 'Não informado'}`
+    ],
+    rows:rows.length ? rows : [['Nenhuma pessoa cadastrada', ...Array(10).fill('—')]]
+   };
+  });
+ }
+
  function mount(root, db, call, esc) {
   const canReadCourses = ['master','discipulador','pastor','predio','obreiro','supervisor'].includes(db.profile.role);
   const byId = items => new Map(items.map(item => [item.id,item]));
@@ -146,6 +211,7 @@ window.VideiraPersonReports = (() => {
     ${select('status','Situação',choices(cellStatuses))}
     <label>Data inicial<input type="date" name="from"></label>
     <label>Data final<input type="date" name="to"></label>
+    ${select('format','Tipo de relatório',choices([['simplified','Simplificado'],['grouped','Blocado']]))}
     <div class="actions wide"><button type="submit">Exportar relatório de células em PDF</button></div>
    </form><p id="cellReportStatus" role="status" hidden></p></article>`;
   root.innerHTML = `<article class="panel"><h2>Relatório Geral</h2><form id="personReportFilters" class="report-filters">
@@ -249,9 +315,11 @@ window.VideiraPersonReports = (() => {
   filters.network.onchange = updateCellOptions;
   filters.church.onchange();
   cellForm.addEventListener('change', () => { cellFeedback.hidden = true; });
-  cellForm.onsubmit = event => {
+  const cellButton = cellForm.querySelector('button');
+  cellForm.onsubmit = async event => {
    event.preventDefault();
-   const {cell, status, from, to} = Object.fromEntries(new FormData(cellForm));
+   if (cellButton.disabled) return;
+   const {cell, status, from, to, format} = Object.fromEntries(new FormData(cellForm));
    const selected = db.cells.filter(item => cellMatchesScope(item) && (!cell || item.id === cell)
     && (!status || Boolean(item.is_paused) === (status === 'paused')));
    const problem = from && to && from > to ? 'A data final deve ser igual ou posterior à data inicial.'
@@ -259,6 +327,29 @@ window.VideiraPersonReports = (() => {
    cellFeedback.textContent = problem;
    cellFeedback.hidden = !problem;
    if (problem) return;
+   const dateLabel = value => value.split('-').reverse().join('/');
+   const period = [from && `desde ${dateLabel(from)}`, to && `até ${dateLabel(to)}`].filter(Boolean).join(' ');
+   const notes = [`${selected.length} célula(s) · ${period || 'Todo o histórico de encontros'}`];
+   if (format === 'grouped') {
+    cellButton.disabled = true;
+    try {
+     const marks = canReadCourses ? await call('report_courses') : {};
+     if (!cellForm.isConnected) return;
+     downloadPdf('relatorio-celulas-blocado-videira.pdf', {
+      title:'Relatório de células · Modelo blocado',
+      notes,
+      headers:['Nome','Situação','Telefone','Presença','Falta','Cursão','CTL','Apocalipse','Seminário Pastoral','Batismo','Dizimista'],
+      widths:[136,126,77,51,43,49,34,64,83,58,57],
+      sections:groupedCellSections(db, selected, marks, canReadCourses, networks, from, to)
+     });
+    } catch (error) {
+     cellFeedback.textContent = error.message || 'Não foi possível exportar o relatório.';
+     cellFeedback.hidden = false;
+    } finally {
+     cellButton.disabled = false;
+    }
+    return;
+   }
 
    const totals = new Map(selected.map(item => [item.id, {members:0, visitors:0, meetings:0, present:0, absent:0}]));
    for (const person of db.people) {
@@ -281,11 +372,9 @@ window.VideiraPersonReports = (() => {
     if (attendance.present === false) count.absent++;
    }
    const headings = ['Célula','Igreja','Rede','Situação','Membros atuais','Visitantes atuais','Encontros','Presenças','Faltas','Frequência'];
-   const dateLabel = value => value.split('-').reverse().join('/');
-   const period = [from && `desde ${dateLabel(from)}`, to && `até ${dateLabel(to)}`].filter(Boolean).join(' ');
    downloadPdf('relatorio-celulas-videira.pdf', {
     title:'Relatório de células · Igreja Videira',
-    notes:[`${selected.length} célula(s) · ${period || 'Todo o histórico de encontros'}`],
+    notes,
     headers:headings,
     widths:[126,104,100,106,66,72,54,54,42,56],
     rows:selected.map(item => {
