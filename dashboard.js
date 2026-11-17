@@ -77,9 +77,9 @@ function showDirectoryPhoto(name, source) {
  dialog.showModal();
 }
 
-function personName(id,name) {
+function personName(id,name,leadershipMember) {
  const initials = name.trim().split(/\s+/).slice(0, 2).map(word => word.charAt(0)).join('').toUpperCase();
- return `<span class="directory-person"><span class="attendance-avatar" aria-hidden="true" data-directory-photo="${esc(id)}" data-name="${esc(name)}">${esc(initials)}</span>${esc(name)}</span>`;
+ return `<span class="directory-person"><span class="attendance-avatar" aria-hidden="true" data-directory-photo="${esc(id)}"${leadershipMember?' data-leadership-member':''} data-name="${esc(name)}">${esc(initials)}</span>${esc(name)}</span>`;
 }
 
 function personPhotos(body, requestPhoto) {
@@ -91,14 +91,14 @@ function personPhotos(body, requestPhoto) {
   const load = async avatar => {
    const {directoryPhoto: id, name} = avatar.dataset;
    if (!photos.has(id)) {
-    photos.set(id, requestPhoto(id).catch(() => {
+    photos.set(id, requestPhoto(id,avatar.hasAttribute('data-leadership-member')).catch(() => {
      photos.delete(id);
      return null;
     }));
    }
    const photo = await photos.get(id);
    if (!photo || !avatar.isConnected) return;
-   const source = 'data:image/jpeg;base64,' + photo;
+   const source = typeof photo === 'string' ? 'data:image/jpeg;base64,' + photo : photo.source;
    const image = new Image();
    image.alt = '';
    image.src = source;
@@ -191,7 +191,7 @@ function mountDirectory(root,db,kind,filter,requestPhoto,editPerson){
    <tbody>${filtered.map(({name,cell,id,leadershipMember})=>{
     const values=[name,...(isCells?[]:[cell.name]),label('church_id',cell.church_id),label('network_id',cell.network_id),
      label('discipler_id',cell.discipler_id),...(isCells?[leadershipName(db,cell.leader_id)]:[])];
-    return `<tr>${values.map((value,index)=>`<td data-label="${headers[index]}">${!isCells&&index===0?personName(id,name):headers[index]==='Rede'?`<span class="directory-network">${esc(value)}</span>`:esc(value)}${isCells&&index===0&&cell.is_paused?'<small class="directory-cell-status">Não está acontecendo</small>':''}</td>`).join('')}
+    return `<tr>${values.map((value,index)=>`<td data-label="${headers[index]}">${!isCells&&index===0?personName(id,name,leadershipMember):headers[index]==='Rede'?`<span class="directory-network">${esc(value)}</span>`:esc(value)}${isCells&&index===0&&cell.is_paused?'<small class="directory-cell-status">Não está acontecendo</small>':''}</td>`).join('')}
      ${isCells?`<td class="directory-action"><button class="secondary" type="button" data-directory-cell="${esc(cell.id)}" aria-haspopup="dialog" aria-label="Ver detalhes de ${esc(cell.name)}">›</button></td>`:canEdit?`<td class="directory-action">${leadershipMember?'Conta de liderança':`<button class="secondary" type="button" data-directory-edit="${esc(id)}" aria-label="Editar cadastro de ${esc(name)}">Editar</button>`}</td>`:''}</tr>`;
    }).join('')}</tbody></table>`;
   bindPhotos();

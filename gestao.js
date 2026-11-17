@@ -71,7 +71,7 @@ async function request(action,data,token){
  const timer=setTimeout(()=>controller.abort(),30000);
  try{
   const rpc={enroll_regular_leader:'videira_regular_leader_enroll',account_get:'videira_account_card',account_save:'videira_account_card',discipleship_person_field:'videira_discipleship_person_field',report_courses:'videira_report_courses',discipleship:'videira_discipleship',link_existing_leader:'videira_link_existing_leader',
-   member_leader_links:'videira_member_leader_links',person_photo:'videira_portal'}[action];
+   member_leader_links:'videira_member_leader_links',member_leadership_avatar:'videira_member_leadership_avatar',person_photo:'videira_portal'}[action];
   const payload=rpc==='videira_account_card'?{p_action:action==='account_get'?'get':'save',p_data:data}:action==='person_photo'?{p_action:action,p_data:data}:rpc?(data||{}):action==='login'?{action,...data}:{action,data};
   const response=await fetch(rpc?cfg.url+'/rest/v1/rpc/'+rpc:cfg.gateway,{
    method:'POST',
@@ -369,7 +369,8 @@ function render(){const menuScroll=$('.shell > aside > nav')?.scrollLeft??0;
   view='overview';
   edit=null;
  }
-$('#app').innerHTML=`<div class="shell"><aside><img class="management-logo" src="assets/logo.png" alt="Videira"><div class="identity"><div><span class="attendance-avatar identity-photo" id="identityPhoto" aria-hidden="true">${esc(personInitials(db.profile.display_name))}</span>${esc(db.profile.display_name)}<small>${roleName(db.profile)} · ${esc(db.profile.username)}</small></div><button class="secondary" id="logout">Sair</button></div><nav aria-label="Gestão">${tabs.map(v=>`<button data-view="${v}" class="${view===v?'active':''}">${names[v]}</button>`).join('')}</nav></aside><main class="main ${view==='overview'?'dashboard-main':''}"><div class="top"><span class="badge">Conectado ao Supabase · Dados reais</span><a href="index.html">Ver site ↗</a></div>${view==='overview'?'':`<div class="heading ${view==='metric'?'directory-heading':''}"><small>${view==='metric'?'Gestão / Visão geral':'IGREJA VIDEIRA / GESTÃO'}</small><h1>${view==='metric'?window.VideiraDashboard.metricTitle(db,metricKind)||'Indicador':names[view]}</h1>${view==='metric'?'<a class="directory-back" href="gestao.html?v=20261112-panel-nav">← Voltar à Visão geral</a>':'<p>Somente os registros permitidos ao seu perfil.</p>'}</div>`}<div id="status" role="status" aria-live="polite"></div><div id="workspace">${view==='overview'?overview():view==='metric'?'<section id="metricPage" class="dashboard"></section>':view==='discipleship'?'<div id="discipleshipPanel"></div>':view==='site'?'<div id="siteEditor"></div>':view==='profile'?'<div id="myProfile"></div>':list[view]?entityForm()+entityList():view==='meeting'?meeting():view==='reports'?'<div id="personReports"></div>':accounts()}</div><small>Gravação no servidor. Membros, telefones e presenças não são publicados no site.</small></main></div>`;$('.shell > aside > nav').scrollLeft=menuScroll;bind();}
+ const identityName=db.profile.card_name?.trim()||db.profile.username||db.profile.display_name;
+$('#app').innerHTML=`<div class="shell"><aside><img class="management-logo" src="assets/logo.png" alt="Videira"><div class="identity"><div><span class="attendance-avatar identity-photo" id="identityPhoto" aria-hidden="true">${esc(personInitials(identityName))}</span>${esc(identityName)}<small>${roleName(db.profile)}</small></div><button class="secondary" id="logout">Sair</button></div><nav aria-label="Gestão">${tabs.map(v=>`<button data-view="${v}" class="${view===v?'active':''}">${names[v]}</button>`).join('')}</nav></aside><main class="main ${view==='overview'?'dashboard-main':''}"><div class="top"><span class="badge">Conectado ao Supabase · Dados reais</span><a href="index.html">Ver site ↗</a></div>${view==='overview'?'':`<div class="heading ${view==='metric'?'directory-heading':''}"><small>${view==='metric'?'Gestão / Visão geral':'IGREJA VIDEIRA / GESTÃO'}</small><h1>${view==='metric'?window.VideiraDashboard.metricTitle(db,metricKind)||'Indicador':names[view]}</h1>${view==='metric'?'<a class="directory-back" href="gestao.html?v=20261112-panel-nav">← Voltar à Visão geral</a>':'<p>Somente os registros permitidos ao seu perfil.</p>'}</div>`}<div id="status" role="status" aria-live="polite"></div><div id="workspace">${view==='overview'?overview():view==='metric'?'<section id="metricPage" class="dashboard"></section>':view==='discipleship'?'<div id="discipleshipPanel"></div>':view==='site'?'<div id="siteEditor"></div>':view==='profile'?'<div id="myProfile"></div>':list[view]?entityForm()+entityList():view==='meeting'?meeting():view==='reports'?'<div id="personReports"></div>':accounts()}</div><small>Gravação no servidor. Membros, telefones e presenças não são publicados no site.</small></main></div>`;$('.shell > aside > nav').scrollLeft=menuScroll;bind();}
 function bindMemberPhoto(form,id){
  const file=form.querySelector('#memberPhotoFile');
  const preview=form.querySelector('#memberPhotoPreview');
@@ -476,6 +477,19 @@ window.addEventListener('popstate',()=>{
 });
 
 const requestPersonPhoto = id => cachedAvatar('person:'+id,async ()=>(await call('person_photo',{id})).photo_base64);
+async function requestDirectoryPhoto(id, leadershipMember) {
+ if (leadershipMember) {
+  try {
+   const avatar=await cachedAvatar('member-leadership:'+id,()=>call('member_leadership_avatar',{p_member_id:id}));
+   if (avatar.own&&ownProfile?.photo_url) return {source:ownProfile.photo_url};
+   if (avatar.photo) return avatar.photo;
+  } catch {
+   // The member photo is still available independently of the leadership photo.
+  }
+ }
+ return requestPersonPhoto(id);
+}
+
 
 async function showIdentityPhoto() {
  const avatar = $('#identityPhoto');
@@ -553,7 +567,7 @@ function bind(){
  if(view==='metric'){
   const dashboard=window.VideiraDashboard;
   document.title=(dashboard.metricTitle(db,metricKind)||'Indicador')+' · Igreja Videira';
-  dashboard.mountMetric($('#metricPage'),db,metricKind,metricFilter,requestPersonPhoto, id => {
+  dashboard.mountMetric($('#metricPage'),db,metricKind,metricFilter,requestDirectoryPhoto, id => {
    if (!db.people.some(person => person.id === id && !person.leadership_member)) return;
    openManagementSection('person');
    edit = id;
