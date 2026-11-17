@@ -41,7 +41,7 @@ function groupedCells(s,db){if(db.profile.role==='lider')return cellRows({...s,g
 function networkBars(s,db){const ids=new Set(s.cells.map(c=>c.network_id)),networks=db.networks.filter(n=>ids.has(n.id));if(!networks.length)return '<div class="dash-empty">Cadastre redes e células para comparar a frequência.</div>';return `<div class="dash-bars">${networks.map(n=>{const ids=new Set(s.meetings.filter(m=>s.cells.some(c=>c.id===m.cell_id&&c.network_id===n.id)).map(m=>m.id)),nrate=pct(s.attendance.filter(a=>ids.has(a.meeting_id)));return `<div><span>${esc(n.name)}<small>${esc(db.churches.find(c=>c.id===n.church_id)?.name||'')}</small></span><span class="dash-track"><i style="width:${nrate??0}%"></i></span><b>${rate(nrate)}</b></div>`}).join('')}</div>`}
 const metricRoles=new Set(['master','supervisor','pastor','obreiro','predio','discipulador','supervisora_kids']);
 const allChurchRoles=new Set(['master','supervisor']);
-const metricTitles={cells:'Células no seu escopo',members:'Membros cadastrados',frequency:'Frequência no período',visitors:'Visitantes cadastrados'};
+const metricTitles={cells:'Células no seu escopo',members:'Membros',frequency:'Frequência no período',visitors:'Visitantes cadastrados'};
 const compareNames=(a,b)=>a.localeCompare(b,'pt-BR',{numeric:true,sensitivity:'base'});
 
 function metricScope(db){
@@ -150,7 +150,7 @@ function mountDirectory(root,db,kind,filter,requestPhoto,editPerson){
  const source=new Map(db.cells.map(cell=>[cell.id,cell]));
  const rows=isCells?db.cells.map(cell=>({name:cell.name,cell})):
   db.people.filter(person=>person.category===(kind==='members'?'Membro':'Visitante')&&source.has(person.cell_id))
-   .map(person=>({name:person.full_name,id:person.id,cell:source.get(person.cell_id)}));
+   .map(person=>({name:person.full_name,id:person.id,cell:source.get(person.cell_id),leadershipMember:person.leadership_member}));
  rows.sort((a,b)=>compareNames(a.name,b.name)||compareNames(a.cell.name,b.cell.name));
  const label=(key,id)=>key==='network_id'?db.networks.find(n=>n.id===id)?.name||'Rede':cellGroupName(db,key,id);
  const canEdit = !isCells && metricRoles.has(db.profile.role) && typeof editPerson === 'function';
@@ -188,11 +188,11 @@ function mountDirectory(root,db,kind,filter,requestPhoto,editPerson){
   }
   const headers=[isCells?'Célula':'Nome',...(isCells?[]:['Célula']),'Igreja','Rede','Discipulador',...(isCells?['Líder','Detalhes']:canEdit?['Ações']:[])];
   body.innerHTML=`<table class="directory-table"><thead><tr>${headers.map(text=>`<th scope="col">${text}</th>`).join('')}</tr></thead>
-   <tbody>${filtered.map(({name,cell,id})=>{
+   <tbody>${filtered.map(({name,cell,id,leadershipMember})=>{
     const values=[name,...(isCells?[]:[cell.name]),label('church_id',cell.church_id),label('network_id',cell.network_id),
      label('discipler_id',cell.discipler_id),...(isCells?[leadershipName(db,cell.leader_id)]:[])];
     return `<tr>${values.map((value,index)=>`<td data-label="${headers[index]}">${!isCells&&index===0?personName(id,name):headers[index]==='Rede'?`<span class="directory-network">${esc(value)}</span>`:esc(value)}${isCells&&index===0&&cell.is_paused?'<small class="directory-cell-status">Não está acontecendo</small>':''}</td>`).join('')}
-     ${isCells?`<td class="directory-action"><button class="secondary" type="button" data-directory-cell="${esc(cell.id)}" aria-haspopup="dialog" aria-label="Ver detalhes de ${esc(cell.name)}">›</button></td>`:canEdit?`<td class="directory-action"><button class="secondary" type="button" data-directory-edit="${esc(id)}" aria-label="Editar cadastro de ${esc(name)}">Editar</button></td>`:''}</tr>`;
+     ${isCells?`<td class="directory-action"><button class="secondary" type="button" data-directory-cell="${esc(cell.id)}" aria-haspopup="dialog" aria-label="Ver detalhes de ${esc(cell.name)}">›</button></td>`:canEdit?`<td class="directory-action">${leadershipMember?'Conta de liderança':`<button class="secondary" type="button" data-directory-edit="${esc(id)}" aria-label="Editar cadastro de ${esc(name)}">Editar</button>`}</td>`:''}</tr>`;
    }).join('')}</tbody></table>`;
   bindPhotos();
   body.querySelectorAll('[data-directory-edit]').forEach(button => {
