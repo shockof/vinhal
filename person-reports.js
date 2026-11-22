@@ -36,7 +36,7 @@ window.VideiraPersonReports = (() => {
   return [...lines, line];
  }
 
- function makePdf({title, notes, headers, widths, rows, sections = [{rows}]}) {
+ function makePdf({title, notes, headers, widths, rows, sections = [{rows}]}, previewPages = []) {
   const width = 841.89, height = 595.28, margin = 30;
   const tableWidth = widths.reduce((sum, column) => sum + column, 0);
   const size = 8.5, leading = 11, padding = 5;
@@ -45,15 +45,18 @@ window.VideiraPersonReports = (() => {
    '<< /Type /Font /Subtype /Type1 /BaseFont /Courier-Bold /Encoding /WinAnsiEncoding >>'];
   const pages = [];
   const headings = headers.map((label, index) => wrapText(label, widths[index] - 2 * padding, size));
-  let commands, y;
+  let commands, y, svg;
+  const xml = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[char]));
 
   function write(value, x, baseline, fontSize, font = 'F1', color = '0.16 0.13 0.22') {
    commands.push(`BT /${font} ${fontSize} Tf ${color} rg 1 0 0 1 ${x} ${baseline} Tm ${pdfText(value)} Tj ET`);
+   svg.push(`<text x="${x}" y="${height-baseline}" font-size="${fontSize}" font-weight="${font==='F2'?'bold':'normal'}" fill="rgb(${color.split(' ').map(n=>Math.round(Number(n)*255)).join(',')})">${xml(value)}</text>`);
   }
 
   function drawRow(columns, lineCount, heading = false) {
    const rowHeight = lineCount * leading + 2 * padding;
    if (heading) commands.push(`0.92 0.88 0.97 rg ${margin} ${y - rowHeight} ${tableWidth} ${rowHeight} re f`);
+   if (heading) svg.push(`<rect x="${margin}" y="${height-y}" width="${tableWidth}" height="${rowHeight}" fill="#ebe0f7"/>`);
    let x = margin;
    columns.forEach((lines, index) => {
     lines.forEach((line, number) => write(line, x + padding, y - padding - size - number * leading, size, heading ? 'F2' : 'F1'));
@@ -61,10 +64,12 @@ window.VideiraPersonReports = (() => {
    });
    y -= rowHeight;
    commands.push(`0.87 0.84 0.91 RG 0.5 w ${margin} ${y} m ${margin + tableWidth} ${y} l S`);
+   svg.push(`<path d="M${margin} ${height-y} H${margin+tableWidth}" stroke="#ded6e8" stroke-width=".5"/>`);
   }
 
   function beginPage(section) {
    commands = [];
+   svg = [];
    y = height - margin;
    write(title, margin, y - 17, 17, 'F2', '0.29 0.16 0.49');
    y -= 34;
@@ -93,6 +98,7 @@ window.VideiraPersonReports = (() => {
 
   function finishPage() {
    write(`Página ${pages.length + 1}`, margin, 18, 8);
+   previewPages.push(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Página ${pages.length+1} do relatório" font-family="Courier, monospace"><rect width="${width}" height="${height}" fill="white"/>${svg.join('')}</svg>`);
    const stream = commands.join('\n') + '\n';
    const contents = objects.push(`<< /Length ${stream.length} >>\nstream\n${stream}endstream`);
    pages.push(objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${width} ${height}]
@@ -136,18 +142,19 @@ window.VideiraPersonReports = (() => {
 
  function previewPdf(filename, report) {
   document.querySelector('dialog.report-preview')?.close();
-  const url = URL.createObjectURL(new Blob(makePdf(report), {type:'application/pdf'}));
+  const previewPages = [];
+  const url = URL.createObjectURL(new Blob(makePdf(report,previewPages), {type:'application/pdf'}));
   const dialog = document.createElement('dialog');
   dialog.className = 'report-preview';
   dialog.setAttribute('aria-labelledby','reportPreviewTitle');
   dialog.innerHTML = `<div class="report-preview-heading"><div><h2 id="reportPreviewTitle"></h2><p>Confira o relatório antes de baixar. PDF em formato horizontal.</p></div>
    <div class="actions"><a class="report-preview-download" download>Baixar PDF</a><button type="button" class="secondary">Fechar</button></div></div>
-   <iframe title="Prévia do relatório em PDF"></iframe>`;
+   <div class="report-preview-pages"><div class="report-preview-document"></div></div>`;
   dialog.querySelector('h2').textContent = report.title;
   const link = dialog.querySelector('a');
   link.href = url;
   link.download = filename;
-  dialog.querySelector('iframe').src = url;
+  dialog.querySelector('.report-preview-document').innerHTML = previewPages.join('');
   dialog.querySelector('button').onclick = () => dialog.close();
   dialog.addEventListener('close', () => {
    dialog.remove();

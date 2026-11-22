@@ -452,5 +452,9 @@ svg.meeting-card-icon{width:28px;height:28px;flex-shrink:0}
 .report-preview-heading .actions { margin:0; flex-shrink:0; }
 .report-preview-download { display:inline-flex; align-items:center; justify-content:center; background:var(--purple,#7546bd); color:#fff; padding:12px 18px; border-radius:12px; text-decoration:none; font-weight:700; }
 .report-preview-download:focus-visible { outline:3px solid #bfa4e2; outline-offset:3px; }
-.report-preview iframe { width:100%; flex:1; min-height:0; border:0; background:#ece9f0; }
 @media(max-width:650px) { .report-preview-heading { align-items:flex-start; flex-direction:column; padding:16px; } .report-preview-heading h2 { font-size:18px; } }
+
+.report-preview-pages { flex:1; min-height:0; overflow:auto; padding:20px; background:#ece9f0; }
+.report-preview-document { width:100%; max-width:1120px; margin:auto; }
+.report-preview-document svg { display:block; width:100%; height:auto; margin-bottom:20px; box-shadow:0 3px 12px #24143322; }
+@media(max-width:650px) { .report-preview-pages { padding:8px; } }
