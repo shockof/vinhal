@@ -10,7 +10,7 @@
   for(let i=0;i<40;i++){
     const dot=document.createElement('span');
     const side=i%2===0?2+(i*7%10):89+(i*3%10);
-    dot.style.cssText='left:'+side+'%;top:'+(i*37%100)+'%;--drift:'+(6+i%6)+'s;--delay:-'+(i*1.7)+'s;--dot:'+(2+i%3)+'px';
+    dot.style.cssText='left:'+side+'%;top:'+(i*37%100)+'%;--drift:'+(6+i%6)+'s;--fade:'+(4+i%5*.65)+'s;--delay:-'+(i*1.7)+'s;--dot:'+(2+i%3)+'px';
     particles.append(dot);
   }
   root.prepend(particles);
