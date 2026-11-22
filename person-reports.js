@@ -147,7 +147,7 @@ window.VideiraPersonReports = (() => {
 
  function groupedCellSections(db, selected, marks, canReadCourses, networks, from, to) {
   const meetings = new Map(db.meetings.filter(item => !item.deleted_at).map(item => [item.id, item]));
-  const profiles = new Map([...db.profiles, ...(db.cell_leadership || [])].map(item => [item.id, item.card_name || item.username || item.display_name]));
+  const profiles = new Map([...(db.cell_leadership || []), ...db.profiles].map(item => [item.id, item.card_name || item.username || item.display_name]));
   const people = new Map(db.people.map(item => [item.id, item]));
   const groups = new Map(selected.map(cell => [cell.id, []]));
   const counts = new Map();

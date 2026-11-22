@@ -51,7 +51,7 @@ window.VideiraDiscipleship = (() => {
   const cell = root.querySelector('[name=cell]');
   const discipler = root.querySelector('[name=discipler]');
   const cellsById = new Map(cells.map(item => [item.id, item]));
-  const leaders = new Map([...(profiles || []), ...(cell_leadership || [])].map(item => [item.id,item]));
+  const leaders = new Map([...(cell_leadership || []), ...(profiles || [])].map(item => [item.id,item]));
   const isMember = row => row.situacao === 'Membro da célula' || row.situacao === 'Membro da igreja' || row.situacao === 'Membro';
   const networkIndex = new Map(networks.map(item => [item.id, item]));
   const cellNetworks = new Map(cells.map(item => [item.id, item.network_id]));
