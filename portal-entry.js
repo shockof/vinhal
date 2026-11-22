@@ -47,7 +47,7 @@ document.querySelector('#loginBtn').onclick=()=>{location.href='gestao.html?v=20
   button.textContent='Login';
  }
  function showProfile(profile){
-  const name=profile.display_name.trim();
+  const name=(profile.card_name || profile.username || '').trim();
   if(!name)return;
   const avatar=document.createElement('span');
   avatar.className='login-avatar';

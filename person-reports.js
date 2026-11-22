@@ -147,7 +147,7 @@ window.VideiraPersonReports = (() => {
 
  function groupedCellSections(db, selected, marks, canReadCourses, networks, from, to) {
   const meetings = new Map(db.meetings.filter(item => !item.deleted_at).map(item => [item.id, item]));
-  const profiles = new Map([...db.profiles, ...(db.cell_leadership || [])].map(item => [item.id, item.display_name]));
+  const profiles = new Map([...db.profiles, ...(db.cell_leadership || [])].map(item => [item.id, item.card_name || item.username || item.display_name]));
   const people = new Map(db.people.map(item => [item.id, item]));
   const groups = new Map(selected.map(cell => [cell.id, []]));
   const counts = new Map();
@@ -175,12 +175,12 @@ window.VideiraPersonReports = (() => {
    const rows = groups.get(cell.id).map(person => {
     const {present, absent, lifetimePresent} = counts.get(person.id);
     const personCourses = marks[person.id] || [];
-    let status = person.category;
-    if (status === 'Visitante' && courseVisible && lifetimePresent >= 3 && !personCourses.length) status = 'Frequentador assíduo';
+    let status = person.membership_status || (person.encounter_with_god ? 'Membro da igreja' : person.category === 'Membro' ? 'Membro da célula' : 'Visitante');
+    
     if (courseVisible && isPending({...person, networkKind, courses:personCourses})) status += ' · Cursos pendentes';
-    return [person.full_name, status, window.VideiraPhone?.format(person.phone) || person.phone || '—', present, absent,
+    return [person.full_name, status, window.VideiraPhone?.format(person.phone) || person.phone || '—', present, absent, yesNo(person.encounter_with_god), person.baptized || 'Não informado',
      ...Object.keys(courses).map(key => courseVisible ? yesNo(personCourses.includes(key)) : '—'),
-     person.baptized || 'Não informado', yesNo(person.is_tither)];
+     yesNo(person.is_tither)];
    });
    return {
     title:cell.name,
@@ -190,7 +190,7 @@ window.VideiraPersonReports = (() => {
      `Dia e horário: ${cell.meeting_schedule || 'Não informado'}`,
      `Endereço: ${location || 'Não informado'}`
     ],
-    rows:rows.length ? rows : [['Nenhuma pessoa cadastrada', ...Array(10).fill('—')]]
+    rows:rows.length ? rows : [['Nenhuma pessoa cadastrada', ...Array(11).fill('—')]]
    };
   });
  }
@@ -220,7 +220,7 @@ window.VideiraPersonReports = (() => {
     ${select('tither','Dízimo',choices(answers))}
     ${select('course','Cursos','<option value="">Todos os cursos</option><optgroup label="Com marcação">'+courseOptions('marked')+'</optgroup><optgroup label="Sem marcação">'+courseOptions('unmarked')+'</optgroup>')}
     ${select('pending','Cadastro com pendências',choices([['','Todos'],['yes','Com pendências'],['no','Sem pendências']]))}
-    ${select('category','Categoria',choices([['','Todas as categorias'],['Visitante','Visitante'],['Membro','Membro']]))}
+    ${select('category','Categoria',choices([['','Todas as categorias'],['Visitante','Visitante'],['Membro da célula','Membro da célula'],['Membro da igreja','Membro da igreja']]))}
     ${select('baptism','Batismo',choices([['','Todos'],['Sim','Sim'],['Não','Não'],['Não informado','Não informado']]))}
     <div class="actions wide"><button type="submit">Exportar em PDF</button></div>
     <small class="wide">Pendências consideram Cursão e CTL de membros fora da Rede Kids.</small>
@@ -262,7 +262,7 @@ window.VideiraPersonReports = (() => {
     }).filter(person => {
      if (!person.cell || (filter.church && filter.church !== person.cell.church_id) ||
         !networkFilters.matches(filter.network, networks.get(person.cell.network_id), person.cell.network_id)) return false;
-     if (filter.category && filter.category !== person.category) return false;
+     if (filter.category && filter.category !== person.membership_status) return false;
      if (filter.baptism && filter.baptism !== (person.baptized || 'Não informado')) return false;
      const tither = person.is_tither == null ? 'unknown' : String(person.is_tither);
      if (filter.tither && filter.tither !== tither) return false;
@@ -284,7 +284,7 @@ window.VideiraPersonReports = (() => {
      widths:[118,92,88,108,76,57,62,116,63],
      rows:rows.map(person => [
       person.full_name,churches.get(person.cell.church_id)?.name,networks.get(person.cell.network_id)?.name,
-      person.cell.name,person.category,yesNo(person.is_tither),person.baptized || 'Não informado',
+      person.cell.name,person.membership_status || person.category,yesNo(person.is_tither),person.baptized || 'Não informado',
       person.courses.map(key => courses[key]).filter(Boolean).join(', ') || '—',person.courseVisible && isPending(person) ? 'Sim' : '—'
      ])
     });
@@ -338,8 +338,8 @@ window.VideiraPersonReports = (() => {
      downloadPdf('relatorio-celulas-blocado-videira.pdf', {
       title:'Relatório de células · Modelo blocado',
       notes,
-      headers:['Nome','Situação','Telefone','Presença','Falta','Cursão','CTL','Apocalipse','Seminário Pastoral','Batismo','Dizimista'],
-      widths:[136,126,77,51,43,49,34,64,83,58,57],
+      headers:['Nome','Situação','Telefone','Presença','Falta','Encontro com Deus','Batismo','Cursão','CTL','Apocalipse','Seminário Pastoral','Dizimista'],
+      widths:[128,107,77,45,36,57,48,46,30,59,87,58],
       sections:groupedCellSections(db, selected, marks, canReadCourses, networks, from, to)
      });
     } catch (error) {

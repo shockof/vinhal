@@ -149,7 +149,7 @@
   async function loadCatalog() {
     for (const url of ['https://raw.githubusercontent.com/shockof/vinhal/main/youtube-catalog.json', 'youtube-catalog.json']) {
       try {
-        const response = await fetch(url, {credentials: 'omit', signal: AbortSignal.timeout(5000)});
+        const response = await fetch(url, {credentials: 'omit', cache:'no-store', signal: AbortSignal.timeout(5000)});
         if (!response.ok) continue;
         const data = await response.json();
         if (!Array.isArray(data)) continue;
