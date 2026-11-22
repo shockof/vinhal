@@ -36,3 +36,6 @@ body > .site-footer { margin:24px 16px 0; padding:68px 0 24px; border-radius:36p
  .site-footer .footer-grid > * { transition-delay:0s; }
  .site-footer .footer-contact-row svg,.site-footer .footer-nav > a { transition:none; transform:none!important; }
 }
+
+/* White brand directly on the purple footer. */
+.site-footer .church-logo { background:transparent; padding:0; border-radius:0; filter:brightness(0) invert(1); }
