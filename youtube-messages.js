@@ -56,6 +56,32 @@
     return frame;
   }
 
+  function renderDescription(element, value) {
+    const full = String(value || '').trim();
+    const previous = element.nextElementSibling;
+    if (previous?.classList.contains('youtube-description-toggle')) previous.remove();
+    element.textContent = full;
+    element.hidden = !full;
+    if (full.length <= 300) return;
+    const paragraph = full.split(/\n\s*\n/)[0];
+    let excerpt = paragraph.length >= 80 && paragraph.length <= 300 ? paragraph : full.slice(0, 300).replace(/\s+\S*$/, '');
+    excerpt = excerpt.trimEnd();
+    element.textContent = excerpt + '…';
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'youtube-description-toggle';
+    toggle.textContent = 'mais...';
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.setAttribute('aria-controls', element.id);
+    toggle.onclick = () => {
+      const expand = toggle.getAttribute('aria-expanded') !== 'true';
+      element.textContent = expand ? full : excerpt + '…';
+      toggle.textContent = expand ? 'menos' : 'mais...';
+      toggle.setAttribute('aria-expanded', String(expand));
+    };
+    element.after(toggle);
+  }
+
   function renderFiles() {
     const linked = files.filter(file => {
       const source = cmsVideoLink(file.youtubeVideo);
@@ -124,7 +150,7 @@
       host.replaceChildren(play);
     }
     heading.textContent = video.title;
-    get('youtube-current-description').textContent = video.description || '';
+    renderDescription(get('youtube-current-description'), video.description);
     renderFiles();
     renderThumbnails();
   }
@@ -156,8 +182,7 @@
     feature.querySelector('img').src = imageUrl(latest.id);
     get('youtube-featured-title').textContent = latest.title;
     const description = get('youtube-featured-description');
-    description.textContent = latest.description || '';
-    description.hidden = !description.textContent;
+    renderDescription(description, latest.description);
   }
   const catalogRequest = loadCatalog();
   window.VideiraYouTube = {
@@ -194,7 +219,7 @@
     if (host.querySelector('iframe') && current) {
       selected = current;
       heading.textContent = current.title;
-      get('youtube-current-description').textContent = current.description || '';
+      renderDescription(get('youtube-current-description'), current.description);
       renderThumbnails();
     } else if (host.querySelector('iframe')) {
       select(latest);
