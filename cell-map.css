@@ -54,3 +54,5 @@ button.cell-map-kids{width:36px;height:38px;filter:none}.cell-map-kids .kids-pin
  #cellDirectory { grid-auto-columns: min(86%, 360px); }
 }
 #cellDirectory > .quick-card:only-child { grid-column: 1 / -1; }
+
+.cell-paused-tag { display:inline-block; padding:5px 10px; margin:0 0 10px; border-radius:8px; background:#f9dce2; color:#97203a; font-size:12px; font-weight:700; }

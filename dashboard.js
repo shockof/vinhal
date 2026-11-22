@@ -293,7 +293,7 @@ function details(db,id,filter){
   ['Encontro',c.meeting_schedule||'Não informado']
  ];
  const charts=`<div class="dash-grid"><article class="dash-panel"><h2>Frequência mensal</h2>${trend(s)}</article><article class="dash-panel"><h2>Participação no período</h2>${donut(s)}</article></div>`;
- dialog.innerHTML=`<div class="dash-dialog-head"><div><span class="dash-eyebrow">DETALHES DA CÉLULA</span><h2>${esc(c.name)}</h2></div><button type="button" class="secondary" data-close>Fechar ×</button></div>
+ dialog.innerHTML=`<div class="dash-dialog-head"><div><span class="dash-eyebrow">DETALHES DA CÉLULA</span><h2>${esc(c.name)}</h2>${c.is_paused?'<span class="dash-cell-status">Não está funcionando</span>':''}</div><button type="button" class="secondary" data-close>Fechar ×</button></div>
   ${cards(s,false,{},true)}<div class="cell-detail-content"></div>`;
  const content=dialog.querySelector('.cell-detail-content');
  const summary=`<div class="dash-details-meta">${meta.map(([label,value])=>`<p><span>${label}</span><b>${esc(value)}</b></p>`).join('')}</div>${charts}`;

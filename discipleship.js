@@ -113,7 +113,7 @@ window.VideiraDiscipleship = (() => {
     groups.get(row.celulaId).push(row);
    }
    results.innerHTML = [...groups.values()].map(group => `<article class="panel">
-    <h2>${esc(group[0].celula)}</h2>
+    <h2>${esc(group[0].celula)}</h2>${cellsById.get(group[0].celulaId)?.is_paused?'<span class="cell-paused-tag">Não está funcionando</span>':''}
     <div class="table-scroll"><table class="discipleship-table" aria-label="${esc(group[0].celula)}">
      <thead><tr>${['Nome','Situação','Telefone','Líder','Presença','Falta',personFields.encounter_with_god,personFields.baptized,...Object.values(courses),personFields.is_tither]
       .map(title => `<th scope="col">${title}</th>`).join('')}</tr></thead>
