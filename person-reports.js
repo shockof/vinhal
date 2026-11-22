@@ -241,7 +241,7 @@ window.VideiraPersonReports = (() => {
     ${select('pending','Cadastro com pendências',choices([['','Todos'],['yes','Com pendências'],['no','Sem pendências']]))}
     ${select('category','Categoria',choices([['','Todas as categorias'],['Visitante','Visitante'],['Membro da célula','Membro da célula'],['Membro da igreja','Membro da igreja']]))}
     ${select('baptism','Batismo',choices([['','Todos'],['Sim','Sim'],['Não','Não'],['Não informado','Não informado']]))}
-    <label>Discipulador<select name="discipler" aria-describedby="reportDisciplerHelp"><option value="">Todos os discipuladores</option></select><small id="reportDisciplerHelp" hidden></small></label>
+    <label>Discipulador<select name="discipler" aria-describedby="reportDisciplerHelp"><option value="">Todos os discipuladores</option></select></label><small class="wide" id="reportDisciplerHelp" hidden></small>
     <div class="actions wide"><button type="submit">Visualizar PDF</button></div>
     <small class="wide">Pendências consideram Cursão e CTL de membros fora da Rede Kids.</small>
    </form><p id="personReportStatus" role="status" hidden></p></article>
@@ -265,7 +265,7 @@ window.VideiraPersonReports = (() => {
     && (!church.value || profile.church_id === church.value || assignedIds.has(profile.id))
     && (!network.value || assignedIds.has(profile.id)))
     .sort((a,b) => (a.card_name || a.username || a.display_name).localeCompare(b.card_name || b.username || b.display_name,'pt-BR'));
-   discipler.innerHTML = '<option value="">'+(available.length ? 'Todos os discipuladores' : 'Sem discipulador disponível')+'</option>'
+   discipler.innerHTML = '<option value="">'+(available.length ? 'Todos os discipuladores' : 'Sem discipulador')+'</option>'
     + available.map(profile => `<option value="${esc(profile.id)}">${esc(profile.card_name || profile.username || profile.display_name)}</option>`).join('');
    discipler.value = available.some(profile => profile.id === previous) ? previous : '';
    discipler.disabled = !available.length;
