@@ -1,0 +1,21 @@
+body > .site-footer { margin:24px 16px 0; padding:68px 0 24px; border-radius:36px 36px 0 0; border-top:0; background:#241638; color:#fff; }
+.site-footer .container { width:min(calc(100% - 64px),var(--max,1160px)); max-width:none; }
+.site-footer .footer-grid { display:grid; grid-template-columns:1.25fr .65fr 1.1fr; gap:64px; }
+.site-footer .church-logo { width:180px; height:80px; padding:8px; border-radius:16px; margin-bottom:24px; }
+.site-footer .footer-title { font-size:clamp(1.65rem,3vw,2.35rem); line-height:1.2; letter-spacing:-.035em; color:#fff; margin:0 0 18px; max-width:370px; }
+.site-footer .footer-intro { color:#d7cee2; font-size:1rem; line-height:1.7; margin:0; max-width:330px; }
+.site-footer .footer-heading,.site-footer h3 { display:block; font-size:1.1rem; color:#fff; font-weight:650; margin:6px 0 26px; }
+.site-footer .footer-nav { display:flex; flex-direction:column; align-items:flex-start; gap:0; }
+.site-footer a { color:#e1d7ed; font-size:.95rem; text-decoration:none; }
+.site-footer a:hover { color:#fff; text-decoration:underline; text-underline-offset:5px; }
+.site-footer .footer-nav > a { padding:10px 0; min-height:44px; }
+.site-footer .footer-contact-row { display:flex; gap:14px; align-items:flex-start; padding:9px 0; margin-bottom:8px; line-height:1.5; }
+.site-footer .footer-contact-row svg { width:22px; height:22px; flex-shrink:0; color:#cbb6ee; margin-top:5px; }
+.site-footer .footer-contact-row small { display:block; font-size:.875rem; color:#b8a8cd; margin-bottom:2px; }
+.site-footer .footer-units { display:inline-block; margin-top:12px; border:1px solid #a68abc66; border-radius:999px; padding:12px 18px; }
+.site-footer .footer-bottom { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; border-top:1px solid #fff2; margin-top:54px; padding-top:22px; }
+.site-footer .footer-bottom p { margin:0; font-size:.875rem; color:#b8a8cd; }
+@media(max-width:900px) { .site-footer .footer-grid { grid-template-columns:1fr 1fr; gap:36px; } .site-footer .footer-brand { grid-column:1/-1; } .site-footer .footer-intro { max-width:520px; } }
+@media(max-width:540px) { body > .site-footer { margin:12px 8px 0; padding-top:40px; border-radius:26px 26px 0 0; } .site-footer .container { width:calc(100% - 40px); } .site-footer .footer-grid { grid-template-columns:1fr; gap:30px; } .site-footer .footer-brand { grid-column:auto; } .site-footer .footer-title { font-size:1.8rem; } .site-footer .footer-bottom { margin-top:32px; } }
+
+.site-footer .footer-title,.site-footer .footer-contact-value { white-space:pre-line; }
