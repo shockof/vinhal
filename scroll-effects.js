@@ -24,8 +24,8 @@
     scheduled = false;
     if(expansion && expansion.closest('.page-section')?.classList.contains('active')) {
       const rect=expansion.getBoundingClientRect();
-      const progress=reduced.matches?1:Math.max(0,Math.min(1,(innerHeight-rect.top)/(innerHeight*.75)));
-      expansion.style.setProperty('--section-scale',String(.94+.06*progress));
+      const progress=reduced.matches?1:Math.max(0,Math.min(1,(innerHeight-rect.top)/(innerHeight*.95)));
+      expansion.style.setProperty('--section-scale',String(.82+.18*progress));
     }
     const floating=header.classList.contains('is-floating');
     if(window.scrollY>72&&!floating)header.classList.add('is-floating');
