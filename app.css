@@ -234,3 +234,8 @@
 
 .quicklinks .iconbox { display:grid; place-items:center; width:52px; height:52px; border-radius:16px; color:var(--purple,#7040b4); background:#eee6f7; }
 .quicklinks .iconbox svg { display:block; width:28px; height:28px; flex-shrink:0; }
+
+.giving .giving-digital-intro { white-space:pre-line; }
+.giving .giving-qr { display:grid; place-items:center; flex-shrink:0; }
+.giving .giving-qr img { display:block; width:220px; height:220px; max-width:100%; background:white; border-radius:16px; box-shadow:0 8px 28px #21172d20; }
+@media(max-width:700px) { .giving .giving-qr { justify-self:start; margin-top:8px; } .giving .giving-qr img { width:200px; height:200px; } }
