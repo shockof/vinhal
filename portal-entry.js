@@ -10,6 +10,10 @@ document.querySelector('#loginBtn').onclick=()=>{location.href='gestao.html?v=20
  demoButton.type='button';
  demoButton.className='dash-button';
  demoButton.textContent='Explorar demonstração';
+ const controls=document.createElement('div');
+ controls.className='footer-demo-controls';
+ const units=document.querySelector('.footer-units');
+ if(units){units.after(controls);controls.append(reset);}
  const restoreDemo=reset.onclick;
  let masterSession=null;
  const canUseDemo=()=>masterSession!==null&&current()?.tokens.local_id===masterSession;

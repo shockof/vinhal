@@ -27,3 +27,13 @@ body > header.is-floating .brand { min-width:130px; }
  .scroll-reveal { opacity:1!important; transform:none!important; }
  body > header { display:none; }
 }
+
+/* Rounded panels for the public sections, including image banners. */
+#public > .page-section > :is(section,.about-hero,.hero-pills) {
+ border-radius:36px; margin-inline:16px; margin-block:16px; overflow:clip;
+}
+#public > .page-section > .hero { margin-top:0; }
+@media(max-width:600px) {
+ #public > .page-section > :is(section,.about-hero,.hero-pills) { border-radius:24px; margin-inline:8px; margin-block:10px; }
+}
+@media print { .footer-wordmark { display:none; } }
