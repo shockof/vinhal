@@ -57,3 +57,12 @@
   height: 100%;
   border: 0;
 }
+
+.youtube-play-placeholder { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1rem; width:100%; aspect-ratio:16/9; padding:1.5rem; border:1px solid #d7c5ed; border-radius:12px; background:#f2ecf8; color:#45256f; font:inherit; text-align:center; cursor:pointer; }
+.youtube-play-placeholder strong { font-size:clamp(1.1rem,2.5vw,1.5rem); max-width:38rem; }
+.youtube-play-placeholder span { font-size:.875rem; line-height:1.5; }
+
+.youtube-play-placeholder { position:relative; overflow:hidden; isolation:isolate; color:#fff; background:#21162e; }
+.youtube-play-placeholder img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:-2; }
+.youtube-play-placeholder::before { content:''; position:absolute; inset:0; background:linear-gradient(0deg,#1b102ce6,#1b102c66); z-index:-1; }
+.youtube-play-placeholder strong,.youtube-play-placeholder span { text-shadow:0 1px 3px #0008; }

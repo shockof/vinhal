@@ -101,7 +101,28 @@
 
   function select(video, autoplay = false) {
     selected = video;
-    host.replaceChildren(player(video, autoplay));
+    if (autoplay) host.replaceChildren(player(video, true));
+    else {
+      const play = document.createElement('button');
+      play.type = 'button';
+      play.className = 'youtube-play-placeholder';
+      const cover = document.createElement('img');
+      cover.src = imageUrl(video.id);
+      cover.alt = '';
+      cover.loading = 'lazy';
+      play.append(cover);
+      const label = document.createElement('strong');
+      label.textContent = 'Assistir: ' + video.title;
+      const note = document.createElement('span');
+      note.textContent = 'Ao reproduzir, o vídeo será carregado pelo YouTube.';
+      play.append(label, note);
+      play.onclick = () => {
+        const frame = player(video, true);
+        host.replaceChildren(frame);
+        frame.focus();
+      };
+      host.replaceChildren(play);
+    }
     heading.textContent = video.title;
     get('youtube-current-description').textContent = video.description || '';
     renderFiles();
@@ -149,7 +170,12 @@
   async function loadCatalog() {
     for (const url of ['https://raw.githubusercontent.com/shockof/vinhal/main/youtube-catalog.json', 'youtube-catalog.json']) {
       try {
-        const response = await fetch(url, {credentials: 'omit', cache:'no-store', signal: AbortSignal.timeout(5000)});
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 5000);
+        let response;
+        try {
+          response = await fetch(url, {credentials: 'omit', cache: 'no-store', signal: controller.signal});
+        } finally { clearTimeout(timer); }
         if (!response.ok) continue;
         const data = await response.json();
         if (!Array.isArray(data)) continue;
@@ -165,16 +191,17 @@
     renderFeatured();
     const latest = catalog[0];
     const current = catalog.find(video => video.id === selected.id);
-    if (host.firstElementChild && current) {
+    if (host.querySelector('iframe') && current) {
       selected = current;
       heading.textContent = current.title;
       get('youtube-current-description').textContent = current.description || '';
       renderThumbnails();
-    } else if (host.firstElementChild) {
+    } else if (host.querySelector('iframe')) {
       select(latest);
     } else {
       selected = latest;
-      openPlaylist();
+      if (location.hash === '#arquivos') select(latest);
+      else openPlaylist();
     }
   });
 })();
