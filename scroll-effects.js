@@ -3,8 +3,8 @@
   const header = document.querySelector('body > header');
   const root = document.getElementById('public');
   if (!header || !root) return;
-  const expansion = root.querySelector('#page-inicio .vision')?.closest('section');
-  expansion?.classList.add('scroll-expand');
+  const expansions = [root.querySelector('#page-inicio .vision')?.closest('section'),root.querySelector('#mensagem')].filter(Boolean);
+  expansions.forEach(section=>section.classList.add('scroll-expand'));
   const particles=document.createElement('div');
   particles.className='site-particles';particles.setAttribute('aria-hidden','true');
   for(let i=0;i<22;i++){
@@ -22,10 +22,11 @@
   let scheduled = false;
   const updateHeader = () => {
     scheduled = false;
-    if(expansion && expansion.closest('.page-section')?.classList.contains('active')) {
+    for(const expansion of expansions) {
+      if(!expansion.closest('.page-section')?.classList.contains('active'))continue;
       const rect=expansion.getBoundingClientRect();
-      const progress=reduced.matches?1:Math.max(0,Math.min(1,(innerHeight-rect.top)/(innerHeight*.95)));
-      expansion.style.setProperty('--section-scale',String(.82+.18*progress));
+      const progress=reduced.matches?1:Math.max(0,Math.min(1,(innerHeight-rect.top)/(innerHeight*.75)));
+      expansion.style.setProperty('--section-scale',String(.94+.06*progress));
     }
     const floating=header.classList.contains('is-floating');
     if(window.scrollY>72&&!floating)header.classList.add('is-floating');
