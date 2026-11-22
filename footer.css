@@ -62,3 +62,8 @@ body > .site-footer { margin:24px 16px 0; padding:68px 0 24px; border-radius:36p
 .site-footer .footer-credit strong { color:#fff; font-size:1.1rem; letter-spacing:.04em; }
 .site-footer .footer-credit:is(:hover,:focus-visible) { border-color:#65b7b0; background:#65b7b01a; text-decoration:none; }
 @media(max-width:540px) { .site-footer .footer-bottom-actions { gap:16px; } .site-footer .footer-credit { padding:11px 16px; } }
+
+/* Marca ampla antes dos créditos, seguindo a identidade da Videira. */
+.site-footer .footer-wordmark { font-size:clamp(4rem,21vw,20rem); line-height:1; letter-spacing:-.06em; color:#ffffff12; border-top:1px solid #fff2; margin-top:54px; padding:48px 0; }
+.site-footer .footer-bottom { margin-top:0; padding-top:24px; }
+@media(max-width:540px) { .site-footer .footer-wordmark { margin-top:32px; padding:30px 0; } }

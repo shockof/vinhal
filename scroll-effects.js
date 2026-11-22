@@ -7,17 +7,17 @@
   expansions.forEach(section=>section.classList.add('scroll-expand'));
   const particles=document.createElement('div');
   particles.className='site-particles';particles.setAttribute('aria-hidden','true');
-  for(let i=0;i<22;i++){
+  for(let i=0;i<40;i++){
     const dot=document.createElement('span');
     const side=i%2===0?2+(i*7%10):89+(i*3%10);
-    dot.style.cssText='left:'+side+'%;top:'+(i*37%100)+'%;--drift:'+(10+i%9)+'s;--delay:-'+(i*1.7)+'s;--dot:'+(2+i%3)+'px';
+    dot.style.cssText='left:'+side+'%;top:'+(i*37%100)+'%;--drift:'+(6+i%6)+'s;--delay:-'+(i*1.7)+'s;--dot:'+(2+i%3)+'px';
     particles.append(dot);
   }
   root.prepend(particles);
   document.addEventListener('visibilitychange',()=>particles.classList.toggle('is-paused',document.hidden));
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const footer=document.querySelector('.site-footer');
-  if(footer){const mark=document.createElement('div');mark.className='footer-wordmark';mark.textContent='VIDEIRA';mark.setAttribute('aria-hidden','true');footer.querySelector('.container').append(mark);}
+  if(footer){const mark=document.createElement('div');mark.className='footer-wordmark';mark.textContent='VIDEIRA';mark.setAttribute('aria-hidden','true');footer.querySelector('.container').insertBefore(mark,footer.querySelector('.footer-bottom'));}
   const selector = '.page-section > section:not(.hero) > .container > *, .page-section > .container > *';
   let scheduled = false;
   const updateHeader = () => {
