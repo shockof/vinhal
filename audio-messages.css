@@ -1,0 +1,12 @@
+.cms-audio-library { margin-top:56px; padding-top:44px; border-top:1px solid #ded4eb; }
+.cms-audio-list { display:grid; gap:20px; }
+.cms-audio-card { background:#fff; border:1px solid #e7def2; border-radius:24px; padding:28px; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:18px 24px; align-items:center; }
+.cms-audio-card h3 { margin:0 0 8px; font-size:1.35rem; }
+.cms-audio-card p { margin:8px 0 0; white-space:pre-line; }
+.cms-audio-card small { color:#786e88; }
+.cms-audio-card audio { grid-column:1; width:100%; min-width:0; accent-color:#7040b4; }
+.cms-audio-card button { grid-column:2; grid-row:2; }
+.cms-audio-card .cms-audio-status { grid-column:1/-1; font-size:.9rem; }
+.cms-audio-status:empty { display:none; }
+.cms-audio-empty { padding:30px; background:#f2edf7; border-radius:24px; color:#71647f; }
+@media(max-width:600px) { .cms-audio-card { grid-template-columns:1fr; padding:22px; } .cms-audio-card button { grid-column:1; grid-row:auto; justify-self:start; } }
