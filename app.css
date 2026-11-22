@@ -231,3 +231,6 @@
 #loginBtn:not(.login-account)::after {
   content: none;
 }
+
+.quicklinks .iconbox { display:grid; place-items:center; width:52px; height:52px; border-radius:16px; color:var(--purple,#7040b4); background:#eee6f7; }
+.quicklinks .iconbox svg { display:block; width:28px; height:28px; flex-shrink:0; }
