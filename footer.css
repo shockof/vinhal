@@ -55,3 +55,10 @@ body > .site-footer { margin:24px 16px 0; padding:68px 0 24px; border-radius:36p
  .site-footer .footer-nav > a::before,.site-footer .footer-contact-row svg,.site-footer .footer-units { transition:none; }
  .site-footer .footer-contact-row:is(:hover,:focus-visible) svg { animation:none; transform:none; }
 }
+
+.site-footer .footer-bottom-actions { display:flex; align-items:center; gap:24px; flex-wrap:wrap; }
+.site-footer .footer-credit { display:inline-flex; align-items:center; gap:12px; border:1px solid #a68abc66; border-radius:999px; padding:12px 20px; min-height:44px; transition:background .3s ease,border-color .3s ease; }
+.site-footer .footer-credit span { color:#b8a8cd; font-size:.875rem; }
+.site-footer .footer-credit strong { color:#fff; font-size:1.1rem; letter-spacing:.04em; }
+.site-footer .footer-credit:is(:hover,:focus-visible) { border-color:#65b7b0; background:#65b7b01a; text-decoration:none; }
+@media(max-width:540px) { .site-footer .footer-bottom-actions { gap:16px; } .site-footer .footer-credit { padding:11px 16px; } }
