@@ -241,6 +241,7 @@ window.VideiraPersonReports = (() => {
     ${select('pending','Cadastro com pendências',choices([['','Todos'],['yes','Com pendências'],['no','Sem pendências']]))}
     ${select('category','Categoria',choices([['','Todas as categorias'],['Visitante','Visitante'],['Membro da célula','Membro da célula'],['Membro da igreja','Membro da igreja']]))}
     ${select('baptism','Batismo',choices([['','Todos'],['Sim','Sim'],['Não','Não'],['Não informado','Não informado']]))}
+    <label>Discipulador<select name="discipler" aria-describedby="reportDisciplerHelp"><option value="">Todos os discipuladores</option></select><small id="reportDisciplerHelp" hidden></small></label>
     <div class="actions wide"><button type="submit">Visualizar PDF</button></div>
     <small class="wide">Pendências consideram Cursão e CTL de membros fora da Rede Kids.</small>
    </form><p id="personReportStatus" role="status" hidden></p></article>
@@ -249,12 +250,31 @@ window.VideiraPersonReports = (() => {
   const form = root.querySelector('#personReportFilters');
   const feedback = root.querySelector('#personReportStatus');
   const button = form.querySelector('button');
-  const {church, network} = form.elements;
+  const {church, network, discipler} = form.elements;
   form.elements.course.disabled = form.elements.pending.disabled = !canReadCourses;
   const networkFilters = window.VideiraNetworkFilters;
   const updateReportNetworks = (control, churchId) =>
    networkFilters.update(control, db.networks, churchId, 'Todas as redes', {includeAdultsAndYouth:true});
-  const updateNetworks = () => updateReportNetworks(network, church.value);
+  const disciplerProfiles = new Map([...(db.cell_leadership || []), ...db.profiles].map(profile => [profile.id,profile]));
+  function updateDisciplers() {
+   const previous = discipler.value;
+   const scopedCells = db.cells.filter(cell => (!church.value || cell.church_id === church.value)
+    && networkFilters.matches(network.value, networks.get(cell.network_id), cell.network_id));
+   const assignedIds = new Set(scopedCells.map(cell => cell.discipler_id).filter(Boolean));
+   const available = [...disciplerProfiles.values()].filter(profile => profile.active !== false && profile.role === 'discipulador'
+    && (!church.value || profile.church_id === church.value || assignedIds.has(profile.id))
+    && (!network.value || assignedIds.has(profile.id)))
+    .sort((a,b) => (a.card_name || a.username || a.display_name).localeCompare(b.card_name || b.username || b.display_name,'pt-BR'));
+   discipler.innerHTML = '<option value="">'+(available.length ? 'Todos os discipuladores' : 'Sem discipulador disponível')+'</option>'
+    + available.map(profile => `<option value="${esc(profile.id)}">${esc(profile.card_name || profile.username || profile.display_name)}</option>`).join('');
+   discipler.value = available.some(profile => profile.id === previous) ? previous : '';
+   discipler.disabled = !available.length;
+   const help = root.querySelector('#reportDisciplerHelp');
+   help.hidden = !!available.length;
+   help.textContent = available.length ? '' : 'Esta igreja/rede ainda não possui discipulador. O relatório mantém o vínculo com o pastor ou obreiro responsável.';
+  }
+  const updateNetworks = () => { updateReportNetworks(network, church.value); updateDisciplers(); };
+  network.onchange = updateDisciplers;
   church.onchange = updateNetworks;
   updateNetworks();
 
@@ -281,6 +301,7 @@ window.VideiraPersonReports = (() => {
     }).filter(person => {
      if (!person.cell || (filter.church && filter.church !== person.cell.church_id) ||
         !networkFilters.matches(filter.network, networks.get(person.cell.network_id), person.cell.network_id)) return false;
+     if (filter.discipler && filter.discipler !== person.cell.discipler_id) return false;
      if (filter.category && filter.category !== person.membership_status) return false;
      if (filter.baptism && filter.baptism !== (person.baptized || 'Não informado')) return false;
      const tither = person.is_tither == null ? 'unknown' : String(person.is_tither);
