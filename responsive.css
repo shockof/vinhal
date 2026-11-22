@@ -74,3 +74,12 @@ label { font-size:max(.875rem, 14px); }
  header .nav-actions { margin-left:auto; }
  header .login-account { max-width:clamp(100px,30vw,240px); }
 }
+
+/* One shared shape for action buttons across the public site and management. */
+:root { --button-radius:999px; }
+button:not(.video-card,.youtube-play-placeholder,.slide-dot):not(#youtube-thumbnails > button):not([data-seat]),
+input:is([type=button],[type=submit],[type=reset]),
+a:is(.btn,.dash-button,.footer-units,.login,.text-button),
+[role=button]:not(.video-card) {
+ border-radius:var(--button-radius)!important;
+}
