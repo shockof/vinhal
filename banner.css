@@ -1,0 +1,18 @@
+#public > #page-inicio > .hero { min-height:510px; align-items:center; margin-bottom:0; }
+#page-inicio .hero-content { padding:44px 0 130px; }
+#page-inicio .hero h1 { font-size:clamp(38px,5vw,64px); max-width:760px; }
+#page-inicio .hero p { font-size:17px; max-width:600px; }
+#page-inicio .hero .slide-controls { bottom:76px; }
+#page-inicio > .hero-pills { display:none!important; }
+.banner-white-cover { position:relative; z-index:3; height:64px; margin-top:-64px; margin-inline:16px; background:var(--paper,#fff); border-radius:36px 36px 0 0; transform:translate3d(0,var(--cover-release,0px),0); pointer-events:none; }
+#page-inicio > section.scroll-expand { margin-top:0; }
+@media(max-width:600px){
+ #public > #page-inicio > .hero { min-height:530px; }
+ #page-inicio .hero-content { padding:42px 0 125px; }
+ #page-inicio .hero h1 { font-size:38px; }
+ .banner-white-cover { margin-inline:8px; border-radius:24px 24px 0 0; }
+}
+@media(prefers-reduced-motion:reduce){ .banner-white-cover { transform:translateY(64px); } }
+
+.banner-white-cover { position:absolute; inset-inline:0; bottom:0; height:64px; margin:0; width:100%; }
+#public > #page-inicio > .hero { border:0; box-shadow:none; border-bottom-left-radius:0; border-bottom-right-radius:0; }
