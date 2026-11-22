@@ -140,7 +140,7 @@ window.VideiraDiscipleship = (() => {
     rows = await call('discipleship', {p_month: month.value + '-01'});
     const churches = new Set(networks.map(item => item.church_id));
     window.VideiraNetworkFilters.update(network, networks, churches.size === 1 ? networks[0].church_id : '');
-    setChoices(discipler,new Map(cells.filter(item=>leaders.has(item.discipler_id)).map(item=>{const person=leaders.get(item.discipler_id);return [person.id,person.card_name || person.username || person.display_name]})));
+    setChoices(discipler,new Map(cells.filter(item=>leaders.has(item.discipler_id)).map(item=>{const person=leaders.get(item.discipler_id);return [person.id,person.display_name || person.card_name || person.username]})));
     updateCells();
     feedback.textContent = '';
    } catch (error) {

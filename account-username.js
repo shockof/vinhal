@@ -19,5 +19,14 @@ window.VideiraUsername = (() => {
     update();
   }
 
-  return {login, bind};
+  function name(profile, fallback='A definir') {
+    return [profile?.card_name,profile?.username].find(value=>typeof value==='string'&&value.trim())?.trim() || fallback;
+  }
+  function memberName(person, profiles=[]) {
+    if(!person?.leadership_member) return person?.full_name || '';
+    const direct=profiles.find(profile=>person.profile_id&&profile.id===person.profile_id);
+    const matches=profiles.filter(profile=>profile.display_name===person.full_name);
+    return name(direct || (matches.length===1?matches[0]:null),person.full_name);
+  }
+  return {login, bind, name, memberName};
 })();

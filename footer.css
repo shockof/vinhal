@@ -39,3 +39,19 @@ body > .site-footer { margin:24px 16px 0; padding:68px 0 24px; border-radius:36p
 
 /* White brand directly on the purple footer. */
 .site-footer .church-logo { background:transparent; padding:0; border-radius:0; filter:brightness(0) invert(1); }
+
+/* Animated navigation markers and contact icons, in Videira's palette. */
+.site-footer .footer-nav > a { display:inline-flex; align-items:center; gap:0; }
+.site-footer .footer-nav > a::before { content:''; width:0; height:2px; border-radius:2px; background:#65b7b0; transition:width .35s ease,margin-right .35s ease; }
+.site-footer .footer-nav > a:is(:hover,:focus-visible) { color:#fff; transform:none; text-decoration:none; }
+.site-footer .footer-nav > a:is(:hover,:focus-visible)::before { width:14px; margin-right:10px; }
+.site-footer .footer-contact-row svg { width:42px; height:42px; padding:10px; box-sizing:border-box; border-radius:50%; background:#ffffff0a; color:#b9a0e0; transition:background .3s ease,color .3s ease,box-shadow .3s ease; }
+.site-footer .footer-contact-row:is(:hover,:focus-visible) { text-decoration:none; }
+.site-footer .footer-contact-row:is(:hover,:focus-visible) svg { background:#65b7b024; color:#9ce0d3; box-shadow:0 0 0 5px #65b7b00a; animation:footer-icon-bob 1.6s ease-in-out infinite; }
+.site-footer .footer-units { transition:background .35s ease,border-color .35s ease,color .35s ease; }
+.site-footer .footer-units:is(:hover,:focus-visible) { background:#65b7b024; border-color:#65b7b0; color:#fff; text-decoration:none; }
+@keyframes footer-icon-bob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-3px); } }
+@media(prefers-reduced-motion:reduce) {
+ .site-footer .footer-nav > a::before,.site-footer .footer-contact-row svg,.site-footer .footer-units { transition:none; }
+ .site-footer .footer-contact-row:is(:hover,:focus-visible) svg { animation:none; transform:none; }
+}
