@@ -134,15 +134,27 @@ window.VideiraPersonReports = (() => {
   return parts;
  }
 
- function downloadPdf(filename, report) {
+ function previewPdf(filename, report) {
+  document.querySelector('dialog.report-preview')?.close();
   const url = URL.createObjectURL(new Blob(makePdf(report), {type:'application/pdf'}));
-  const link = document.createElement('a');
+  const dialog = document.createElement('dialog');
+  dialog.className = 'report-preview';
+  dialog.setAttribute('aria-labelledby','reportPreviewTitle');
+  dialog.innerHTML = `<div class="report-preview-heading"><div><h2 id="reportPreviewTitle"></h2><p>Confira o relatório antes de baixar. PDF em formato horizontal.</p></div>
+   <div class="actions"><a class="report-preview-download" download>Baixar PDF</a><button type="button" class="secondary">Fechar</button></div></div>
+   <iframe title="Prévia do relatório em PDF"></iframe>`;
+  dialog.querySelector('h2').textContent = report.title;
+  const link = dialog.querySelector('a');
   link.href = url;
   link.download = filename;
-  document.body.append(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  dialog.querySelector('iframe').src = url;
+  dialog.querySelector('button').onclick = () => dialog.close();
+  dialog.addEventListener('close', () => {
+   dialog.remove();
+   setTimeout(() => URL.revokeObjectURL(url),60000);
+  },{once:true});
+  document.body.append(dialog);
+  dialog.showModal();
  }
 
  function groupedCellSections(db, selected, marks, canReadCourses, networks, from, to) {
@@ -212,7 +224,7 @@ window.VideiraPersonReports = (() => {
     <label>Data inicial<input type="date" name="from"></label>
     <label>Data final<input type="date" name="to"></label>
     ${select('format','Tipo de relatório',choices([['simplified','Simplificado'],['grouped','Blocado']]))}
-    <div class="actions wide"><button type="submit">Exportar relatório de células em PDF</button></div>
+    <div class="actions wide"><button type="submit">Visualizar relatório de células em PDF</button></div>
    </form><p id="cellReportStatus" role="status" hidden></p></article>`;
   root.innerHTML = `<article class="panel"><h2>Relatório Geral</h2><form id="personReportFilters" class="report-filters">
     ${select('church','Igreja',entityOptions(db.churches,'Todas as igrejas'))}
@@ -222,7 +234,7 @@ window.VideiraPersonReports = (() => {
     ${select('pending','Cadastro com pendências',choices([['','Todos'],['yes','Com pendências'],['no','Sem pendências']]))}
     ${select('category','Categoria',choices([['','Todas as categorias'],['Visitante','Visitante'],['Membro da célula','Membro da célula'],['Membro da igreja','Membro da igreja']]))}
     ${select('baptism','Batismo',choices([['','Todos'],['Sim','Sim'],['Não','Não'],['Não informado','Não informado']]))}
-    <div class="actions wide"><button type="submit">Exportar em PDF</button></div>
+    <div class="actions wide"><button type="submit">Visualizar PDF</button></div>
     <small class="wide">Pendências consideram Cursão e CTL de membros fora da Rede Kids.</small>
    </form><p id="personReportStatus" role="status" hidden></p></article>
    ${cellFilterMarkup}`;
@@ -277,7 +289,7 @@ window.VideiraPersonReports = (() => {
      return;
     }
     const issued = new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeZone:'America/Maceio'}).format(new Date());
-    downloadPdf('relatorio-cadastros-videira.pdf', {
+    previewPdf('relatorio-cadastros-videira.pdf', {
      title:'Relatório de cadastros · Igreja Videira',
      notes:[`${rows.length} cadastro(s) · ${issued}`, descriptions.join(' | ') || 'Todos os cadastros do seu escopo'],
      headers,
@@ -335,7 +347,7 @@ window.VideiraPersonReports = (() => {
     try {
      const marks = canReadCourses ? await call('report_courses') : {};
      if (!cellForm.isConnected) return;
-     downloadPdf('relatorio-celulas-blocado-videira.pdf', {
+     previewPdf('relatorio-celulas-blocado-videira.pdf', {
       title:'Relatório de células · Modelo blocado',
       notes,
       headers:['Nome','Situação','Telefone','Presença','Falta','Encontro com Deus','Batismo','Cursão','CTL','Apocalipse','Seminário Pastoral','Dizimista'],
@@ -372,7 +384,7 @@ window.VideiraPersonReports = (() => {
     if (attendance.present === false) count.absent++;
    }
    const headings = ['Célula','Igreja','Rede','Situação','Membros atuais','Visitantes atuais','Encontros','Presenças','Faltas','Frequência'];
-   downloadPdf('relatorio-celulas-videira.pdf', {
+   previewPdf('relatorio-celulas-videira.pdf', {
     title:'Relatório de células · Igreja Videira',
     notes,
     headers:headings,
