@@ -25,13 +25,14 @@ for(const group of ['pilar','satuba','antonio-lins','rio-largo','sao-luis-do-qui
  cmsRegister(visit,group);
 }
 cmsRegister($('body>header'),'chrome');cmsRegister($('body>footer'),'chrome');
-let footerFieldIndex=0;for(const field of CMS_TEXTS){if(field.el.closest('.site-footer'))field.id='footer-content-'+footerFieldIndex++;}
-for(const field of CMS_LINKS){if(field.el.closest('.footer-nav'))field.id='footer-navigation-'+(field.el.dataset.page||'management');}
+let footerFieldIndex=0;for(const field of CMS_TEXTS){if(field.el.closest('.site-footer')){field.id='footer-content-'+footerFieldIndex++;field.el.dataset.cmsText=field.id;}}
+for(const field of CMS_LINKS){if(field.el.closest('.footer-nav')){field.id='footer-navigation-'+(field.el.dataset.page||'management');field.el.dataset.cmsLink=field.id;}}
 for (const [i, link] of [...document.querySelectorAll('[data-footer-contact]')].entries()) {
  for (const [j, el] of [...link.querySelectorAll('small,.footer-contact-value')].entries()) {
-  const id='footer-contact-'+i+'-text-'+j, original=el.textContent.trim();
+  const id='footer-contact-'+i+'-text-'+j, original=el.textContent.trim();el.dataset.cmsText=id;
   CMS_TEXTS.push({id,el,group:'chrome',value:original,original,context:'Contatos do rodapé',label:j?'Contato':'Título do contato',long:true});
  }
+ link.dataset.cmsLink='footer-contact-'+i+'-link';
  CMS_LINKS.push({id:'footer-contact-'+i+'-link',el:link,group:'chrome',value:link.getAttribute('href'),label:link.textContent.trim()});
 }
 
