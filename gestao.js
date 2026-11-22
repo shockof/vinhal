@@ -755,9 +755,12 @@ loginForm.onsubmit=async event=>{
   clearSession();
   sessionStore=remember?localStorage:sessionStorage;
   saveTokens(tokens);
-  loginForm.elements.password.value='';
   await reload();
-  render();
+  // Keep the submitted fields intact until navigation so password managers
+  // can recognize a successful sign-in. Only session tokens are persisted.
+  const destination=new URL(location.href);
+  destination.searchParams.delete('senha');
+  location.replace(destination.href);
  }catch(error){
   clearSession();
   status(error.message,true);
