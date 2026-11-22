@@ -1,15 +1,16 @@
 /* Stable dimensions prevent the logo and links from jumping while scrolling. */
-body > header { transition:background .5s ease,border-color .5s ease; backdrop-filter:none; -webkit-backdrop-filter:none; }
-body > header .nav { position:relative; top:6px; height:56px; width:calc(100% - 48px); max-width:var(--max,1160px); box-sizing:border-box; padding-inline:16px; border:1px solid transparent; border-radius:20px; transform:translate3d(0,0,0); background:transparent; backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); transition:transform .55s cubic-bezier(.22,1,.36,1),background .5s ease,box-shadow .5s ease,border-color .5s ease,border-radius .55s cubic-bezier(.22,1,.36,1); }
+body > header { height:60px; transition:background .5s ease,border-color .5s ease; backdrop-filter:none; -webkit-backdrop-filter:none; }
+body > header .nav { position:relative; top:2px; height:56px; width:calc(100% - 48px); max-width:var(--max,1160px); box-sizing:border-box; padding-inline:16px; border:1px solid transparent; border-radius:20px; transform:translate3d(0,0,0); background:transparent; backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); transition:transform .55s cubic-bezier(.22,1,.36,1),background .5s ease,box-shadow .5s ease,border-color .5s ease,border-radius .55s cubic-bezier(.22,1,.36,1); }
 body > header.is-floating { background:transparent; border-color:transparent; pointer-events:none; }
-body > header.is-floating .nav { pointer-events:auto; transform:translate3d(0,2px,0); border-color:#7040b426; border-radius:999px; background:rgba(255,255,255,.92); box-shadow:0 8px 30px #30184812; }
+body > header.is-floating .nav { pointer-events:auto; transform:translate3d(0,0,0); border-color:#7040b426; border-radius:999px; background:rgba(255,255,255,.92); box-shadow:0 8px 30px #30184812; }
 body > header .church-logo,body > header.is-floating .church-logo { height:38px; width:110px; transition:none; }
 body > header .brand,body > header.is-floating .brand { min-width:110px; }
 .scroll-reveal { opacity:0; transform:translate3d(0,28px,0); transition:opacity .7s cubic-bezier(.22,1,.36,1),transform .7s cubic-bezier(.22,1,.36,1); }
 .scroll-reveal.scroll-entered { opacity:1; transform:none; }
 .scroll-reveal:focus-within { opacity:1; transform:none; }
 @media(max-width:1000px) {
- body > header .nav { top:4px; height:60px; width:calc(100% - 24px); padding-inline:14px; }
+ body > header { height:64px; }
+ body > header .nav { top:2px; height:60px; width:calc(100% - 24px); padding-inline:14px; }
  body > header.is-floating .navlinks { top:calc(100% + 8px); left:0; right:0; }
 }
 @media(max-width:480px) {
