@@ -10,7 +10,9 @@
   let scheduled = false;
   const updateHeader = () => {
     scheduled = false;
-    header.classList.toggle('is-floating', window.scrollY > 48);
+    const floating=header.classList.contains('is-floating');
+    if(window.scrollY>72&&!floating)header.classList.add('is-floating');
+    else if(window.scrollY<24&&floating)header.classList.remove('is-floating');
   };
   window.addEventListener('scroll', () => {
     if (!scheduled) { scheduled = true; requestAnimationFrame(updateHeader); }
