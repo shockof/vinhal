@@ -3,6 +3,18 @@
   const header = document.querySelector('body > header');
   const root = document.getElementById('public');
   if (!header || !root) return;
+  const expansion = root.querySelector('#page-inicio .vision')?.closest('section');
+  expansion?.classList.add('scroll-expand');
+  const particles=document.createElement('div');
+  particles.className='site-particles';particles.setAttribute('aria-hidden','true');
+  for(let i=0;i<22;i++){
+    const dot=document.createElement('span');
+    const side=i%2===0?2+(i*7%10):89+(i*3%10);
+    dot.style.cssText='left:'+side+'%;top:'+(i*37%100)+'%;--drift:'+(10+i%9)+'s;--delay:-'+(i*1.7)+'s;--dot:'+(2+i%3)+'px';
+    particles.append(dot);
+  }
+  root.prepend(particles);
+  document.addEventListener('visibilitychange',()=>particles.classList.toggle('is-paused',document.hidden));
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
   const footer=document.querySelector('.site-footer');
   if(footer){const mark=document.createElement('div');mark.className='footer-wordmark';mark.textContent='VIDEIRA';mark.setAttribute('aria-hidden','true');footer.querySelector('.container').append(mark);}
@@ -10,6 +22,11 @@
   let scheduled = false;
   const updateHeader = () => {
     scheduled = false;
+    if(expansion && expansion.closest('.page-section')?.classList.contains('active')) {
+      const rect=expansion.getBoundingClientRect();
+      const progress=reduced.matches?1:Math.max(0,Math.min(1,(innerHeight-rect.top)/(innerHeight*.75)));
+      expansion.style.setProperty('--section-scale',String(.94+.06*progress));
+    }
     const floating=header.classList.contains('is-floating');
     if(window.scrollY>72&&!floating)header.classList.add('is-floating');
     else if(window.scrollY<24&&floating)header.classList.remove('is-floating');
@@ -38,11 +55,13 @@
     event.target.closest('.scroll-reveal')?.classList.add('scroll-entered');
   });
   reduced.addEventListener('change', () => {
+    updateHeader();
     if (!reduced.matches) return;
     observer.disconnect();
     document.querySelectorAll('.scroll-reveal').forEach(item => item.classList.add('scroll-entered'));
   });
-  window.addEventListener('videira:navigation', prepare);
+  window.addEventListener('videira:navigation', () => {prepare();updateHeader();});
+  window.addEventListener('resize',updateHeader,{passive:true});
   let refresh = false;
   new MutationObserver(() => {
     if (refresh) return;
