@@ -14,3 +14,16 @@
 @media(max-width:1000px) { .kids-welcome-grid { margin-top:-65px; grid-template-columns:42% 58%; } .kids-welcome-copy { padding-top:55px; } }
 @media(max-width:700px) { #page-kids > .kids-welcome { padding:20px 0 28px; } .kids-welcome .kids-welcome-inner { width:calc(100% - 32px); } .kids-welcome-grid { grid-template-columns:1fr; margin-top:0; } .kids-welcome-copy { padding:22px 4px 12px; text-align:center; } .kids-welcome #kids-welcome-title { font-size:clamp(1.85rem,7vw,2.65rem); } .kids-welcome-copy p { margin-left:auto; margin-right:auto; } .kids-turma-3d { width:100%; margin:12px 0 0; } .kids-eyebrow { margin-bottom:12px; } }
 @media(prefers-reduced-motion:reduce) { .kids-welcome-button { transition:none; } }
+/* Mantém a composição completa na primeira tela em computadores e tablets. */
+@media(min-width:701px) {
+ #page-kids > .kids-welcome { padding:16px 0 20px; }
+ .kids-welcome .kids-welcome-inner { width:min(1120px,calc(100% - 64px)); height:min(660px,calc(100svh - 160px)); display:grid; grid-template-rows:34% 66%; }
+ .kids-brand-3d { width:100%; height:100%; min-height:0; object-fit:contain; }
+ .kids-welcome-grid { grid-template-columns:40% 60%; margin-top:-24px; height:calc(100% + 24px); min-height:0; }
+ .kids-welcome-copy { padding:12px 14px 0 0; }
+ .kids-welcome #kids-welcome-title { font-size:clamp(1.45rem,3.6svh,2.6rem); margin-bottom:16px; }
+ .kids-eyebrow { font-size:.8rem; margin-bottom:12px; }
+ .kids-welcome-copy p { font-size:clamp(1rem,1.8svh,1.1rem); line-height:1.5; margin-bottom:18px; }
+ .kids-welcome-button { min-height:46px; padding:11px 24px; }
+ .kids-turma-3d { width:100%; height:100%; max-width:100%; max-height:100%; min-height:0; object-fit:contain; object-position:center bottom; margin:0; }
+}
