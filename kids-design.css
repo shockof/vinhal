@@ -55,3 +55,14 @@
 @media(max-width:700px) { .kids-turma-art { height:auto; aspect-ratio:3 / 2; margin-top:12px; } .kids-orbits span { width:calc(var(--kids-dot) * .7); height:calc(var(--kids-dot) * .7); } }
 @media(prefers-reduced-motion:reduce) { .kids-orbits { display:none; } }
 @media print { .kids-orbits { display:none; } }
+
+/* Recorte com alfa: as cores do cenário não se misturam com os personagens. */
+.kids-turma-art .kids-turma-3d { mix-blend-mode:normal; position:relative; z-index:2; }
+.kids-turma-art::before { z-index:0; }
+@media(min-width:701px) {
+ .kids-welcome .kids-welcome-inner { grid-template-rows:52% 48%; }
+ .kids-brand-lockup { width:min(100%,calc((var(--kids-scene-height) * .52 - 32px) * 3)); position:relative; z-index:0; }
+ .kids-welcome-grid { margin-top:-112px; height:calc(100% + 112px); z-index:2; }
+ .kids-welcome-copy { padding-top:76px; }
+ .kids-brand-state { position:relative; z-index:3; }
+}
