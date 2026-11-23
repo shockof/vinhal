@@ -86,3 +86,5 @@
 
 /* Ajuste localizado de cor: o PNG original permanece intacto, inclusive os olhos. */
 .kids-turma-art .kids-eye-tint { position:absolute; inset:0; display:block; width:100%; height:100%; z-index:3; pointer-events:none; }
+
+.kids-welcome #kids-welcome-title { white-space:pre-line; }

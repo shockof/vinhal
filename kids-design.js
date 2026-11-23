@@ -12,5 +12,5 @@
  dots.forEach(([x,y,size],i)=>{const dot=document.createElement('span');dot.style.cssText=`left:${x}%;top:${y}%;--kids-dot:${size}px;--kids-float:${5+i%4}s;--kids-fade:${3.5+i%3*.8}s;--kids-delay:-${i*.9}s`;orbits.append(dot)});
  document.addEventListener('visibilitychange',()=>hero.classList.toggle('is-paused',document.hidden));
  page.prepend(hero);
- hero.querySelector('a').addEventListener('click',event=>{if(!intro)return;event.preventDefault();intro.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});intro.setAttribute('tabindex','-1');intro.focus({preventScroll:true});});
+ hero.querySelector('a').addEventListener('click',event=>{if(!intro||event.currentTarget.getAttribute('href')!=='#kids-descobertas')return;event.preventDefault();intro.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});intro.setAttribute('tabindex','-1');intro.focus({preventScroll:true});});
 })();
