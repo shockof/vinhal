@@ -1,0 +1,16 @@
+#page-kids > .kids-welcome { background:#fff; padding:28px 0 44px; margin-top:16px; isolation:isolate; }
+.kids-welcome .kids-welcome-inner { width:min(1360px,calc(100% - 64px)); }
+.kids-brand-3d { display:block; width:100%; height:auto; object-fit:contain; }
+.kids-welcome-grid { display:grid; grid-template-columns:40% 60%; align-items:center; margin-top:-110px; position:relative; }
+.kids-welcome-copy { padding:90px 8px 10px 0; z-index:3; }
+.kids-eyebrow { display:block; color:#76278c; text-transform:uppercase; letter-spacing:.15em; font-size:.875rem; font-weight:800; margin-bottom:18px; }
+.kids-welcome #kids-welcome-title { color:#52156b; font-size:clamp(1.9rem,3.3vw,3.2rem); line-height:1.12; letter-spacing:-.045em; margin:0 0 22px; }
+.kids-welcome-copy p { color:#62586a; font-size:clamp(1rem,1.5vw,1.2rem); line-height:1.65; max-width:400px; margin:0 0 28px; }
+.kids-welcome-button { display:inline-flex; align-items:center; justify-content:center; min-height:52px; border-radius:999px; padding:14px 28px; color:#52156b; background:#ffcf28; text-decoration:none; font-size:1rem; font-weight:750; box-shadow:0 6px 18px #e0ae251c; transition:background .2s,transform .2s; }
+.kids-welcome-button:hover { background:#ffdc53; transform:translateY(-2px); }
+.kids-welcome-button:focus-visible { outline:3px solid #76278c; outline-offset:5px; }
+.kids-turma-3d { display:block; width:110%; max-width:none; height:auto; margin-left:-6%; position:relative; z-index:2; mix-blend-mode:multiply; }
+#kids-descobertas { scroll-margin-top:100px; }
+@media(max-width:1000px) { .kids-welcome-grid { margin-top:-65px; grid-template-columns:42% 58%; } .kids-welcome-copy { padding-top:55px; } }
+@media(max-width:700px) { #page-kids > .kids-welcome { padding:20px 0 28px; } .kids-welcome .kids-welcome-inner { width:calc(100% - 32px); } .kids-welcome-grid { grid-template-columns:1fr; margin-top:0; } .kids-welcome-copy { padding:22px 4px 12px; text-align:center; } .kids-welcome #kids-welcome-title { font-size:clamp(1.85rem,7vw,2.65rem); } .kids-welcome-copy p { margin-left:auto; margin-right:auto; } .kids-turma-3d { width:100%; margin:12px 0 0; } .kids-eyebrow { margin-bottom:12px; } }
+@media(prefers-reduced-motion:reduce) { .kids-welcome-button { transition:none; } }
