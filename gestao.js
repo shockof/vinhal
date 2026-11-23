@@ -157,7 +157,7 @@ function entityForm(){const item=edit?db[list[view]].find(x=>x.id===edit):{};if(
    <div id="memberPhotoPreview" class="profile-avatar"><span aria-label="Sem foto">—</span></div>
    <div>
     <label>Foto do membro ou visitante (opcional)<input id="memberPhotoFile" type="file" accept="image/jpeg,image/png,image/webp"></label>
-    <small>JPG, PNG ou WebP · até 8 MB</small>
+    <small>JPG, PNG ou WebP · até 10 MB</small>
     <div class="actions"><button type="button" class="secondary" id="cropMemberPhoto" hidden>Ajustar enquadramento</button></div>
     <p id="memberPhotoFeedback" role="status"></p>
    </div>
