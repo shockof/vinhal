@@ -42,3 +42,16 @@
  .kids-brand-lockup { justify-self:center; width:min(100%,calc((var(--kids-scene-height) * .34 - 32px) * 3)); height:100%; }
  .kids-welcome-grid { margin-top:-24px; height:calc(100% + 24px); z-index:2; }
 }
+
+.kids-turma-art { position:relative; min-width:0; min-height:0; width:100%; height:100%; margin:0; isolation:isolate; }
+.kids-turma-art::before { content:""; position:absolute; width:96%; height:88%; right:0; bottom:5%; border-radius:50% 47% 46% 48%; background:linear-gradient(145deg,#f5eeff,#ece0fb); z-index:0; }
+.kids-turma-art .kids-turma-3d { width:100%; height:100%; margin:0; object-fit:contain; object-position:center bottom; }
+.kids-orbits { position:absolute; inset:0; pointer-events:none; z-index:3; }
+.kids-orbits span { position:absolute; width:var(--kids-dot); height:var(--kids-dot); border-radius:50%; background:#8c21bd; opacity:0; animation:kids-dot-float var(--kids-float) ease-in-out var(--kids-delay) infinite alternate,kids-dot-fade var(--kids-fade) ease-in-out var(--kids-delay) infinite; }
+.kids-orbits span:nth-child(even) { background:#ffca16; }
+@keyframes kids-dot-float { from { transform:translate3d(0,7px,0); } to { transform:translate3d(5px,-11px,0); } }
+@keyframes kids-dot-fade { 0%,12%,90%,100% { opacity:0; } 35%,65% { opacity:.85; } }
+.kids-welcome.is-paused .kids-orbits span,.page-section:not(.active) .kids-orbits span { animation-play-state:paused; }
+@media(max-width:700px) { .kids-turma-art { height:auto; aspect-ratio:3 / 2; margin-top:12px; } .kids-orbits span { width:calc(var(--kids-dot) * .7); height:calc(var(--kids-dot) * .7); } }
+@media(prefers-reduced-motion:reduce) { .kids-orbits { display:none; } }
+@media print { .kids-orbits { display:none; } }
