@@ -12,4 +12,4 @@
 @media(max-width:600px) { .cms-audio-card { grid-template-columns:1fr; padding:22px; } .cms-audio-card button { grid-column:1; grid-row:auto; justify-self:start; } }
 
 /* A página de Mensagens começa diretamente pelo conteúdo. */
-#page-arquivos > .about-hero { display:none !important; }
+#public > .page-section > .about-hero, #page-kids > .kids-hero { display:none !important; }
