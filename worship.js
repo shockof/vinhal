@@ -6,11 +6,16 @@ window.VideiraWorship=(()=>{
  const serviceOptions='<option value="morning">Culto da manhã</option><option value="evening">Culto da noite</option>';
  const options=(items,all)=>`<option value="">${all}</option>`+items.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
  const request=(call,action,data={})=>call('worship',{p_action:action,p_data:data});
+ async function callPhotoSource(id,call,resolvePhoto){
+  const photo=resolvePhoto?await resolvePhoto(id):(await request(call,'photo',{id}))?.photo_base64;
+  if(typeof photo==='string'&&photo)return 'data:image/jpeg;base64,'+photo;
+  return photo&&typeof photo.source==='string'&&photo.source?photo.source:null;
+ }
  let unsaved=()=>false;
  const canLeave=()=>!unsaved()||confirm('Há marcações não salvas. Deseja sair sem salvar?');
  function message(root,text,error=false){const el=root.querySelector('.worship-status');if(el){el.textContent=text;el.classList.toggle('error',error)}}
  async function scope(root,db,call){const data=db.worship_scope||await request(call,'scope');if(!root.isConnected)return null;return data}
- async function mountCall(root,db,call){
+ async function mountCall(root,db,call,{resolvePhoto}={}){
   root.innerHTML='<p role="status">Carregando células para a chamada…</p>';
   try{
    const data=await scope(root,db,call);if(!data)return;
@@ -28,7 +33,7 @@ window.VideiraWorship=(()=>{
    }
    function renderRows(){const query=root.querySelector('.worship-search').value.normalize('NFD').replace(/\p{M}/gu,'').toLowerCase();
     list.innerHTML=roster.people.filter(p=>p.full_name.normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().includes(query)).map(p=>`<div class="worship-person" data-person="${esc(p.id)}"><span class="attendance-avatar" data-avatar="${esc(p.id)}" aria-hidden="true">${esc(p.full_name.slice(0,1))}</span><div class="worship-person-name"><strong>${esc(p.full_name)}</strong><small>${esc(cells.find(c=>c.id===p.cell_id)?.name)}</small></div><span class="worship-category">${esc(p.category)}</span><fieldset><legend class="sr-only">Chamada de ${esc(p.full_name)}</legend>${[['true','Presente'],['false','Falta'],['null','Pendente']].map(([value,label])=>`<label class="worship-choice ${p.present===JSON.parse(value)?'selected':''}"><input type="radio" name="attendance-${esc(p.id)}" value="${value}" ${p.present===JSON.parse(value)?'checked':''}>${label}</label>`).join('')}</fieldset></div>`).join('')||'<p>Nenhuma pessoa encontrada.</p>';
-    let index=0;const avatars=[...list.querySelectorAll('[data-avatar]')];async function photos(){while(index<avatars.length){const avatar=avatars[index++],id=avatar.dataset.avatar;if(!avatar.isConnected)return;try{if(!photoCache.has(id))photoCache.set(id,request(call,'photo',{id}).then(r=>r?.photo_base64||null).catch(()=>null));const photo=await photoCache.get(id);if(photo&&avatar.isConnected){const img=document.createElement('img');img.alt='';img.src='data:image/jpeg;base64,'+photo;avatar.replaceChildren(img)}}catch{}}}Promise.all([photos(),photos(),photos()]);
+    let index=0;const avatars=[...list.querySelectorAll('[data-avatar]')];async function photos(){while(index<avatars.length){const avatar=avatars[index++],id=avatar.dataset.avatar;if(!avatar.isConnected)return;try{if(!photoCache.has(id))photoCache.set(id,callPhotoSource(id,call,resolvePhoto).catch(()=>null));const photo=await photoCache.get(id);if(photo&&avatar.isConnected){const img=document.createElement('img');img.alt='';img.onload=()=>{if(avatar.isConnected)avatar.replaceChildren(img)};img.src=photo}}catch{}}}Promise.all([photos(),photos(),photos()]);
    }
    list.onchange=event=>{const radio=event.target.closest('input[type=radio]');if(!radio||loading)return;const row=radio.closest('[data-person]');roster.people.find(p=>p.id===row.dataset.person).present=JSON.parse(radio.value);dirty=true;for(const label of row.querySelectorAll('.worship-choice'))label.classList.toggle('selected',label.contains(radio));totals()};
    root.querySelector('.worship-search').oninput=()=>{if(roster)renderRows()};
