@@ -57,13 +57,6 @@ document.querySelector('#loginBtn').onclick=()=>{location.href='gestao.html?v=20
   avatar.className='login-avatar';
   avatar.setAttribute('aria-hidden','true');
   avatar.textContent=name.split(/\s+/).slice(0,2).map(part=>Array.from(part)[0]).join('').toUpperCase();
-  const photo=profile.photo_url;
-  if(typeof photo==='string'&&(photo.startsWith(config.url+'/storage/v1/object/sign/videira-avatars/')||/^data:image\/jpeg;base64,\/9j\/[A-Za-z0-9+/]*={0,2}$/.test(photo))){
-   const image=new Image();
-   image.alt='';
-   image.onload=()=>avatar.replaceChildren(image);
-   image.src=photo;
-  }
   const role=roles[profile.role]||'Gestão';
   const info=document.createElement('span');
   info.className='login-account-info';
@@ -75,6 +68,27 @@ document.querySelector('#loginBtn').onclick=()=>{location.href='gestao.html?v=20
   button.classList.add('login-account');
   button.setAttribute('aria-label',name+', '+role+'. Abrir painel de gestão');
   button.replaceChildren(avatar,info);
+  // Match the management header: personal photo first, then the existing leadership photo.
+  async function showPhoto(source){
+   if(typeof source!=='string'||!(source.startsWith(config.url+'/storage/v1/object/sign/videira-avatars/')||/^data:image\/jpeg;base64,\/9j\/[A-Za-z0-9+/]*={0,2}$/.test(source)))return false;
+   const image=new Image();image.alt='';image.src=source;
+   try{await image.decode()}catch{return false}
+   if(!avatar.isConnected)return false;
+   avatar.replaceChildren(image);return true;
+  }
+  (async()=>{
+   if(await showPhoto(profile.photo_url)||!avatar.isConnected)return;
+   if(!['supervisor','supervisora_kids','pastor','predio','obreiro','discipulador','lider'].includes(profile.role)||!profile.id)return;
+   try{
+    const response=await fetch(config.url+'/rest/v1/rpc/videira_public_leadership_photo',{
+     method:'POST',headers:{apikey:config.publicKey,Authorization:'Bearer '+config.publicKey,'Content-Type':'application/json'},
+     body:JSON.stringify({p_id:profile.id}),signal:AbortSignal.timeout(10000)
+    });
+    if(!response.ok||!avatar.isConnected)return;
+    const photo=await response.json();
+    if(typeof photo==='string'&&photo)await showPhoto('data:image/jpeg;base64,'+photo);
+   }catch{/* Keep initials if neither existing photo is available. */}
+  })();
  }
  function request(action,tokens){
   const refresh=action==='refresh';
