@@ -605,7 +605,7 @@ function bind(){
   });
  }
  if(view==='site')window.VideiraSiteEditor.mount($('#siteEditor'),{call,profile:db.profile,config:cfg,getSession:()=>session});
- if(view==='profile')window.VideiraProfile.mount($('#myProfile'),{call,onSaved:async()=>{await reload();render();status('Perfil atualizado.')},onPasswordChanged:()=>{clearSession();location.href='gestao.html?senha=alterada'}});
+ if(view==='profile')window.VideiraProfile.mount($('#myProfile'),{call,resolvePhoto:async profile=>{if(profile.id!==db?.profile.id)return null;await showIdentityPhoto();return profile.id===db?.profile.id?identityPhotoState?.image?.src||null:null},onSaved:async()=>{await reload();render();status('Perfil atualizado.')},onPasswordChanged:()=>{clearSession();location.href='gestao.html?senha=alterada'}});
  const bindAccountEditors=()=>document.querySelectorAll('[data-account-edit]').forEach(button=>button.onclick=()=>window.VideiraAccountEditor.open({id:button.dataset.accountEdit,call,requestPhoto:requestLeadershipPhoto,churches:db.churches,networks:db.networks,
   regularCells:db.cells.filter(cell=>cell.active&&!cell.is_paused&&db.networks.some(network=>network.id===cell.network_id&&network.kind==='regular')),
   people:db.people,roles,updateRoleOptions,assignKidsSupervisorScope,selfId:db.profile.id,onSaved:async()=>{await reload();if(accountList?.isConnected){
