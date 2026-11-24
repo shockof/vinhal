@@ -16,3 +16,6 @@
 .worship-summary-note{font-size:.875rem;line-height:1.5;color:#756d82;margin:16px 0 0}
 @media(max-width:1150px){.worship-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.worship-summary-head{display:block}.worship-summary-head>span{display:block;margin-top:6px}.worship-summary-grid{gap:10px}.worship-stat{padding:16px}.worship-stat-icon{margin-bottom:14px}.worship-stat h3{font-size:.9rem;min-height:2.8em}.worship-stat>strong{font-size:2.25rem}.worship-stat>p{font-size:.8rem}.worship-summary-head h2{font-size:1.25rem}}
+
+.worship-field-button{box-sizing:border-box;block-size:var(--field-height,46px);min-block-size:0;padding:0 20px;border:1px solid transparent;border-radius:10px!important;line-height:normal;align-self:end}
+.worship-filters>.worship-field-button{inline-size:100%}
