@@ -12,7 +12,23 @@ window.VideiraDiscipleship = (() => {
  const options = entries => Object.entries(entries)
   .map(([key, label]) => `<option value="${key}">${label}</option>`).join('');
 
- function mount(root, call, esc, editable, {meetings, cells, networks, people, profiles, cell_leadership}) {
+ async function mount(root, call, esc, editable, data) {
+  root.innerHTML='<p role="status">Carregando permissões do acompanhamento…</p>';
+  try {
+   const scope=await call('discipleship_scope',{});
+   if(!root.isConnected)return;
+   if(!scope||!Array.isArray(scope.cells)||!Array.isArray(scope.networks)||scope.editable!==true)throw Error('Permissões de acompanhamento inválidas.');
+   mountScoped(root,call,esc,editable&&scope.editable,{...data,...scope,profiles:[],people:[]});
+  } catch(error) {
+   if(!root.isConnected)return;
+   // Keep the existing screen usable while the database migration is being applied.
+   if(error.status===404||error.code==='PGRST202'||/videira_discipleship_scope/.test(error.message||'')) {
+    mountScoped(root,call,esc,['master','discipulador'].includes(data.profile.role),data);
+    const warning=document.createElement('p');warning.className='notice';warning.textContent='A ampliação das permissões do acompanhamento ainda precisa ser ativada no servidor.';root.prepend(warning);
+   } else root.innerHTML='<p role="alert">'+esc(error.message||'Não foi possível carregar o acompanhamento.')+'</p>';
+  }
+ }
+ function mountScoped(root, call, esc, editable, {meetings, cells, networks, people, profiles, cell_leadership}) {
   const currentMonth = new Intl.DateTimeFormat('sv-SE', {
    timeZone: 'America/Maceio', year: 'numeric', month: '2-digit'
   }).format(new Date());

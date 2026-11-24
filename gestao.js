@@ -15,7 +15,7 @@ readManagementRoute();
 let memberSearch='',accountSearch='';
 let memberForLeaderAccess=null;
 const normalizeSearch=value=>String(value??'').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().trim();
-const discipleshipRoles=new Set(['master','discipulador','pastor','predio','obreiro','supervisor']);
+const discipleshipRoles=new Set(['master','discipulador','pastor','predio','obreiro','supervisor','supervisora_kids']);
 const names={discipleship:'Acompanhamento do discipulado',overview:'Visão geral',profile:'Meu perfil',church:'Igrejas',network:'Redes',cell:'Células',person:'Membros e visitantes',meeting:'Presenças',reports:'Relatórios',site:'Editar site',accounts:'Contas e liderança'};
 const cellEditorRoles=new Set(['master','supervisor','predio']);
 const memberTransferRoles=new Set(['master','supervisor','pastor','obreiro','predio','supervisora_kids']);
@@ -70,7 +70,7 @@ async function request(action,data,token){
  const controller=new AbortController();
  const timer=setTimeout(()=>controller.abort(),30000);
  try{
-  const rpc={registration_trash:'videira_registration_trash',registration_archive:'videira_registration_archive',enroll_regular_leader:'videira_regular_leader_enroll',account_get:'videira_account_card',account_save:'videira_account_card',discipleship_person_field:'videira_discipleship_person_field',report_courses:'videira_report_courses',discipleship:'videira_discipleship',link_existing_leader:'videira_link_existing_leader',
+  const rpc={discipleship_scope:'videira_discipleship_scope',registration_trash:'videira_registration_trash',registration_archive:'videira_registration_archive',enroll_regular_leader:'videira_regular_leader_enroll',account_get:'videira_account_card',account_save:'videira_account_card',discipleship_person_field:'videira_discipleship_person_field',report_courses:'videira_report_courses',discipleship:'videira_discipleship',link_existing_leader:'videira_link_existing_leader',
    member_leader_links:'videira_member_leader_links',member_leadership_avatar:'videira_member_leadership_avatar',person_photo:'videira_portal'}[action];
   const payload=rpc==='videira_account_card'?{p_action:action==='account_get'?'get':'save',p_data:data}:action==='person_photo'?{p_action:action,p_data:data}:rpc?(data||{}):action==='login'?{action,...data}:{action,data};
   const response=await fetch(rpc?cfg.url+'/rest/v1/rpc/'+rpc:cfg.gateway,{
@@ -547,7 +547,7 @@ function bind(){
   bindDashboard();bindViews();
  };bindDashboard();loadBirthdays($('#birthdaysPanel'));$('#dashboardPeriod').onchange=update;if($('#dashboardChurch'))$('#dashboardChurch').onchange=update}
 
- if(view==='discipleship')window.VideiraDiscipleship.mount($('#discipleshipPanel'),call,esc,['master','discipulador'].includes(db.profile.role),db);
+ if(view==='discipleship')window.VideiraDiscipleship.mount($('#discipleshipPanel'),call,esc,discipleshipRoles.has(db.profile.role),db);
  if(view==='cell')bindCellFilters();
  if(view==='person'){
   const search=$('#memberSearch');
