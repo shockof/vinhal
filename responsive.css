@@ -77,7 +77,7 @@ label { font-size:max(.875rem, 14px); }
 
 /* One shared shape for action buttons across the public site and management. */
 :root { --button-radius:999px; }
-button:not(.video-card,.youtube-play-placeholder,.slide-dot):not(#youtube-thumbnails > button):not([data-seat]),
+button:not(.video-card,.youtube-play-placeholder,.slide-dot,.meeting-cell-card):not(#youtube-thumbnails > button):not([data-seat]),
 input:is([type=button],[type=submit],[type=reset]),
 a:is(.btn,.dash-button,.footer-units,.login,.text-button),
 [role=button]:not(.video-card) {
