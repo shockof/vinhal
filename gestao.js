@@ -17,7 +17,7 @@ let memberSearch='',accountSearch='';
 let memberForLeaderAccess=null;
 const normalizeSearch=value=>String(value??'').normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().trim();
 const discipleshipRoles=new Set(['master','discipulador','pastor','predio','obreiro','supervisor','supervisora_kids']);
-const names={discipleship:'Acompanhamento do discipulado',overview:'Visão geral',profile:'Meu perfil',church:'Igrejas',network:'Redes',cell:'Células',person:'Membros e visitantes',meeting:'Presenças',reports:'Relatórios',site:'Editar site',accounts:'Contas e liderança'};
+const names={worship:'Presença no culto',discipleship:'Acompanhamento do discipulado',overview:'Visão geral',profile:'Meu perfil',church:'Igrejas',network:'Redes',cell:'Células',person:'Membros e visitantes',meeting:'Presenças',reports:'Relatórios',site:'Editar site',accounts:'Contas e liderança'};
 const cellEditorRoles=new Set(['master','supervisor','predio']);
 const memberTransferRoles=new Set(['master','supervisor','pastor','obreiro','predio','supervisora_kids']);
 const list={church:'churches',network:'networks',cell:'cells',person:'people'};
@@ -72,7 +72,7 @@ async function request(action,data,token){
  const controller=new AbortController();
  const timer=setTimeout(()=>controller.abort(),30000);
  try{
-  const rpc={youth_report_scope:'videira_youth_report_scope',discipleship_scope:'videira_discipleship_scope',registration_trash:'videira_registration_trash',registration_archive:'videira_registration_archive',enroll_regular_leader:'videira_regular_leader_enroll',account_get:'videira_account_card',account_save:'videira_account_card',discipleship_person_field:'videira_discipleship_person_field',report_courses:'videira_report_courses',discipleship:'videira_discipleship',link_existing_leader:'videira_link_existing_leader',
+  const rpc={worship:'videira_worship',youth_report_scope:'videira_youth_report_scope',discipleship_scope:'videira_discipleship_scope',registration_trash:'videira_registration_trash',registration_archive:'videira_registration_archive',enroll_regular_leader:'videira_regular_leader_enroll',account_get:'videira_account_card',account_save:'videira_account_card',discipleship_person_field:'videira_discipleship_person_field',report_courses:'videira_report_courses',discipleship:'videira_discipleship',link_existing_leader:'videira_link_existing_leader',
    member_leader_links:'videira_member_leader_links',member_leadership_avatar:'videira_member_leadership_avatar',person_photo:'videira_portal'}[action];
   const payload=rpc==='videira_account_card'?{p_action:action==='account_get'?'get':'save',p_data:data}:action==='person_photo'?{p_action:action,p_data:data}:rpc?(data||{}):action==='login'?{action,...data}:{action,data};
   const response=await fetch(rpc?cfg.url+'/rest/v1/rpc/'+rpc:cfg.gateway,{
@@ -146,7 +146,7 @@ async function call(action,data){
  }
 }
 
-async function reload(){identityPhotoState=null;db=await call('load');if(!db?.profile?.active)throw Error('Conta sem acesso ativo.');try{ownProfile=await call('profile_get')}catch{ownProfile=null}}
+async function reload(){identityPhotoState=null;db=await call('load');if(!db?.profile?.active)throw Error('Conta sem acesso ativo.');try{ownProfile=await call('profile_get')}catch{ownProfile=null}try{db.worship_scope=await call('worship',{p_action:'scope',p_data:{}})}catch{db.worship_scope=null}}
 function table(headers,rows){return rows.length?`<div class="table-scroll"><table><thead><tr>${headers.map(x=>`<th>${esc(x)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr>${row.map(x=>`<td>${x}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`:'<div class="empty">Nenhum cadastro neste escopo.</div>'}
 function metric(n,title){return `<article class="card"><strong>${n}</strong><span>${title}</span></article>`}
 function overview(){return window.VideiraDashboard.overview(db)}
@@ -350,7 +350,7 @@ async function loadBirthdays(panel) {
  }
 }
 
-function managementTabs(){return ['overview','profile',...(discipleshipRoles.has(db.profile.role)?['discipleship']:[]),...(['master','supervisor'].includes(db.profile.role)?['church','network','cell']:db.profile.role==='predio'?['network','cell']:['pastor','obreiro','supervisora_kids'].includes(db.profile.role)?['cell']:[]),'person','meeting','reports','accounts',...(db.profile.role==='master'?['site']:[])];}
+function managementTabs(){return ['overview','profile',...(discipleshipRoles.has(db.profile.role)?['discipleship']:[]),...(['master','supervisor'].includes(db.profile.role)?['church','network','cell']:db.profile.role==='predio'?['network','cell']:['pastor','obreiro','supervisora_kids'].includes(db.profile.role)?['cell']:[]),'person','meeting',...(db.profile.role==='discipulador'||db.worship_scope?.cells?.some(c=>c.can_record)?['worship']:[]),'reports','accounts',...(db.profile.role==='master'?['site']:[])];}
 function openManagementSection(section){
  const url=new URL(location.href);
  if(url.searchParams.has('metric')){
@@ -374,7 +374,7 @@ function render(){const menuScroll=$('.shell > aside > nav')?.scrollLeft??0;
   edit=null;
  }
  const identityName=db.profile.card_name?.trim()||db.profile.username||db.profile.display_name;
-$('#app').innerHTML=`<div class="shell"><aside><img class="management-logo" src="assets/logo.png" alt="Videira"><div class="identity"><div><span class="attendance-avatar identity-photo" id="identityPhoto" data-profile-id="${esc(db.profile.id)}" aria-hidden="true">${esc(personInitials(identityName))}</span>${esc(identityName)}<small>${roleName(db.profile)}</small></div><button class="secondary" id="logout">Sair</button></div><nav aria-label="Gestão">${tabs.map(v=>`<button data-view="${v}" class="${view===v?'active':''}">${names[v]}</button>`).join('')}</nav></aside><main class="main ${view==='overview'?'dashboard-main':''}"><div class="top"><a href="index.html">Ver site ↗</a></div>${view==='overview'?'':`<div class="heading ${view==='metric'?'directory-heading':''}"><small>${view==='metric'?'Gestão / Visão geral':'IGREJA VIDEIRA / GESTÃO'}</small><h1>${view==='metric'?window.VideiraDashboard.metricTitle(db,metricKind)||'Indicador':names[view]}</h1>${view==='metric'?'<a class="directory-back" href="gestao.html?v=20261112-panel-nav">← Voltar à Visão geral</a>':'<p>Somente os registros permitidos ao seu perfil.</p>'}</div>`}<div id="status" role="status" aria-live="polite"></div><div id="workspace">${view==='overview'?overview():view==='metric'?'<section id="metricPage" class="dashboard"></section>':view==='discipleship'?'<div id="discipleshipPanel"></div>':view==='site'?'<div id="siteEditor"></div>':view==='profile'?'<div id="myProfile"></div>':list[view]?entityForm()+entityList():view==='meeting'?meeting():view==='reports'?'<div id="personReports"></div>':accounts()}</div><small>Gravação no servidor. Membros, telefones e presenças não são publicados no site.</small></main></div>`;if(retainedIdentity)$('#identityPhoto').replaceWith(retainedIdentity);$('.shell > aside > nav').scrollLeft=menuScroll;bind();}
+$('#app').innerHTML=`<div class="shell"><aside><img class="management-logo" src="assets/logo.png" alt="Videira"><div class="identity"><div><span class="attendance-avatar identity-photo" id="identityPhoto" data-profile-id="${esc(db.profile.id)}" aria-hidden="true">${esc(personInitials(identityName))}</span>${esc(identityName)}<small>${roleName(db.profile)}</small></div><button class="secondary" id="logout">Sair</button></div><nav aria-label="Gestão">${tabs.map(v=>`<button data-view="${v}" class="${view===v?'active':''}">${names[v]}</button>`).join('')}</nav></aside><main class="main ${view==='overview'?'dashboard-main':''}"><div class="top"><a href="index.html">Ver site ↗</a></div>${view==='overview'?'':`<div class="heading ${view==='metric'?'directory-heading':''}"><small>${view==='metric'?'Gestão / Visão geral':'IGREJA VIDEIRA / GESTÃO'}</small><h1>${view==='metric'?window.VideiraDashboard.metricTitle(db,metricKind)||'Indicador':names[view]}</h1>${view==='metric'?'<a class="directory-back" href="gestao.html?v=20261112-panel-nav">← Voltar à Visão geral</a>':'<p>Somente os registros permitidos ao seu perfil.</p>'}</div>`}<div id="status" role="status" aria-live="polite"></div><div id="workspace">${view==='overview'?overview():view==='metric'?'<section id="metricPage" class="dashboard"></section>':view==='discipleship'?'<div id="discipleshipPanel"></div>':view==='site'?'<div id="siteEditor"></div>':view==='profile'?'<div id="myProfile"></div>':list[view]?entityForm()+entityList():view==='meeting'?meeting():view==='worship'?'<div id="worshipPanel"></div>':view==='reports'?'<div id="personReports"></div>':accounts()}</div><small>Gravação no servidor. Membros, telefones e presenças não são publicados no site.</small></main></div>`;if(retainedIdentity)$('#identityPhoto').replaceWith(retainedIdentity);$('.shell > aside > nav').scrollLeft=menuScroll;bind();}
 function bindMemberPhoto(form,id){
  const file=form.querySelector('#memberPhotoFile');
  const preview=form.querySelector('#memberPhotoPreview');
@@ -550,7 +550,7 @@ function bind(){
  };
 
  showIdentityPhoto();const bindViews=()=>document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{
- openManagementSection(b.dataset.view);edit=null;memberForLeaderAccess=null;render();
+ if(!window.VideiraWorship.canLeave())return;openManagementSection(b.dataset.view);edit=null;memberForLeaderAccess=null;render();
 });bindViews();
  if(view==='overview'){const filters=()=>({from:window.VideiraDashboard.startDate($('#dashboardPeriod').value),church:$('#dashboardChurch')?.value||''}),bindDashboard=()=>window.VideiraDashboard.bind($('#dashboardVisuals'),db,filters()),update=()=>{
   const birthdays=$('#birthdaysPanel');
@@ -743,7 +743,8 @@ function bind(){
   form.onsubmit=e=>{e.preventDefault();if(busy)return;const id=form.elements.cell_id.value;if(!meetingCells().some(c=>c.id===id))return status('Selecione uma célula disponível para sua chamada.',true);const people=db.people.filter(p=>p.cell_id===id);if(!people.length)return status('Cadastre as pessoas desta célula antes de registrar o encontro.',true);if(!form.elements.date.value||form.elements.date.value<form.elements.date.min||form.elements.date.value>window.VideiraWeekly.today())return status('Confira a data: a chamada não pode ser futura, repetida ou anterior à última chamada.',true);const checked=new Set([...form.querySelectorAll('[name=present]:checked')].map(x=>x.value));const data={cell_id:id,date:form.elements.date.value,attendance:people.map(p=>({person_id:p.id,present:checked.has(p.id)}))};save('meeting',data)};
  }
  document.querySelectorAll('[data-call-archive]').forEach(button=>button.onclick=async()=>{if(busy)return;const restore=button.dataset.restore==='true';if(!confirm(restore?'Restaurar esta chamada nos relatórios?':'Excluir esta chamada dos relatórios? Você poderá restaurá-la em Chamadas excluídas.'))return;busy=true;button.disabled=true;try{await call('meeting_archive',{id:button.dataset.callArchive,restore});await reload();render();status(restore?'Chamada restaurada.':'Chamada excluída. Disponível em Chamadas excluídas.')}catch(e){status(e.message,true);button.disabled=false}finally{busy=false}});
- if(view==='reports')window.VideiraPersonReports.mount($('#personReports'),db,call,esc);
+ if(view==='worship')window.VideiraWorship.mountCall($('#worshipPanel'),db,call);
+ if(view==='reports')window.VideiraWorship.mountReports($('#personReports'),db,call,esc);
 }
 async function save(action,data){busy=true;document.querySelectorAll('form button').forEach(b=>b.disabled=true);status('Salvando cadastro…');try{const result=await call(action,data);
  if(action==='person')avatarRequests.clear();
@@ -806,3 +807,4 @@ window.addEventListener('pageshow',event=>{
 });
 restoreSession();
 })();
+

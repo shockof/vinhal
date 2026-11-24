@@ -444,5 +444,5 @@ window.VideiraPersonReports = (() => {
   };
 
  }
- return {mount};
+ return {mount,previewPdf};
 })();
