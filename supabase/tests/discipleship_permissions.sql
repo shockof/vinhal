@@ -39,6 +39,10 @@ insert into auth.users(id,email) values ('90000000-0000-0000-0000-000000000008',
 insert into videira.profiles(id,organization_id,username,display_name,role,church_id) values
  ('90000000-0000-0000-0000-000000000008','10000000-0000-0000-0000-000000000001','test.building','Prédio teste','predio','20000000-0000-0000-0000-000000000001'),
  ('90000000-0000-0000-0000-000000000009','10000000-0000-0000-0000-000000000001','test.kids','Supervisora teste','supervisora_kids',null);
+-- Two networks inside church A verify that church-wide access is not network-limited.
+insert into videira.networks(id,organization_id,church_id,name) values
+ ('30000000-0000-0000-0000-000000000004','10000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001','Segunda rede da igreja A');
+update videira.cells set network_id='30000000-0000-0000-0000-000000000004' where id='40000000-0000-0000-0000-000000000002';
 set local role authenticated;
 do $test$
 declare actor integer; expected integer; scope jsonb; rows jsonb; person uuid; item jsonb;
@@ -61,7 +65,7 @@ begin
  end loop;
  -- The pastor's generic management scope has not been broadened.
  perform set_config('request.jwt.claim.sub','90000000-0000-0000-0000-000000000003',true);
- if (select count(*) from videira.cells)<>2 then raise exception 'FAIL general RLS changed';end if;
+ if (select count(*) from videira.cells)<>1 then raise exception 'FAIL general RLS changed';end if;
  -- Discipler cannot write another cell, even with a supplied person ID.
  perform set_config('request.jwt.claim.sub','90000000-0000-0000-0000-000000000001',true);
  rows:=public.videira_discipleship(date_trunc('month',current_date)::date);
