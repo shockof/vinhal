@@ -4,6 +4,7 @@ const cfg=window.VIDEIRA_CONFIG,$=s=>document.querySelector(s),esc=v=>String(v??
 const roles={master:'Master',supervisor:'Pastor Supervisor',supervisora_kids:'Pastora Supervisora',predio:'Pastor de Prédio',pastor:'Pastor de Rede',obreiro:'Obreiro',discipulador:'Discipulador',lider:'Líder de célula'};
 let session=null,db=null,view='overview',edit=null,busy=false,accountRoleFilter='',accountChurchFilter='',ownProfile=null;
 let metricKind,metricFilter;
+let identityPhotoState=null;
 function readManagementRoute(){
  const query=new URLSearchParams(location.search);
  metricKind=query.get('metric');
@@ -60,6 +61,7 @@ function clearSession(){
  session=null;
  db=null;
  ownProfile=null;
+ identityPhotoState=null;
  for(const store of [sessionStorage,localStorage]){
   try{store.removeItem(sessionKey)}catch{}
  }
@@ -144,7 +146,7 @@ async function call(action,data){
  }
 }
 
-async function reload(){db=await call('load');if(!db?.profile?.active)throw Error('Conta sem acesso ativo.');try{ownProfile=await call('profile_get')}catch{ownProfile=null}}
+async function reload(){identityPhotoState=null;db=await call('load');if(!db?.profile?.active)throw Error('Conta sem acesso ativo.');try{ownProfile=await call('profile_get')}catch{ownProfile=null}}
 function table(headers,rows){return rows.length?`<div class="table-scroll"><table><thead><tr>${headers.map(x=>`<th>${esc(x)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr>${row.map(x=>`<td>${x}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`:'<div class="empty">Nenhum cadastro neste escopo.</div>'}
 function metric(n,title){return `<article class="card"><strong>${n}</strong><span>${title}</span></article>`}
 function overview(){return window.VideiraDashboard.overview(db)}
@@ -206,8 +208,8 @@ function bindCellFilters() {
 }
 
 function entityList(){const headers=view==='church'?['Igreja','Município','']:view==='network'?['Rede','Igreja','Tipo','']:view==='cell'?['Célula','Rede','Encontro','Situação','']:['Nome','Categoria','Célula',''];return `<article class="panel">${view==='person'?`<label class="member-search">Pesquisar cadastros<input id="memberSearch" type="search" value="${esc(memberSearch)}" placeholder="Nome, célula, nascimento, telefone…" autocomplete="off"></label><p id="memberSearchEmpty" role="status" hidden>Nenhum cadastro encontrado para essa busca.</p>`:view==='cell'?cellFilters():''}${table(headers,(view==='person'?db.people.filter(person=>!person.leadership_member):db[list[view]]).map(x=>[...(view==='church'?[esc(x.name),esc(x.municipality)]:view==='network'?[esc(x.name),esc(label(db.churches,x.church_id)),x.kind==='kids'?'Kids':'Regular']:view==='cell'?[esc(x.name),esc(label(db.networks,x.network_id)),esc(x.meeting_schedule),x.is_paused?'Não está acontecendo':'Está acontecendo']:[window.VideiraDashboard.personName(x.id,x.full_name),esc(x.membership_status || x.category),esc(label(db.cells,x.cell_id))]),view==='cell'&&!cellEditorRoles.has(db.profile.role)?'':`<button class="secondary" data-edit="${x.id}">Editar</button>`]))}</article>`}
-function meetingCells(){return ['master','supervisor','predio'].includes(db.profile.role)?db.cells.filter(c=>c.leader_id===db.profile.id):db.cells}
-function meeting(){const cells=meetingCells();return `<section class="meeting-picker"><h2>Escolha a célula para fazer a chamada</h2><p>Cada cartão mostra o dia e horário semanal cadastrados.</p>${['master','supervisor','predio'].includes(db.profile.role)?'<div class="notice">Aqui aparecem as células vinculadas a você como líder.</div>':''}<div class="meeting-cell-grid">${cells.map(c=>`<button type="button" class="meeting-cell-card${c.is_paused?' meeting-cell-paused':''}" data-meeting-cell="${esc(c.id)}" aria-pressed="false" aria-controls="meetingEntry"><svg class="meeting-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 2v6m10-6v6M3 11h18m-13 4h3m2 0h3"/></svg><strong>${esc(c.name)}</strong><span class="meeting-card-schedule">${c.is_paused?'Não está acontecendo':esc(c.meeting_schedule||'Dia e horário ainda não informados')}</span><small>${db.people.filter(p=>p.cell_id===c.id).length} pessoa(s) cadastrada(s)</small><span class="meeting-card-action">Fazer chamada →</span></button>`).join('')||'<div class="empty">Nenhuma célula disponível para sua chamada. Confira o vínculo do líder no cadastro da célula.</div>'}</div></section><article class="panel meeting-entry" id="meetingEntry" hidden><div class="meeting-entry-heading"><div><small>CHAMADA DA CÉLULA</small><h2 id="meetingCellTitle"></h2><p id="meetingCellSchedule"></p></div><button type="button" class="secondary" id="closeMeeting">Voltar às células</button></div><p>Confira os participantes e salve a chamada após o encontro. A data não pode ser futura, repetir ou preceder o último encontro registrado.</p><form id="meetingForm"><input type="hidden" name="cell_id"><div class="meeting-today"><span>Data do encontro: <strong id="meetingDateDisplay"></strong></span><details id="changeMeetingDate"><summary>Alterar data</summary>${field('date','Data do encontro','','date','required')}</details></div><p id="meetingDateHelp" class="notice" role="status"></p><div id="attendance" style="margin-top:20px"></div><div id="cellTrainee" class="notice" hidden>
+function meetingCells(){return db.cells.filter(c=>c.active!==false&&c.leader_id===db.profile.id)}
+function meeting(){const cells=meetingCells();return `<section class="meeting-picker"><h2>Escolha a célula para fazer a chamada</h2><p>Cada cartão mostra o dia e horário semanal cadastrados.</p><div class="notice">Aqui aparecem somente as células vinculadas a você como líder.</div><div class="meeting-cell-grid">${cells.map(c=>`<button type="button" class="meeting-cell-card${c.is_paused?' meeting-cell-paused':''}" data-meeting-cell="${esc(c.id)}" aria-pressed="false" aria-controls="meetingEntry"><svg class="meeting-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 2v6m10-6v6M3 11h18m-13 4h3m2 0h3"/></svg><strong>${esc(c.name)}</strong><span class="meeting-card-schedule">${c.is_paused?'Não está acontecendo':esc(c.meeting_schedule||'Dia e horário ainda não informados')}</span><small>${db.people.filter(p=>p.cell_id===c.id).length} pessoa(s) cadastrada(s)</small><span class="meeting-card-action">Fazer chamada →</span></button>`).join('')||'<div class="empty">Nenhuma célula disponível para sua chamada. Confira o vínculo do líder no cadastro da célula.</div>'}</div></section><article class="panel meeting-entry" id="meetingEntry" hidden><div class="meeting-entry-heading"><div><small>CHAMADA DA CÉLULA</small><h2 id="meetingCellTitle"></h2><p id="meetingCellSchedule"></p></div><button type="button" class="secondary" id="closeMeeting">Voltar às células</button></div><p>Confira os participantes e salve a chamada após o encontro. A data não pode ser futura, repetir ou preceder o último encontro registrado.</p><form id="meetingForm"><input type="hidden" name="cell_id"><div class="meeting-today"><span>Data do encontro: <strong id="meetingDateDisplay"></strong></span><details id="changeMeetingDate"><summary>Alterar data</summary>${field('date','Data do encontro','','date','required')}</details></div><p id="meetingDateHelp" class="notice" role="status"></p><div id="attendance" style="margin-top:20px"></div><div id="cellTrainee" class="notice" hidden>
  <label>Líder em treinamento (opcional)<select id="cellTraineeSelect"></select></label>
  <div class="actions"><button type="button" class="secondary" id="saveCellTrainee">Salvar líder em treinamento</button></div>
  <small id="cellTraineeStatus" role="status"></small>
@@ -361,6 +363,8 @@ function openManagementSection(section){
  view=section;
 }
 function render(){const menuScroll=$('.shell > aside > nav')?.scrollLeft??0;
+ const previousIdentity=$('#identityPhoto');
+ const retainedIdentity=previousIdentity?.dataset.profileId===db.profile.id?previousIdentity:null;
  const tabs=managementTabs();
  if(view!=='metric'&&!tabs.includes(view)){
   const url=new URL(location.href);
@@ -370,7 +374,7 @@ function render(){const menuScroll=$('.shell > aside > nav')?.scrollLeft??0;
   edit=null;
  }
  const identityName=db.profile.card_name?.trim()||db.profile.username||db.profile.display_name;
-$('#app').innerHTML=`<div class="shell"><aside><img class="management-logo" src="assets/logo.png" alt="Videira"><div class="identity"><div><span class="attendance-avatar identity-photo" id="identityPhoto" aria-hidden="true">${esc(personInitials(identityName))}</span>${esc(identityName)}<small>${roleName(db.profile)}</small></div><button class="secondary" id="logout">Sair</button></div><nav aria-label="Gestão">${tabs.map(v=>`<button data-view="${v}" class="${view===v?'active':''}">${names[v]}</button>`).join('')}</nav></aside><main class="main ${view==='overview'?'dashboard-main':''}"><div class="top"><a href="index.html">Ver site ↗</a></div>${view==='overview'?'':`<div class="heading ${view==='metric'?'directory-heading':''}"><small>${view==='metric'?'Gestão / Visão geral':'IGREJA VIDEIRA / GESTÃO'}</small><h1>${view==='metric'?window.VideiraDashboard.metricTitle(db,metricKind)||'Indicador':names[view]}</h1>${view==='metric'?'<a class="directory-back" href="gestao.html?v=20261112-panel-nav">← Voltar à Visão geral</a>':'<p>Somente os registros permitidos ao seu perfil.</p>'}</div>`}<div id="status" role="status" aria-live="polite"></div><div id="workspace">${view==='overview'?overview():view==='metric'?'<section id="metricPage" class="dashboard"></section>':view==='discipleship'?'<div id="discipleshipPanel"></div>':view==='site'?'<div id="siteEditor"></div>':view==='profile'?'<div id="myProfile"></div>':list[view]?entityForm()+entityList():view==='meeting'?meeting():view==='reports'?'<div id="personReports"></div>':accounts()}</div><small>Gravação no servidor. Membros, telefones e presenças não são publicados no site.</small></main></div>`;$('.shell > aside > nav').scrollLeft=menuScroll;bind();}
+$('#app').innerHTML=`<div class="shell"><aside><img class="management-logo" src="assets/logo.png" alt="Videira"><div class="identity"><div><span class="attendance-avatar identity-photo" id="identityPhoto" data-profile-id="${esc(db.profile.id)}" aria-hidden="true">${esc(personInitials(identityName))}</span>${esc(identityName)}<small>${roleName(db.profile)}</small></div><button class="secondary" id="logout">Sair</button></div><nav aria-label="Gestão">${tabs.map(v=>`<button data-view="${v}" class="${view===v?'active':''}">${names[v]}</button>`).join('')}</nav></aside><main class="main ${view==='overview'?'dashboard-main':''}"><div class="top"><a href="index.html">Ver site ↗</a></div>${view==='overview'?'':`<div class="heading ${view==='metric'?'directory-heading':''}"><small>${view==='metric'?'Gestão / Visão geral':'IGREJA VIDEIRA / GESTÃO'}</small><h1>${view==='metric'?window.VideiraDashboard.metricTitle(db,metricKind)||'Indicador':names[view]}</h1>${view==='metric'?'<a class="directory-back" href="gestao.html?v=20261112-panel-nav">← Voltar à Visão geral</a>':'<p>Somente os registros permitidos ao seu perfil.</p>'}</div>`}<div id="status" role="status" aria-live="polite"></div><div id="workspace">${view==='overview'?overview():view==='metric'?'<section id="metricPage" class="dashboard"></section>':view==='discipleship'?'<div id="discipleshipPanel"></div>':view==='site'?'<div id="siteEditor"></div>':view==='profile'?'<div id="myProfile"></div>':list[view]?entityForm()+entityList():view==='meeting'?meeting():view==='reports'?'<div id="personReports"></div>':accounts()}</div><small>Gravação no servidor. Membros, telefones e presenças não são publicados no site.</small></main></div>`;if(retainedIdentity)$('#identityPhoto').replaceWith(retainedIdentity);$('.shell > aside > nav').scrollLeft=menuScroll;bind();}
 function bindMemberPhoto(form,id){
  const file=form.querySelector('#memberPhotoFile');
  const preview=form.querySelector('#memberPhotoPreview');
@@ -492,32 +496,40 @@ async function requestDirectoryPhoto(id, leadershipMember) {
 
 
 async function showIdentityPhoto() {
- const avatar = $('#identityPhoto');
- const profile = db.profile;
- async function show(source) {
-  if (!source || !avatar.isConnected) return false;
-  const image = new Image();
-  image.alt = '';
-  image.src = source;
-  try { await image.decode(); } catch { return false; }
-  if (!avatar.isConnected) return false;
-  avatar.replaceChildren(image);
-  return true;
+ const profile=db.profile;
+ const key=JSON.stringify([profile.id,profile.role,ownProfile?.photo_url||'']);
+ const apply=entry=>{
+  const avatar=$('#identityPhoto');
+  if(identityPhotoState!==entry||db?.profile.id!==profile.id||avatar?.dataset.profileId!==profile.id)return;
+  if(entry.image){if(avatar.firstChild!==entry.image)avatar.replaceChildren(entry.image)}
+  else if(entry.ready)avatar.textContent=personInitials(db.profile.card_name?.trim()||db.profile.username||db.profile.display_name);
+ };
+ if(identityPhotoState?.key===key){
+  const entry=identityPhotoState;
+  if(entry.ready){apply(entry);return}
+  await entry.pending;apply(entry);return;
  }
- if (await show(ownProfile?.photo_url) || !avatar.isConnected) return;
- if (!['supervisor','pastor','predio','obreiro','discipulador','lider'].includes(profile.role)) return;
- try {
-  const response = await fetch(cfg.url+'/rest/v1/rpc/videira_public_leadership_photo',{
-   method:'POST',
-   headers:{apikey:cfg.publicKey,Authorization:'Bearer '+cfg.publicKey,'Content-Type':'application/json'},
-   body:JSON.stringify({p_id:profile.id})
-  });
-  if (!response.ok) return;
-  const photo = await response.json();
-  if (typeof photo === 'string' && photo) await show('data:image/jpeg;base64,'+photo);
- } catch {
-  // Keep the initials if the photo is unavailable.
- }
+ const entry={key,image:null,ready:false,pending:null};
+ identityPhotoState=entry;
+ entry.pending=(async()=>{
+  async function decode(source){
+   if(!source)return null;
+   const image=new Image();image.alt='';image.src=source;
+   try{await image.decode();return image}catch{return null}
+  }
+  let image=await decode(ownProfile?.photo_url);
+  if(!image&&['supervisor','supervisora_kids','pastor','predio','obreiro','discipulador','lider'].includes(profile.role)){
+   try{
+    const response=await fetch(cfg.url+'/rest/v1/rpc/videira_public_leadership_photo',{
+     method:'POST',headers:{apikey:cfg.publicKey,Authorization:'Bearer '+cfg.publicKey,'Content-Type':'application/json'},
+     body:JSON.stringify({p_id:profile.id}),signal:AbortSignal.timeout(10000)
+    });
+    if(response.ok){const photo=await response.json();if(typeof photo==='string'&&photo)image=await decode('data:image/jpeg;base64,'+photo)}
+   }catch{/* Keep initials when neither photo is available. */}
+  }
+  entry.image=image;entry.ready=true;
+ })();
+ await entry.pending;apply(entry);
 }
 
 async function bindRegistrationTrash(){
