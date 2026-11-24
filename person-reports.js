@@ -214,7 +214,24 @@ window.VideiraPersonReports = (() => {
   });
  }
 
- function mount(root, db, call, esc) {
+ async function mount(root, db, call, esc) {
+  root.innerHTML='<p role="status">Carregando permissões dos relatórios…</p>';
+  try {
+   const scope=await call('youth_report_scope',{});
+   if(!root.isConnected)return;
+   if(scope!==null&&(!scope||scope.report_youth_all_churches!==true||!['churches','networks','cells','people','meetings','attendance','cell_leadership','profiles'].every(key=>Array.isArray(scope[key]))))throw Error('Permissões de relatórios inválidas.');
+   mountScoped(root,scope?{...db,...scope}:db,call,esc);
+  } catch(error) {
+   if(!root.isConnected)return;
+   if(error.status===404||error.code==='PGRST202'||/videira_youth_report_scope/.test(error.message||'')) {
+    mountScoped(root,db,call,esc);
+    if(db.profile.username==='prvitormendes'){
+     const warning=document.createElement('p');warning.className='notice';warning.textContent='O acesso da Rede Jovens a todas as igrejas ainda precisa ser ativado no servidor.';root.prepend(warning);
+    }
+   } else root.innerHTML='<p role="alert">'+esc(error.message||'Não foi possível carregar os relatórios.')+'</p>';
+  }
+ }
+ function mountScoped(root, db, call, esc) {
   const canReadCourses = ['master','discipulador','pastor','predio','obreiro','supervisor'].includes(db.profile.role);
   const byId = items => new Map(items.map(item => [item.id,item]));
   const churches = byId(db.churches), networks = byId(db.networks), cells = byId(db.cells);

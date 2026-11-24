@@ -70,7 +70,7 @@ async function request(action,data,token){
  const controller=new AbortController();
  const timer=setTimeout(()=>controller.abort(),30000);
  try{
-  const rpc={discipleship_scope:'videira_discipleship_scope',registration_trash:'videira_registration_trash',registration_archive:'videira_registration_archive',enroll_regular_leader:'videira_regular_leader_enroll',account_get:'videira_account_card',account_save:'videira_account_card',discipleship_person_field:'videira_discipleship_person_field',report_courses:'videira_report_courses',discipleship:'videira_discipleship',link_existing_leader:'videira_link_existing_leader',
+  const rpc={youth_report_scope:'videira_youth_report_scope',discipleship_scope:'videira_discipleship_scope',registration_trash:'videira_registration_trash',registration_archive:'videira_registration_archive',enroll_regular_leader:'videira_regular_leader_enroll',account_get:'videira_account_card',account_save:'videira_account_card',discipleship_person_field:'videira_discipleship_person_field',report_courses:'videira_report_courses',discipleship:'videira_discipleship',link_existing_leader:'videira_link_existing_leader',
    member_leader_links:'videira_member_leader_links',member_leadership_avatar:'videira_member_leadership_avatar',person_photo:'videira_portal'}[action];
   const payload=rpc==='videira_account_card'?{p_action:action==='account_get'?'get':'save',p_data:data}:action==='person_photo'?{p_action:action,p_data:data}:rpc?(data||{}):action==='login'?{action,...data}:{action,data};
   const response=await fetch(rpc?cfg.url+'/rest/v1/rpc/'+rpc:cfg.gateway,{
