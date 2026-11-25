@@ -91,7 +91,7 @@ Deno.serve(async (req: Request) => {
    const response=await fetch(base+'/rest/v1/rpc/videira_admin_account',{method:'POST',headers:userHeaders,body:JSON.stringify({p_action:operation,p_data:clean})});const target=await response.json();
    if(!response.ok)return reply({error:String(target.message||'Conta indisponível').slice(0,220)},response.status===403?403:400);
    if(body.action!=='account_reset_password')return reply(target);
-   const password=String(d.new_password||''),current=String(d.master_password||'');if(password.length<12||password.length>128||!current||current.length>1024)return reply({error:'Informe sua senha Master e uma nova senha de 12 a 128 caracteres.'},400);
+   const password=String(d.new_password||''),current=String(d.master_password||'');if(password.length<8||password.length>128||!current||current.length>1024)return reply({error:'Informe sua senha Master e uma nova senha de 8 a 128 caracteres.'},400);
    const limit=await fetch(base+'/rest/v1/rpc/videira_admin_reset_limit',{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+secret,'Content-Type':'application/json'},body:JSON.stringify({p_actor:actor.id})});if(!limit.ok||await limit.json()!==true)return reply({error:'Limite de tentativas de redefinição atingido. Aguarde 15 minutos.'},429);
    const verified=await fetch(base+'/auth/v1/token?grant_type=password',{method:'POST',headers:{apikey:secret,'Content-Type':'application/json'},body:JSON.stringify({email:actor.email,password:current})});const proof=await verified.json();if(!verified.ok||proof.user?.id!==actor.id)return reply({error:'Não foi possível confirmar sua senha Master.'},400);
    await fetch(base+'/auth/v1/logout?scope=local',{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+proof.access_token}});
@@ -99,6 +99,10 @@ Deno.serve(async (req: Request) => {
    if(!updated.ok)return reply({error:'Não foi possível redefinir a senha. Confira a política de senha do projeto.'},400);
    await fetch(base+'/rest/v1/rpc/videira_admin_password_event',{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+secret,'Content-Type':'application/json'},body:JSON.stringify({p_actor:actor.id,p_target:target.id})});return reply({ok:true});
   }
+  const linkedMemberAvatar=async (id:string)=>{
+   const result=await fetch(base+'/rest/v1/rpc/videira_linked_member_avatar',{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({p_profile_id:id})});
+   return result.ok?await result.json():null;
+  };
   if(['profile_get','profile_save','change_password'].includes(body.action)){
    const actor=await checked.json(),d=body.data||{};
    const userHeaders={apikey:secret,Authorization:'Bearer '+token,'Content-Type':'application/json'};
@@ -106,9 +110,9 @@ Deno.serve(async (req: Request) => {
    const prior=await profileRpc('get');if(!prior.ok)return reply({error:'Perfil indisponível'},403);const old=await prior.json();
    if(body.action==='change_password'){
     const password=String(d.new_password||''),current=String(d.current_password||'');
-    if(!current||current.length>1024||password.length<12||password.length>128)return reply({error:'Informe sua senha atual e uma nova senha com 12 a 128 caracteres.'},400);
+    if(!current||current.length>1024||password.length<8||password.length>128)return reply({error:'Informe sua senha atual e uma nova senha com 8 a 128 caracteres.'},400);
     const updated=await fetch(base+'/auth/v1/user',{method:'PUT',headers:userHeaders,body:JSON.stringify({password,current_password:current})});
-    if(!updated.ok){const error=await updated.json();return reply({error:['reauthentication_needed','reauthentication_not_valid'].includes(error.error_code||error.code)?'Entre novamente e tente alterar sua senha.':'Não foi possível alterar. Confira a senha atual e use uma nova senha diferente, com pelo menos 12 caracteres.'},400)}
+    if(!updated.ok){const error=await updated.json();return reply({error:['reauthentication_needed','reauthentication_not_valid'].includes(error.error_code||error.code)?'Entre novamente e tente alterar sua senha.':'Não foi possível alterar. Confira a senha atual e use uma nova senha diferente, com pelo menos 8 caracteres.'},400)}
     await fetch(base+'/auth/v1/logout?scope=global',{method:'POST',headers:userHeaders});return reply({ok:true});
    }
    let profile=old,newPath:string|null=null;
@@ -130,7 +134,15 @@ Deno.serve(async (req: Request) => {
    }
    profile.photo_url=null;
    if(profile.photo_path){const signed=await fetch(base+'/storage/v1/object/sign/videira-avatars/'+profile.photo_path,{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({expiresIn:3600})});if(signed.ok){const link=await signed.json();if(String(link.signedURL||'').startsWith('/object/sign/'))profile.photo_url=base+'/storage/v1'+link.signedURL;}}
+   if(!profile.photo_path){
+    try{const photo=await linkedMemberAvatar(actor.id);if(typeof photo==='string')profile.photo_url='data:image/jpeg;base64,'+photo;}catch{/* Keep the profile available without an avatar. */}
+   }
    delete profile.photo_path;return reply(profile);
+  }
+  if(body.action==='linked_member_avatar')return reply({photo:await linkedMemberAvatar(String(body.data?.id||''))});
+  if(body.action==='member_leader_links'){
+   const result=await fetch(base+'/rest/v1/rpc/videira_member_leader_links',{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:'{}'});
+   return result.ok?reply(await result.json()):reply({error:'Vínculos de liderança indisponíveis.'},503);
   }
   if(body.action==='create_account'){
    const actor=await checked.json(),d=body.data||{};
@@ -138,17 +150,23 @@ Deno.serve(async (req: Request) => {
    const scope=await fetch(base+'/rest/v1/rpc/videira_portal',{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:JSON.stringify({p_action:'load',p_data:{}})});
    if(!scope.ok)return reply({error:'Acesso indisponível'},403);
    const context=await scope.json();
-   if(context.profile?.role!=='master'||!context.profile?.active)return reply({error:'Somente o Master pode cadastrar acessos.'},403);
+   if(!context.profile?.active)return reply({error:'Acesso indisponível.'},403);
+   if(context.profile.role!=='master'){
+    const permission=await fetch(base+'/rest/v1/rpc/videira_youth_registration_scope',{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:'{}'});
+    const allowed=permission.ok?await permission.json():null;
+    if(!allowed?.allowed_roles?.includes(d.role)||!allowed.networks?.some((n:any)=>n.id===d.network_id&&n.church_id===d.church_id))return reply({error:'Cadastre somente líderes nas redes de jovens autorizadas.'},403);
+   }
    const contactEmail=String(d.email||'').trim().toLowerCase(),password=String(d.password||'');
    // Auth still requires an identity address; use a non-deliverable random alias when omitted.
    const email=contactEmail||crypto.randomUUID()+'@accounts.videira.invalid';
    if(contactEmail&&(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)||contactEmail.length>254))return reply({error:'Informe um e-mail válido para a conta.'},400);
-   if(password.length<12||password.length>128)return reply({error:'A senha inicial deve ter entre 12 e 128 caracteres.'},400);
-   const profile={username:String(d.username||'').trim().toLowerCase(),display_name:String(d.display_name||'').trim(),role:d.role,church_id:d.church_id,network_id:d.network_id||null,birth_date:d.birth_date};
+   if(password.length<8||password.length>128)return reply({error:'A senha inicial deve ter entre 8 e 128 caracteres.'},400);
+   const profile={username:String(d.username||'').trim().toLowerCase(),display_name:String(d.display_name||'').trim(),role:d.role,church_id:d.church_id,network_id:d.network_id||null,birth_date:d.birth_date,member_id:d.member_id,phone:d.phone,card_name:d.card_name,leadership_photo:d.leadership_photo};
    const adminHeaders={apikey:secret,Authorization:'Bearer '+secret,'Content-Type':'application/json'};
    const args={p_actor:actor.id,p_auth_user:null,p_data:profile,p_check_only:true};
    const preflight=await fetch(base+'/rest/v1/rpc/videira_account_provision',{method:'POST',headers:adminHeaders,body:JSON.stringify(args)});
    if(!preflight.ok){const fail=await preflight.json();return reply({error:String(fail.message||'Confira os dados e vínculos.').slice(0,200)},400)}
+   if(d.member_id&&(await preflight.json()).member_id!==d.member_id)return reply({error:'Vínculo do membro indisponível.'},503);
    // Admin create_user does not send invitation or recovery emails.
    const created=await fetch(base+'/auth/v1/admin/users',{method:'POST',headers:adminHeaders,body:JSON.stringify({email,password,email_confirm:true})});
    const account=await created.json();
