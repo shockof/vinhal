@@ -72,7 +72,7 @@ async function request(action,data,token){
  const controller=new AbortController();
  const timer=setTimeout(()=>controller.abort(),30000);
  try{
-  const rpc={account_creation_scope:'videira_account_creation_scope',worship:'videira_worship',youth_report_scope:'videira_youth_report_scope',discipleship_scope:'videira_discipleship_scope',registration_trash:'videira_registration_trash',registration_archive:'videira_registration_archive',enroll_regular_leader:'videira_regular_leader_enroll',account_get:'videira_account_card',account_save:'videira_account_card',discipleship_person_field:'videira_discipleship_person_field',report_courses:'videira_report_courses',discipleship:'videira_discipleship',link_existing_leader:'videira_link_existing_leader',
+  const rpc={leader_account:'videira_leader_account',leader_edit_scope:'videira_leader_edit_scope',account_creation_scope:'videira_account_creation_scope',worship:'videira_worship',youth_report_scope:'videira_youth_report_scope',discipleship_scope:'videira_discipleship_scope',registration_trash:'videira_registration_trash',registration_archive:'videira_registration_archive',enroll_regular_leader:'videira_regular_leader_enroll',account_get:'videira_account_card',account_save:'videira_account_card',discipleship_person_field:'videira_discipleship_person_field',report_courses:'videira_report_courses',discipleship:'videira_discipleship',link_existing_leader:'videira_link_existing_leader',
    member_leader_links:'videira_member_leader_links',member_leadership_avatar:'videira_member_leadership_avatar',person_photo:'videira_portal'}[action];
   const payload=rpc==='videira_account_card'?{p_action:action==='account_get'?'get':'save',p_data:data}:action==='person_photo'?{p_action:action,p_data:data}:rpc?(data||{}):action==='login'?{action,...data}:{action,data};
   const response=await fetch(rpc?cfg.url+'/rest/v1/rpc/'+rpc:cfg.gateway,{
@@ -146,7 +146,7 @@ async function call(action,data){
  }
 }
 
-async function reload(){identityPhotoState=null;db=await call('load');if(!db?.profile?.active)throw Error('Conta sem acesso ativo.');try{ownProfile=await call('profile_get')}catch{ownProfile=null}try{db.worship_scope=await call('worship',{p_action:'scope',p_data:{}})}catch{db.worship_scope=null}try{db.account_creation=await call('account_creation_scope');if(db.account_creation){for(const key of ['churches','networks','profiles'])db[key]=[...new Map([...db[key],...db.account_creation[key]].map(item=>[item.id,item])).values()]}}catch{db.account_creation=null}}
+async function reload(){identityPhotoState=null;db=await call('load');if(!db?.profile?.active)throw Error('Conta sem acesso ativo.');try{ownProfile=await call('profile_get')}catch{ownProfile=null}try{db.worship_scope=await call('worship',{p_action:'scope',p_data:{}})}catch{db.worship_scope=null}try{db.account_creation=await call('account_creation_scope');if(db.account_creation){for(const key of ['churches','networks','profiles'])db[key]=[...new Map([...db[key],...db.account_creation[key]].map(item=>[item.id,item])).values()]}}catch{db.account_creation=null}try{db.leader_edit=await call('leader_edit_scope');db.profiles=[...new Map([...db.profiles,...db.leader_edit.profiles].map(p=>[p.id,p])).values()]}catch{db.leader_edit=null}}
 function table(headers,rows){return rows.length?`<div class="table-scroll"><table><thead><tr>${headers.map(x=>`<th>${esc(x)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr>${row.map(x=>`<td>${x}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`:'<div class="empty">Nenhum cadastro neste escopo.</div>'}
 function metric(n,title){return `<article class="card"><strong>${n}</strong><span>${title}</span></article>`}
 function overview(){return window.VideiraDashboard.overview(db)}
@@ -254,15 +254,15 @@ function linkedProfiles(){
   accountNameOrder.compare(window.VideiraUsername.name(a),window.VideiraUsername.name(b))||accountNameOrder.compare(a.username,b.username));
 }
 function linkedAccountTable(){
- const profiles=linkedProfiles(),master=db.profile.role==='master';
+ const profiles=linkedProfiles(),master=db.profile.role==='master',editable=new Set(db.leader_edit?.editable_leader_ids||[]),actions=master||profiles.some(p=>editable.has(p.id));
  const headers=['Nome','@login','Função','Igreja / rede','Estado'];
- if(master)headers.push('Ações');
+ if(actions)headers.push('Ações');
  if(!profiles.length)return '<div class="empty">'+(accountSearch.trim()||accountRoleFilter||accountChurchFilter
   ?'Nenhuma conta encontrada para essa busca e filtros.':'Nenhum cadastro neste escopo.')+'</div>';
  return table(headers,profiles.map(profile=>{
   const row=accountColumns(profile).map(esc);
   if(master)row[0]=window.VideiraDashboard.personName(profile.id,window.VideiraUsername.name(profile));
-  if(master)row.push(`<button type="button" class="secondary" data-account-edit="${esc(profile.id)}">Editar conta</button>`);
+  if(actions)row.push(master||editable.has(profile.id)?`<button type="button" class="secondary" data-account-edit="${esc(profile.id)}">Editar conta</button>`:'');
   return row;
  }));
 }
