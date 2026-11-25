@@ -18,7 +18,7 @@ begin
   end if;
  end loop;
  select network_id into chosen from videira.profiles where id=actor;
- for item in select to_jsonb(x) from unnest(array['master','supervisor','predio','pastor','obreiro','discipulador','supervisora_kids']) x loop
+ for item in select to_jsonb(x) from unnest(array['master','supervisor','predio','pastor','obreiro','supervisora_kids']) x loop
   denied:=false;
   begin perform public.videira_account_provision(actor,null,jsonb_build_object('username','qa_youth_preflight_20261125','display_name','Verificação sem cadastro','role',item#>>'{}','church_id',(select church_id from videira.networks where id=chosen),'network_id',chosen),true);exception when insufficient_privilege then denied:=true;end;
   if not denied then raise exception 'Elevação de função aceita';end if;
@@ -38,4 +38,4 @@ set local role authenticated;
 select public.videira_portal('cell',jsonb_build_object('name','QA SOMENTE TRANSACAO ROLLBACK','church_id',(select church_id from videira.profiles where id=auth.uid()),'network_id',(select network_id from videira.profiles where id=auth.uid()),'leader_id',(select p->>'id' from jsonb_array_elements(public.videira_youth_registration_scope()->'profiles') p where p->>'role'='lider' and p->>'network_id'=(select network_id::text from videira.profiles where id=auth.uid()) limit 1),'meeting_schedule','Quinta-feira, 20:00')) as cell_creation_rollback;
 reset role;
 rollback;
-select 'PASS: Vitor cria apenas líderes de Jovens, todas as redes autorizadas, lista completa, demais contas inalteradas; célula de teste desfeita.' as resultado;
+select 'PASS: Vitor cria líderes de Jovens, todas as redes autorizadas, lista completa, demais contas inalteradas; célula de teste desfeita.' as resultado;

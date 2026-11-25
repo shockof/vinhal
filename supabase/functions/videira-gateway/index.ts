@@ -152,16 +152,20 @@ Deno.serve(async (req: Request) => {
    const context=await scope.json();
    if(!context.profile?.active)return reply({error:'Acesso indisponível.'},403);
    if(context.profile.role!=='master'){
-    const permission=await fetch(base+'/rest/v1/rpc/videira_youth_registration_scope',{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:'{}'});
+    const permission=await fetch(base+'/rest/v1/rpc/videira_account_creation_scope',{method:'POST',headers:{apikey:secret,Authorization:'Bearer '+token,'Content-Type':'application/json'},body:'{}'});
     const allowed=permission.ok?await permission.json():null;
-    if(!allowed?.allowed_roles?.includes(d.role)||!allowed.networks?.some((n:any)=>n.id===d.network_id&&n.church_id===d.church_id))return reply({error:'Cadastre somente líderes nas redes de jovens autorizadas.'},403);
+    const churchAllowed=allowed?.churches?.some((c:any)=>c.id===d.church_id);
+    const networkOptional=d.role==='predio'||(d.role==='obreiro'&&!d.network_id);
+    const networkAllowed=networkOptional||allowed?.networks?.some((n:any)=>n.id===d.network_id&&n.church_id===d.church_id);
+    const cellAllowed=!allowed?.requires_cell||allowed?.cells?.some((c:any)=>c.id===d.creation_cell_id&&c.church_id===d.church_id&&c.network_id===d.network_id);
+    if(!allowed?.allowed_roles?.includes(d.role)||!churchAllowed||!networkAllowed||!cellAllowed)return reply({error:'Função, igreja, rede ou célula fora da sua permissão de cadastro.'},403);
    }
    const contactEmail=String(d.email||'').trim().toLowerCase(),password=String(d.password||'');
    // Auth still requires an identity address; use a non-deliverable random alias when omitted.
    const email=contactEmail||crypto.randomUUID()+'@accounts.videira.invalid';
    if(contactEmail&&(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail)||contactEmail.length>254))return reply({error:'Informe um e-mail válido para a conta.'},400);
    if(password.length<8||password.length>128)return reply({error:'A senha inicial deve ter entre 8 e 128 caracteres.'},400);
-   const profile={username:String(d.username||'').trim().toLowerCase(),display_name:String(d.display_name||'').trim(),role:d.role,church_id:d.church_id,network_id:d.network_id||null,birth_date:d.birth_date,member_id:d.member_id,phone:d.phone,card_name:d.card_name,leadership_photo:d.leadership_photo};
+   const profile={username:String(d.username||'').trim().toLowerCase(),display_name:String(d.display_name||'').trim(),role:d.role,church_id:d.church_id,network_id:d.network_id||null,birth_date:d.birth_date,member_id:d.member_id,phone:d.phone,card_name:d.card_name,leadership_photo:d.leadership_photo,creation_cell_id:d.creation_cell_id};
    const adminHeaders={apikey:secret,Authorization:'Bearer '+secret,'Content-Type':'application/json'};
    const args={p_actor:actor.id,p_auth_user:null,p_data:profile,p_check_only:true};
    const preflight=await fetch(base+'/rest/v1/rpc/videira_account_provision',{method:'POST',headers:adminHeaders,body:JSON.stringify(args)});
